@@ -26,7 +26,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4.0", features = ["derive"] }
 # Window state management using built-in Tauri APIs (Tauri v1.5 compatible)
-directories = "5.0"
+directories = "6.0"
 tauri-plugin-window-state = "2.4.0"
 tauri-plugin-single-instance = "2.0"
 # Additional plugins for complete system - using compatible versions
