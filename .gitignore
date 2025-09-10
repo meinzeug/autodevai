@@ -1,0 +1,135 @@
+# AutoDev-AI Neural Bridge Platform
+# Optimized .gitignore - includes all project code, excludes only build artifacts and dependencies
+
+# ============================================
+# Dependencies & Package Managers
+# ============================================
+node_modules/
+.npm/
+.yarn/
+.pnp.*
+.yarn-integrity
+
+# ============================================
+# Build Artifacts
+# ============================================
+# Rust/Tauri builds
+target/
+dist/
+build/
+out/
+
+# Tauri specific builds only
+src-tauri/target/
+src-tauri/WixTools/
+
+# ============================================
+# Environment & Secrets
+# ============================================
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.crt
+*.cer
+
+# API Keys
+*api-key*.txt
+*secret*.txt
+
+# ============================================
+# Claude & AI Tool Caches
+# ============================================
+.claude/
+.claude-flow/
+.hive-mind/
+.swarm/
+.agent-memory/
+.autodev-cache/
+.neural-cache/
+.swarm-state/
+
+# MCP and AI session data
+.mcp/
+session-data/
+memory/
+
+# ============================================
+# IDE & Editor
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Logs & Temporary
+# ============================================
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# ============================================
+# Testing & Coverage
+# ============================================
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+jest-coverage/
+
+# ============================================
+# Database Files (local dev)
+# ============================================
+*.sqlite
+*.sqlite3
+*.db
+!init.sql
+
+# ============================================
+# Docker Volumes (runtime data)
+# ============================================
+postgres-data/
+redis-data/
+docker-volumes/
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+$RECYCLE.BIN/
+.Trash-*/
+
+# ============================================
+# Python (if used)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# ============================================
+# Terraform State (sensitive)
+# ============================================
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ============================================
+# IMPORTANT: Everything else is included!
+# All src/, src-tauri/, tests/, docs/, configs, 
+# scripts, and project files will be tracked
+# ============================================
