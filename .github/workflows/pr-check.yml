@@ -716,11 +716,17 @@ jobs:
 
             // Change detection
             report += '## 📋 Change Detection\n\n';
-            report += `- **Frontend:** ${{ needs['pr-analysis'].outputs.has_frontend_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
-            report += `- **Backend:** ${{ needs['pr-analysis'].outputs.has_backend_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
-            report += `- **Docker:** ${{ needs['pr-analysis'].outputs.has_docker_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
-            report += `- **Documentation:** ${{ needs['pr-analysis'].outputs.has_docs_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
-            report += `- **Configuration:** ${{ needs['pr-analysis'].outputs.has_config_changes === 'true' ? '✅ Yes' : '❌ No' }}\n\n`;
+            const hasFrontend = '${{ needs['pr-analysis'].outputs.has_frontend_changes }}' === 'true';
+            const hasBackend = '${{ needs['pr-analysis'].outputs.has_backend_changes }}' === 'true';
+            const hasDocker = '${{ needs['pr-analysis'].outputs.has_docker_changes }}' === 'true';
+            const hasDocs = '${{ needs['pr-analysis'].outputs.has_docs_changes }}' === 'true';
+            const hasConfig = '${{ needs['pr-analysis'].outputs.has_config_changes }}' === 'true';
+            
+            report += `- **Frontend:** ${hasFrontend ? '✅ Yes' : '❌ No'}\n`;
+            report += `- **Backend:** ${hasBackend ? '✅ Yes' : '❌ No'}\n`;
+            report += `- **Docker:** ${hasDocker ? '✅ Yes' : '❌ No'}\n`;
+            report += `- **Documentation:** ${hasDocs ? '✅ Yes' : '❌ No'}\n`;
+            report += `- **Configuration:** ${hasConfig ? '✅ Yes' : '❌ No'}\n\n`;
 
             // Validation results
             report += '## ✅ Validation Results\n\n';
