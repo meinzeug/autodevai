@@ -39,7 +39,7 @@ RUN npm run build && \
     npm run typecheck
 
 # Stage 2: Rust Build
-FROM rust:1.75-alpine AS rust-builder
+FROM rust:1.89-alpine AS rust-builder
 
 # Install system dependencies for Rust compilation
 RUN apk add --no-cache \
