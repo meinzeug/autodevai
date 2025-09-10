@@ -709,18 +709,18 @@ jobs:
             const needs = ${{ toJSON(needs) }};
 
             let report = '# 🔍 PR Validation Summary\n\n';
-            report += `**PR Size:** ${{ needs['pr-analysis'].outputs.pr_size }}\n`;
-            report += `**Complexity Score:** ${{ needs['pr-analysis'].outputs.complexity_score }}/4\n`;
-            report += `**Breaking Changes:** ${{ needs['pr-analysis'].outputs.is_breaking }}\n`;
-            report += `**Author:** @${{ needs['pr-analysis'].outputs.author }}\n\n`;
+            report += '**PR Size:** ' + (needs['pr-analysis']?.outputs?.pr_size || 'N/A') + '\n';
+            report += '**Complexity Score:** ' + (needs['pr-analysis']?.outputs?.complexity_score || 'N/A') + '/4\n';
+            report += '**Breaking Changes:** ' + (needs['pr-analysis']?.outputs?.is_breaking || 'N/A') + '\n';
+            report += '**Author:** @' + (needs['pr-analysis']?.outputs?.author || 'N/A') + '\n\n';
 
             // Change detection
             report += '## 📋 Change Detection\n\n';
-            const hasFrontend = '${{ needs['pr-analysis'].outputs.has_frontend_changes }}' === 'true';
-            const hasBackend = '${{ needs['pr-analysis'].outputs.has_backend_changes }}' === 'true';
-            const hasDocker = '${{ needs['pr-analysis'].outputs.has_docker_changes }}' === 'true';
-            const hasDocs = '${{ needs['pr-analysis'].outputs.has_docs_changes }}' === 'true';
-            const hasConfig = '${{ needs['pr-analysis'].outputs.has_config_changes }}' === 'true';
+            const hasFrontend = needs['pr-analysis']?.outputs?.has_frontend_changes === 'true';
+            const hasBackend = needs['pr-analysis']?.outputs?.has_backend_changes === 'true';
+            const hasDocker = needs['pr-analysis']?.outputs?.has_docker_changes === 'true';
+            const hasDocs = needs['pr-analysis']?.outputs?.has_docs_changes === 'true';
+            const hasConfig = needs['pr-analysis']?.outputs?.has_config_changes === 'true';
             
             report += `- **Frontend:** ${hasFrontend ? '✅ Yes' : '❌ No'}\n`;
             report += `- **Backend:** ${hasBackend ? '✅ Yes' : '❌ No'}\n`;
