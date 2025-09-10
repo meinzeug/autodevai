@@ -244,7 +244,7 @@ jobs:
 
       - name: Setup Node.js
         if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -334,7 +334,7 @@ jobs:
 
       - name: Setup Node.js
         if: matrix.test-type == 'frontend'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -408,7 +408,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -606,7 +606,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
