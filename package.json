@@ -89,7 +89,7 @@
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-window-state": "^2.4.0",
     "axios": "^1.7.7",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "dockerode": "^4.0.8",
     "express": "^4.21.1",
