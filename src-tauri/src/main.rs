@@ -192,10 +192,17 @@ fn main() {
             settings::manager::save_settings,
             settings::manager::reset_settings,
             
-            // Enhanced security commands
+            // Basic security commands (3 commands)
             security::ipc_security::create_security_session,
             security::ipc_security::validate_ipc_command,
             security::ipc_security::get_security_stats,
+            
+            // Enhanced security commands (5 commands)
+            security::enhanced_ipc_security::validate_ipc_command_enhanced,
+            security::enhanced_ipc_security::create_enhanced_security_session,
+            security::enhanced_ipc_security::get_enhanced_security_stats,
+            security::enhanced_ipc_security::flush_security_logs,
+            security::enhanced_ipc_security::cleanup_security_data,
             
             // App setup and window state commands
             app::setup::get_setup_config,

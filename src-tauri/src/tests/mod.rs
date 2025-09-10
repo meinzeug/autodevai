@@ -18,10 +18,34 @@ mod tray_tests;
 mod integration_tests;
 
 #[cfg(test)]
+mod tray_integration_tests;
+
+#[cfg(test)]
+mod window_state_integration_tests;
+
+#[cfg(test)]
+mod menu_integration_tests;
+
+#[cfg(test)]
+mod ipc_security_integration_tests;
+
+#[cfg(test)]
+mod updater_integration_tests;
+
+#[cfg(test)]
+mod e2e_workflow_tests;
+
+#[cfg(test)]
 mod updater_tests;
 
 #[cfg(test)]
 mod security_integration_test;
+
+#[cfg(test)]
+mod cross_platform_tests;
+
+#[cfg(test)]
+mod performance_stress_tests;
 
 // Re-export test utilities for use in other test modules
 #[cfg(test)]

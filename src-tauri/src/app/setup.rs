@@ -3,7 +3,10 @@
 //! Handles application initialization, window state restoration,
 //! and initial configuration setup.
 
-use crate::security::ipc_security::IpcSecurity;
+use crate::security::{
+    ipc_security::IpcSecurity,
+    enhanced_ipc_security::EnhancedIpcSecurity,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -156,10 +159,13 @@ impl SetupManager {
 
     /// Setup security features with enhanced protection
     async fn setup_security(&self, app: &App) -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize enhanced IPC security
-        let mut security = IpcSecurity::new_enhanced().await;
-        security.enable_enhanced_security();
-        app.manage(security);
+        // Initialize basic IPC security for backward compatibility
+        let basic_security = IpcSecurity::default();
+        app.manage(basic_security);
+        
+        // Initialize enhanced IPC security for advanced features
+        let enhanced_security = EnhancedIpcSecurity::new().await;
+        app.manage(enhanced_security);
 
         log::info!("Enhanced security setup completed");
         Ok(())

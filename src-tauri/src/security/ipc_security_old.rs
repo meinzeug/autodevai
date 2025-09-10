@@ -1,6 +1,7 @@
-//! Simple IPC Security Configuration
+//! IPC Security Configuration
 //!
-//! Provides basic IPC security without advanced features for backward compatibility.
+//! Provides secure Inter-Process Communication (IPC) configuration for Tauri
+//! with command validation, rate limiting, and access control.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -27,11 +28,11 @@ pub struct SecurityContext {
     pub timestamp: u64,
 }
 
-/// Rate limiting configuration
+/// Rate limiting configuration with enhanced per-second limits
 #[derive(Debug, Clone)]
 pub struct RateLimit {
     pub requests_per_minute: u32,
-    pub requests_per_second: u32,
+    pub requests_per_second: u32, // New: per-second rate limit
     pub burst_limit: u32,
 }
 
@@ -106,15 +107,27 @@ impl Default for IpcSecurity {
             },
         );
 
-        // Global default rate limit of 100 req/min
+        // Global default rate limit of 10 req/sec
         rate_limits.insert(
             "*".to_string(),
             RateLimit {
-                requests_per_minute: 100,
+                requests_per_minute: 600,
                 requests_per_second: 10,
                 burst_limit: 5,
             },
         );
+
+        // Initialize with basic configuration for backward compatibility
+        let rt = tokio::runtime::Handle::try_current()
+            .unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle().clone());
+        
+        let (audit_logger, enhanced_rate_limiter, session_manager) = rt.block_on(async {
+            (
+                Arc::new(RwLock::new(SecurityAuditLogger::new().await)),
+                Arc::new(RwLock::new(EnhancedRateLimiter::new())),
+                Arc::new(RwLock::new(SecureSessionManager::new())),
+            )
+        });
 
         Self {
             allowed_commands,
@@ -125,6 +138,12 @@ impl Default for IpcSecurity {
                 requests: HashMap::new(),
             })),
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            input_sanitizer: InputSanitizer::default(),
+            command_validator: CommandWhitelist::default(),
+            audit_logger,
+            enhanced_rate_limiter,
+            session_manager,
+            security_enabled: false, // Disabled by default for compatibility
         }
     }
 }
@@ -142,7 +161,7 @@ impl IpcSecurity {
             rate_limits.insert(
                 "*".to_string(),
                 RateLimit {
-                    requests_per_minute: 100,
+                    requests_per_minute: 600,
                     requests_per_second: 10,
                     burst_limit: 5,
                 },
@@ -160,7 +179,7 @@ impl IpcSecurity {
         }
     }
 
-    /// Validate a command before execution
+    /// Validate a command before execution with enhanced security checks
     pub fn validate_command(&self, command: &str, context: &SecurityContext) -> CommandValidation {
         // Check for command injection patterns
         if let Err(msg) = self.validate_command_injection(command) {
@@ -208,7 +227,7 @@ impl IpcSecurity {
         }
     }
 
-    /// Check rate limits for a command
+    /// Check rate limits for a command with enhanced per-second limiting
     fn check_rate_limit(&self, command: &str, session_id: &str) -> Result<(), String> {
         // Try command-specific rate limit first, then fall back to global
         let limit = self
@@ -420,7 +439,7 @@ impl IpcSecurity {
         Ok(())
     }
 
-    /// Get security statistics
+    /// Get comprehensive security statistics
     pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
 
