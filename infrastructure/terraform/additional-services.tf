@@ -123,6 +123,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "autodevai_storage
 resource "aws_kms_key" "s3_encryption_key" {
   description             = "KMS key for S3 bucket encryption"
   deletion_window_in_days = 7
+  enable_key_rotation     = true  # Enable key rotation for security
   
   tags = {
     Name = "autodevai-s3-encryption-key-${var.environment}"
@@ -137,14 +138,21 @@ resource "aws_kms_alias" "s3_encryption_key_alias" {
 # ECR Repository for GUI
 resource "aws_ecr_repository" "autodevai_gui" {
   name                 = "autodevai/gui"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"  # Changed to IMMUTABLE for security
   
   image_scanning_configuration {
     scan_on_push = true
   }
   
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+  
   tags = {
-    Name = "autodevai-gui-${var.environment}"
+    Name        = "autodevai-gui-${var.environment}"
+    Environment = var.environment
+    Service     = "gui"
+    ManagedBy   = "terraform"
   }
 }
 
@@ -173,14 +181,21 @@ resource "aws_ecr_lifecycle_policy" "autodevai_gui_policy" {
 # ECR Repository for Sandbox Manager
 resource "aws_ecr_repository" "autodevai_sandbox" {
   name                 = "autodevai/sandbox-manager"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"  # Changed to IMMUTABLE for security
   
   image_scanning_configuration {
     scan_on_push = true
   }
   
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+  
   tags = {
-    Name = "autodevai-sandbox-${var.environment}"
+    Name        = "autodevai-sandbox-${var.environment}"
+    Environment = var.environment
+    Service     = "sandbox-manager"
+    ManagedBy   = "terraform"
   }
 }
 

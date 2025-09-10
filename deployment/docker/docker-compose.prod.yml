@@ -180,7 +180,18 @@ services:
       - sandbox-data:/var/lib/sandboxes
     networks:
       - autodev-network
-    privileged: true
+    # Remove privileged mode for security
+    # privileged: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - CHOWN
+      - FOWNER
+      - SETGID
+      - SETUID
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s

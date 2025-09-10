@@ -20,6 +20,14 @@ spec:
       serviceAccountName: sandbox-manager-sa
       containers:
       - name: sandbox-manager
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: false
         image: autodevai/sandbox-manager:latest
         ports:
         - containerPort: 8080

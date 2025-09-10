@@ -363,7 +363,16 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: autodev-ai-cadvisor
     restart: unless-stopped
-    privileged: true
+    # Security hardened configuration
+    user: "65534:65534"  # nobody user
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:unconfined
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - SYS_PTRACE
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:
@@ -374,8 +383,6 @@ services:
       - /cgroup:/cgroup:ro
     networks:
       - autodev_network
-    security_opt:
-      - no-new-privileges:false  # Required for cAdvisor
     deploy:
       resources:
         limits:

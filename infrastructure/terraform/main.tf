@@ -61,7 +61,7 @@ resource "aws_subnet" "public_subnets" {
   cidr_block        = "10.0.${count.index + 1}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
   
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false  # Removed public IP assignment for security
   
   tags = {
     Name = "autodevai-public-${count.index + 1}-${var.environment}"

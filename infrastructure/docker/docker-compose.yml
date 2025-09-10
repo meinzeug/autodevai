@@ -107,6 +107,7 @@ services:
       context: ../
       dockerfile: infrastructure/docker/Dockerfile.sandbox
     container_name: autodevai-sandbox-manager
+    user: "1001:1001"  # Run as non-root user
     environment:
       SANDBOX_PORT_RANGE_START: 50010
       SANDBOX_PORT_RANGE_END: 50089
@@ -114,8 +115,8 @@ services:
       DATABASE_URL: postgresql://autodevai:autodevai_secure_2024@172.20.0.10:5432/autodevai
       REDIS_URL: redis://172.20.0.11:6379
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./configs/sandboxes:/etc/sandboxes
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./configs/sandboxes:/etc/sandboxes:ro
     ports:
       - "50010-50089:50010-50089"
     networks:
@@ -127,7 +128,16 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    privileged: true
+    security_opt:
+      - no-new-privileges:true
+      - apparmor:docker-default
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
 
   # Nginx Reverse Proxy
   nginx:

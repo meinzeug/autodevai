@@ -70,6 +70,7 @@ resource "aws_cloudwatch_log_group" "eks_cluster_log_group" {
 resource "aws_kms_key" "eks_encryption_key" {
   description             = "KMS key for EKS cluster encryption"
   deletion_window_in_days = 7
+  enable_key_rotation     = true  # Enable key rotation for security
   
   tags = {
     Name = "autodevai-eks-encryption-key-${var.environment}"
@@ -149,9 +150,22 @@ resource "aws_launch_template" "eks_node_template" {
   
   vpc_security_group_ids = [aws_security_group.eks_node_sg.id]
   
+  # Secure metadata service configuration
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"  # Require IMDSv2
+    http_put_response_hop_limit = 1
+    instance_metadata_tags = "enabled"
+  }
+  
   user_data = base64encode(<<-EOF
     #!/bin/bash
     /etc/eks/bootstrap.sh ${aws_eks_cluster.autodevai_cluster.name}
+    
+    # Secure EC2 metadata service
+    echo 'net.ipv4.conf.all.send_redirects = 0' >> /etc/sysctl.conf
+    echo 'net.ipv4.conf.default.send_redirects = 0' >> /etc/sysctl.conf
+    sysctl -p
     
     # Install additional tools
     yum update -y

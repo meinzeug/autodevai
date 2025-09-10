@@ -115,10 +115,13 @@ resource "aws_db_instance" "autodevai_db" {
   maintenance_window     = "sun:04:00-sun:05:00"
   delete_automated_backups = false
   
-  # Monitoring
+  # Monitoring and Logging
   performance_insights_enabled = true
   monitoring_interval         = 60
   monitoring_role_arn        = aws_iam_role.rds_enhanced_monitoring.arn
+  
+  # Enable comprehensive logging
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade", "postgresql.log", "postgresql.log.gz"]
   
   # Security
   deletion_protection = var.environment == "prod" ? true : false
@@ -166,6 +169,7 @@ resource "aws_db_instance" "autodevai_db_replica" {
 resource "aws_kms_key" "rds_encryption_key" {
   description             = "KMS key for RDS encryption"
   deletion_window_in_days = 7
+  enable_key_rotation     = true  # Enable key rotation for security
   
   tags = {
     Name = "autodevai-rds-encryption-key-${var.environment}"

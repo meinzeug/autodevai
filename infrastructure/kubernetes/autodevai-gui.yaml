@@ -19,6 +19,14 @@ spec:
     spec:
       containers:
       - name: autodevai-gui
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: false
         image: autodevai/gui:latest
         ports:
         - containerPort: 3000

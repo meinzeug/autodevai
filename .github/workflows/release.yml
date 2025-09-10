@@ -54,13 +54,25 @@ jobs:
 
       - name: Extract version information
         id: version
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-            RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            # Sanitize inputs by removing any shell metacharacters
+            VERSION=$(printf '%s' "${INPUT_VERSION}" | tr -cd '[:alnum:].-')
+            RELEASE_TYPE=$(printf '%s' "${INPUT_RELEASE_TYPE}" | tr -cd '[:alnum:]')
+            
+            # Validate version format
+            if [[ ! "${VERSION}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+              echo "Error: Invalid version format: ${VERSION}"
+              exit 1
+            fi
           else
-            VERSION="${GITHUB_REF#refs/tags/}"
-            if [[ "$VERSION" == *"-"* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+            if [[ "${VERSION}" == *"-"* ]]; then
               RELEASE_TYPE="prerelease"
             else
               RELEASE_TYPE="release"
@@ -70,145 +82,163 @@ jobs:
           VERSION_NUM=${VERSION#v}
           IS_PRERELEASE=$([[ "$RELEASE_TYPE" == "prerelease" || "$VERSION" == *"-"* ]] && echo "true" || echo "false")
 
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "version_number=${VERSION_NUM}" >> $GITHUB_OUTPUT
-          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
-          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+          # Use printf to safely output values
+          printf 'version=%s\n' "${VERSION}" >> $GITHUB_OUTPUT
+          printf 'version_number=%s\n' "${VERSION_NUM}" >> $GITHUB_OUTPUT
+          printf 'tag=%s\n' "${VERSION}" >> $GITHUB_OUTPUT
+          printf 'is_prerelease=%s\n' "${IS_PRERELEASE}" >> $GITHUB_OUTPUT
 
-          echo "Release version: ${VERSION}"
-          echo "Version number: ${VERSION_NUM}"
-          echo "Is prerelease: ${IS_PRERELEASE}"
+          printf 'Release version: %s\n' "${VERSION}"
+          printf 'Version number: %s\n' "${VERSION_NUM}"
+          printf 'Is prerelease: %s\n' "${IS_PRERELEASE}"
 
       - name: Generate changelog
         id: changelog
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           # Get previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
           if [[ -n "$PREV_TAG" ]]; then
-            echo "Generating changelog from $PREV_TAG to ${{ steps.version.outputs.tag }}"
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges $PREV_TAG..${{ steps.version.outputs.tag }} | head -20)
-            FULL_CHANGELOG=$(git log --pretty=format:"- %s (%h) by %an" --no-merges $PREV_TAG..${{ steps.version.outputs.tag }})
+            printf 'Generating changelog from %s to %s\n' "${PREV_TAG}" "${RELEASE_TAG}"
+            # Use git log with safe format specifiers
+            git log --pretty=format:"- %s (%h)" --no-merges "${PREV_TAG}..${RELEASE_TAG}" | head -20 > CHANGELOG_BRIEF.md
+            git log --pretty=format:"- %s (%h) by %an" --no-merges "${PREV_TAG}..${RELEASE_TAG}" > CHANGELOG_FULL.md
           else
             echo "Generating changelog for initial release"
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
-            FULL_CHANGELOG=$(git log --pretty=format:"- %s (%h) by %an" --no-merges)
+            git log --pretty=format:"- %s (%h)" --no-merges | head -20 > CHANGELOG_BRIEF.md
+            git log --pretty=format:"- %s (%h) by %an" --no-merges > CHANGELOG_FULL.md
           fi
 
-          # Save to files
-          echo "$CHANGELOG" > CHANGELOG_BRIEF.md
-          echo "$FULL_CHANGELOG" > CHANGELOG_FULL.md
-
-          # Save to output (escaped for GitHub Actions)
+          # Save to output using heredoc to prevent injection
           {
             echo "changelog<<EOF"
-            echo "$CHANGELOG"
+            cat CHANGELOG_BRIEF.md
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: release_notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          cat > RELEASE_NOTES.md << EOF
-          # AutoDev-AI Neural Bridge Platform ${{ steps.version.outputs.version }}
+          cat > RELEASE_NOTES.md << 'EOF'
+# AutoDev-AI Neural Bridge Platform %RELEASE_VERSION%
 
-          ## 🚀 What's New
+## 🚀 What's New
 
-          ${{ steps.changelog.outputs.changelog }}
+%CHANGELOG%
 
-          ## 📦 Installation
+## 📦 Installation
 
-          ### Desktop Applications
-          **Windows:**
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64-setup.exe\` - Windows 64-bit installer
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64-setup.exe\` - Windows ARM64 installer
+### Desktop Applications
+**Windows:**
+- `AutoDev-AI_%RELEASE_VERSION%_x64-setup.exe` - Windows 64-bit installer
+- `AutoDev-AI_%RELEASE_VERSION%_arm64-setup.exe` - Windows ARM64 installer
 
-          **macOS:**
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_universal.dmg\` - Universal binary (Intel + Apple Silicon)
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64.dmg\` - Intel Macs only
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_aarch64.dmg\` - Apple Silicon only
+**macOS:**
+- `AutoDev-AI_%RELEASE_VERSION%_universal.dmg` - Universal binary (Intel + Apple Silicon)
+- `AutoDev-AI_%RELEASE_VERSION%_x64.dmg` - Intel Macs only
+- `AutoDev-AI_%RELEASE_VERSION%_aarch64.dmg` - Apple Silicon only
 
-          **Linux:**
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_amd64.AppImage\` - x64 AppImage
-          - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64.AppImage\` - ARM64 AppImage
-          - \`autodev-ai_${{ steps.version.outputs.version }}_amd64.deb\` - Debian/Ubuntu package
+**Linux:**
+- `AutoDev-AI_%RELEASE_VERSION%_amd64.AppImage` - x64 AppImage
+- `AutoDev-AI_%RELEASE_VERSION%_arm64.AppImage` - ARM64 AppImage
+- `autodev-ai_%RELEASE_VERSION%_amd64.deb` - Debian/Ubuntu package
 
-          ### Docker Images
-          \`\`\`bash
-          # Pull the latest image
-          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+### Docker Images
+```bash
+# Pull the latest image
+docker pull ghcr.io/%GITHUB_REPOSITORY%:%RELEASE_VERSION%
 
-          # Run with port mapping
-          docker run -d \\
-            --name autodev-ai \\
-            -p 50020:50020 \\
-            -p 50021:50021 \\
-            -p 50022:50022 \\
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
-          \`\`\`
+# Run with port mapping
+docker run -d \
+  --name autodev-ai \
+  -p 50020:50020 \
+  -p 50021:50021 \
+  -p 50022:50022 \
+  ghcr.io/%GITHUB_REPOSITORY%:%RELEASE_VERSION%
+```
 
-          ### Kubernetes Deployment
-          \`\`\`bash
-          # Apply Kubernetes manifests
-          kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/k8s-deployment.yaml
-          \`\`\`
+### Kubernetes Deployment
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f https://github.com/%GITHUB_REPOSITORY%/releases/download/%RELEASE_TAG%/k8s-deployment.yaml
+```
 
-          ## ⚙️ Configuration
+## ⚙️ Configuration
 
-          - **Port Range**: 50000-50100 (configurable)
-          - **Default Ports**:
-            - GUI Service: 50020
-            - API Service: 50021
-            - Sandbox Service: 50022
-          - **Claude-Flow Integration**: Built-in multi-agent orchestration
-          - **Neural Bridge**: WebAssembly-accelerated neural processing
+- **Port Range**: 50000-50100 (configurable)
+- **Default Ports**:
+  - GUI Service: 50020
+  - API Service: 50021
+  - Sandbox Service: 50022
+- **Claude-Flow Integration**: Built-in multi-agent orchestration
+- **Neural Bridge**: WebAssembly-accelerated neural processing
 
-          ## 🔧 System Requirements
+## 🔧 System Requirements
 
-          - **Node.js**: 22.0+ (for development)
-          - **Rust**: 1.70+ (for building from source)
-          - **Docker**: 20.10+ (for containerized deployment)
-          - **Memory**: 4GB+ RAM recommended
-          - **Storage**: 2GB+ free space
+- **Node.js**: 22.0+ (for development)
+- **Rust**: 1.70+ (for building from source)
+- **Docker**: 20.10+ (for containerized deployment)
+- **Memory**: 4GB+ RAM recommended
+- **Storage**: 2GB+ free space
 
-          ## 🆕 Features in This Release
+## 🆕 Features in This Release
 
-          - Enhanced neural bridge performance
-          - Improved Docker container orchestration
-          - Updated Tauri desktop application framework
-          - Advanced security scanning and monitoring
-          - Streamlined CI/CD pipeline
-          - Multi-architecture support (x64, ARM64)
+- Enhanced neural bridge performance
+- Improved Docker container orchestration
+- Updated Tauri desktop application framework
+- Advanced security scanning and monitoring
+- Streamlined CI/CD pipeline
+- Multi-architecture support (x64, ARM64)
 
-          ## 🐛 Bug Fixes and Improvements
+## 🐛 Bug Fixes and Improvements
 
-          - Fixed memory leaks in long-running processes
-          - Improved error handling and logging
-          - Enhanced security configurations
-          - Updated dependencies to latest versions
-          - Performance optimizations across all components
+- Fixed memory leaks in long-running processes
+- Improved error handling and logging
+- Enhanced security configurations
+- Updated dependencies to latest versions
+- Performance optimizations across all components
 
-          ## 📚 Documentation
+## 📚 Documentation
 
-          - [Installation Guide](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/installation.md)
-          - [Configuration Reference](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/configuration.md)
-          - [API Documentation](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/api.md)
-          - [Troubleshooting](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/troubleshooting.md)
+- [Installation Guide](https://github.com/%GITHUB_REPOSITORY%/blob/%RELEASE_TAG%/docs/installation.md)
+- [Configuration Reference](https://github.com/%GITHUB_REPOSITORY%/blob/%RELEASE_TAG%/docs/configuration.md)
+- [API Documentation](https://github.com/%GITHUB_REPOSITORY%/blob/%RELEASE_TAG%/docs/api.md)
+- [Troubleshooting](https://github.com/%GITHUB_REPOSITORY%/blob/%RELEASE_TAG%/docs/troubleshooting.md)
 
-          ## 🤝 Contributing
+## 🤝 Contributing
 
-          We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
-          ## 📄 License
+## 📄 License
 
-          This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-          ---
+---
 
-          **Full Changelog**: https://github.com/${{ github.repository }}/compare/\${PREV_TAG}...${{ steps.version.outputs.tag }}
-          EOF
+**Full Changelog**: https://github.com/%GITHUB_REPOSITORY%/compare/${PREV_TAG}...%RELEASE_TAG%
+EOF
 
-          # Save release notes to output
+          # Safely substitute variables using sed
+          sed -i "s|%RELEASE_VERSION%|${RELEASE_VERSION}|g" RELEASE_NOTES.md
+          sed -i "s|%RELEASE_TAG%|${RELEASE_TAG}|g" RELEASE_NOTES.md
+          sed -i "s|%GITHUB_REPOSITORY%|${GITHUB_REPOSITORY}|g" RELEASE_NOTES.md
+          
+          # Insert changelog content safely
+          if [[ -f CHANGELOG_BRIEF.md ]]; then
+            # Use a temporary file to safely insert changelog
+            awk '/^%CHANGELOG%$/ {system("cat CHANGELOG_BRIEF.md"); next} {print}' RELEASE_NOTES.md > RELEASE_NOTES.tmp
+            mv RELEASE_NOTES.tmp RELEASE_NOTES.md
+          else
+            sed -i 's|%CHANGELOG%|No changelog available|g' RELEASE_NOTES.md
+          fi
+
+          # Save release notes to output using heredoc
           {
             echo "notes<<EOF"
             cat RELEASE_NOTES.md
@@ -216,26 +246,28 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Update version in files
+        env:
+          VERSION_NUM: ${{ steps.version.outputs.version_number }}
         run: |
-          VERSION_NUM="${{ steps.version.outputs.version_number }}"
-
           # Update package.json
-          npm version $VERSION_NUM --no-git-tag-version --allow-same-version
+          npm version "${VERSION_NUM}" --no-git-tag-version --allow-same-version
 
           # Update Cargo.toml
           cd src-tauri
-          sed -i "s/^version = .*/version = \"$VERSION_NUM\"/" Cargo.toml
+          sed -i "s/^version = .*/version = \"${VERSION_NUM}\"/" Cargo.toml
           cd ..
 
           # Update tauri.conf.json
-          jq --arg version "$VERSION_NUM" '.version = $version' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          jq --arg version "${VERSION_NUM}" '.version = $version' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
 
       - name: Commit version updates
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
-          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || exit 0
+          git commit -m "chore: bump version to ${RELEASE_VERSION}" || exit 0
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -323,14 +355,17 @@ jobs:
           includeUpdaterJson: true
 
       - name: Generate checksums
+        env:
+          PLATFORM_NAME: ${{ matrix.platform.name }}
+          PLATFORM_TARGET: ${{ matrix.platform.target }}
         run: |
-          cd src-tauri/target/${{ matrix.platform.target }}/release/bundle
+          cd "src-tauri/target/${PLATFORM_TARGET}/release/bundle"
           find . -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) \
-            -exec sha256sum {} \; > checksums-${{ matrix.platform.name }}.txt
+            -exec sha256sum {} \; > "checksums-${PLATFORM_NAME}.txt"
 
           # Display checksums
-          echo "=== Checksums for ${{ matrix.platform.name }} ==="
-          cat checksums-${{ matrix.platform.name }}.txt
+          printf '=== Checksums for %s ===\n' "${PLATFORM_NAME}"
+          cat "checksums-${PLATFORM_NAME}.txt"
 
       - name: Upload platform artifacts
         uses: actions/upload-artifact@v4
@@ -406,100 +441,104 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate Kubernetes manifests
+        env:
+          VERSION_NUMBER: ${{ needs.prepare.outputs.version_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           mkdir -p k8s-release
 
           # Create namespace
           cat > k8s-release/namespace.yaml << EOF
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: autodev-ai
-            labels:
-              app.kubernetes.io/name: autodev-ai
-              app.kubernetes.io/version: "${{ needs.prepare.outputs.version_number }}"
-          EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autodev-ai
+  labels:
+    app.kubernetes.io/name: autodev-ai
+    app.kubernetes.io/version: "${VERSION_NUMBER}"
+EOF
 
           # Create deployment for each service
           for service in gui api sandbox; do
             port=$((50020 + $(echo "gui api sandbox" | tr ' ' '\n' | grep -n $service | cut -d: -f1) - 1))
             
             cat > k8s-release/${service}-deployment.yaml << EOF
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: autodev-ai-${service}
-            namespace: autodev-ai
-            labels:
-              app.kubernetes.io/name: autodev-ai
-              app.kubernetes.io/component: ${service}
-              app.kubernetes.io/version: "${{ needs.prepare.outputs.version_number }}"
-          spec:
-            replicas: 2
-            selector:
-              matchLabels:
-                app.kubernetes.io/name: autodev-ai
-                app.kubernetes.io/component: ${service}
-            template:
-              metadata:
-                labels:
-                  app.kubernetes.io/name: autodev-ai
-                  app.kubernetes.io/component: ${service}
-              spec:
-                containers:
-                - name: ${service}
-                  image: ghcr.io/${{ github.repository }}/autodev-ai-${service}:${{ needs.prepare.outputs.version }}
-                  ports:
-                  - containerPort: ${port}
-                    name: http
-                  env:
-                  - name: PORT
-                    value: "${port}"
-                  - name: NODE_ENV
-                    value: "production"
-                  resources:
-                    requests:
-                      memory: "256Mi"
-                      cpu: "250m"
-                    limits:
-                      memory: "512Mi"
-                      cpu: "500m"
-                  livenessProbe:
-                    httpGet:
-                      path: /health
-                      port: http
-                    initialDelaySeconds: 30
-                    periodSeconds: 10
-                  readinessProbe:
-                    httpGet:
-                      path: /health
-                      port: http
-                    initialDelaySeconds: 5
-                    periodSeconds: 5
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: autodev-ai-${service}
-            namespace: autodev-ai
-            labels:
-              app.kubernetes.io/name: autodev-ai
-              app.kubernetes.io/component: ${service}
-          spec:
-            type: ClusterIP
-            ports:
-            - port: 80
-              targetPort: http
-              protocol: TCP
-              name: http
-            selector:
-              app.kubernetes.io/name: autodev-ai
-              app.kubernetes.io/component: ${service}
-          EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autodev-ai-${service}
+  namespace: autodev-ai
+  labels:
+    app.kubernetes.io/name: autodev-ai
+    app.kubernetes.io/component: ${service}
+    app.kubernetes.io/version: "${VERSION_NUMBER}"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: autodev-ai
+      app.kubernetes.io/component: ${service}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: autodev-ai
+        app.kubernetes.io/component: ${service}
+    spec:
+      containers:
+      - name: ${service}
+        image: ghcr.io/${GITHUB_REPOSITORY}/autodev-ai-${service}:${RELEASE_VERSION}
+        ports:
+        - containerPort: ${port}
+          name: http
+        env:
+        - name: PORT
+          value: "${port}"
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-${service}
+  namespace: autodev-ai
+  labels:
+    app.kubernetes.io/name: autodev-ai
+    app.kubernetes.io/component: ${service}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: autodev-ai
+    app.kubernetes.io/component: ${service}
+EOF
           done
 
           # Create combined deployment file
-          cat k8s-release/*.yaml > k8s-release/autodev-ai-${{ needs.prepare.outputs.version }}.yaml
+          cat k8s-release/*.yaml > k8s-release/autodev-ai-${RELEASE_VERSION}.yaml
 
       - name: Upload Kubernetes manifests
         uses: actions/upload-artifact@v4
@@ -540,30 +579,40 @@ jobs:
           prerelease: ${{ needs.prepare.outputs.is_prerelease }}
 
       - name: Upload release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPLOAD_URL: ${{ steps.release.outputs.upload_url }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           # Upload Tauri binaries
-          find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) | while read file; do
-            echo "Uploading: $(basename "$file")"
+          find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) | while read -r file; do
+            filename=$(basename "$file")
+            printf 'Uploading: %s\n' "${filename}"
+            
+            # Use curl with proper error handling and safe URL construction
+            upload_url_clean="${UPLOAD_URL%\{*}"
             curl -L \
               -X POST \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               -H "Content-Type: application/octet-stream" \
-              "${{ steps.release.outputs.upload_url }}?name=$(basename "$file")" \
-              --data-binary "@$file" || echo "Failed to upload $(basename "$file")"
+              "${upload_url_clean}?name=${filename}" \
+              --data-binary "@${file}" || printf 'Failed to upload %s\n' "${filename}"
           done
 
           # Upload Kubernetes manifests
-          if [[ -f artifacts/kubernetes-manifests/autodev-ai-${{ needs.prepare.outputs.version }}.yaml ]]; then
+          k8s_manifest="artifacts/kubernetes-manifests/autodev-ai-${RELEASE_VERSION}.yaml"
+          if [[ -f "${k8s_manifest}" ]]; then
+            upload_url_clean="${UPLOAD_URL%\{*}"
             curl -L \
               -X POST \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               -H "Content-Type: application/x-yaml" \
-              "${{ steps.release.outputs.upload_url }}?name=k8s-deployment.yaml" \
-              --data-binary "@artifacts/kubernetes-manifests/autodev-ai-${{ needs.prepare.outputs.version }}.yaml"
+              "${upload_url_clean}?name=k8s-deployment.yaml" \
+              --data-binary "@${k8s_manifest}"
           fi
 
   # Post-release tasks
@@ -577,48 +626,66 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Update documentation
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          CHANGELOG_CONTENT: ${{ needs.prepare.outputs.changelog }}
         run: |
           # Update README with latest version
-          sed -i "s/Version: [^)]*/Version: ${{ needs.prepare.outputs.version }}/g" README.md
+          sed -i "s/Version: [^)]*/Version: ${RELEASE_VERSION}/g" README.md
 
           # Update CHANGELOG
           if [[ -f CHANGELOG.md ]]; then
             cp CHANGELOG.md CHANGELOG.md.bak
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "## [${{ needs.prepare.outputs.version }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "${{ needs.prepare.outputs.changelog }}" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            tail -n +2 CHANGELOG.md.bak >> CHANGELOG.md
+            {
+              echo "# Changelog"
+              echo ""
+              echo "## [${RELEASE_VERSION}] - $(date +%Y-%m-%d)"
+              echo ""
+              echo "${CHANGELOG_CONTENT}"
+              echo ""
+              tail -n +2 CHANGELOG.md.bak
+            } > CHANGELOG.md
             rm CHANGELOG.md.bak
           fi
 
       - name: Commit documentation updates
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md CHANGELOG.md
-          git commit -m "docs: update documentation for release ${{ needs.prepare.outputs.version }}" || exit 0
+          git commit -m "docs: update documentation for release ${RELEASE_VERSION}" || exit 0
           git push origin HEAD:main || exit 0
 
       - name: Trigger website deployment
         if: success()
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBSITE_WEBHOOK_URL }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          curl -X POST "${{ secrets.WEBSITE_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "version": "${{ needs.prepare.outputs.version }}",
-              "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}",
-              "docker_image": "ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}"
-            }' || echo "Website update webhook failed (non-critical)"
+          if [[ -n "${WEBHOOK_URL}" ]]; then
+            curl -X POST "${WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"version\": \"${RELEASE_VERSION}\",
+                \"release_url\": \"https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}\",
+                \"docker_image\": \"ghcr.io/${GITHUB_REPOSITORY}:${RELEASE_VERSION}\"
+              }" || echo "Website update webhook failed (non-critical)"
+          fi
 
       - name: Announce release
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          echo "🎉 AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }} has been released!"
-          echo "📦 Download: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}"
-          echo "🐳 Docker: docker pull ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}"
-          echo "☸️  Kubernetes: kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare.outputs.tag }}/k8s-deployment.yaml"
+          printf '🎉 AutoDev-AI Neural Bridge %s has been released!\n' "${RELEASE_VERSION}"
+          printf '📦 Download: https://github.com/%s/releases/tag/%s\n' "${GITHUB_REPOSITORY}" "${RELEASE_TAG}"
+          printf '🐳 Docker: docker pull ghcr.io/%s:%s\n' "${GITHUB_REPOSITORY}" "${RELEASE_VERSION}"
+          printf '☸️  Kubernetes: kubectl apply -f https://github.com/%s/releases/download/%s/k8s-deployment.yaml\n' "${GITHUB_REPOSITORY}" "${RELEASE_TAG}"
 
   # Rollback mechanism
   rollback:
@@ -628,6 +695,12 @@ jobs:
     if: failure() && needs.prepare.outputs.version != ''
     steps:
       - name: Delete failed release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           echo "Release creation failed, cleaning up..."
 
@@ -635,20 +708,20 @@ jobs:
           curl -L \
             -X DELETE \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.prepare.outputs.tag }}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
             || echo "Release may not have been created"
 
           # Delete the tag if it was created via workflow_dispatch
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             curl -L \
               -X DELETE \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{ needs.prepare.outputs.tag }}" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/tags/${RELEASE_TAG}" \
               || echo "Tag deletion failed or tag doesn't exist"
           fi
 
-          echo "❌ Release ${{ needs.prepare.outputs.version }} rollback completed"
+          printf '❌ Release %s rollback completed\n' "${RELEASE_VERSION}"

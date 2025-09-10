@@ -189,16 +189,21 @@ jobs:
     if: always()
     steps:
       - name: Check pipeline status
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
         run: |
           echo "✅ Main pipeline completed"
-          echo "Validation: ${{ needs.validate.result }}"
-          echo "Tests: ${{ needs.test.result }}"
-          echo "Build: ${{ needs.build.result }}"
-          echo "Security: ${{ needs.security.result }}"
+          echo "Validation: $VALIDATE_RESULT"
+          echo "Tests: $TEST_RESULT"
+          echo "Build: $BUILD_RESULT"
+          echo "Security: $SECURITY_RESULT"
           
-          if [[ "${{ needs.validate.result }}" == "failure" ]] || \
-             [[ "${{ needs.test.result }}" == "failure" ]] || \
-             [[ "${{ needs.build.result }}" == "failure" ]]; then
+          if [[ "$VALIDATE_RESULT" == "failure" ]] || \
+             [[ "$TEST_RESULT" == "failure" ]] || \
+             [[ "$BUILD_RESULT" == "failure" ]]; then
             echo "❌ Pipeline failed"
             exit 1
           else
