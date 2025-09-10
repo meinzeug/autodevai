@@ -709,24 +709,30 @@ jobs:
             const needs = ${{ toJSON(needs) }};
 
             let report = '# 🔍 PR Validation Summary\n\n';
-            report += '**PR Size:** ' + (needs['pr-analysis']?.outputs?.pr_size || 'N/A') + '\n';
-            report += '**Complexity Score:** ' + (needs['pr-analysis']?.outputs?.complexity_score || 'N/A') + '/4\n';
-            report += '**Breaking Changes:** ' + (needs['pr-analysis']?.outputs?.is_breaking || 'N/A') + '\n';
-            report += '**Author:** @' + (needs['pr-analysis']?.outputs?.author || 'N/A') + '\n\n';
+            
+            // PR Info section - using safe property access
+            const prAnalysis = needs['pr-analysis'] || {};
+            const outputs = prAnalysis.outputs || {};
+            
+            report += '**PR Size:** ' + (outputs.pr_size || 'N/A') + '\n';
+            report += '**Complexity Score:** ' + (outputs.complexity_score || 'N/A') + '/4\n';
+            report += '**Breaking Changes:** ' + (outputs.is_breaking || 'N/A') + '\n';
+            report += '**Author:** @' + (outputs.author || 'N/A') + '\n\n';
 
             // Change detection
             report += '## 📋 Change Detection\n\n';
-            const hasFrontend = needs['pr-analysis']?.outputs?.has_frontend_changes === 'true';
-            const hasBackend = needs['pr-analysis']?.outputs?.has_backend_changes === 'true';
-            const hasDocker = needs['pr-analysis']?.outputs?.has_docker_changes === 'true';
-            const hasDocs = needs['pr-analysis']?.outputs?.has_docs_changes === 'true';
-            const hasConfig = needs['pr-analysis']?.outputs?.has_config_changes === 'true';
             
-            report += `- **Frontend:** ${hasFrontend ? '✅ Yes' : '❌ No'}\n`;
-            report += `- **Backend:** ${hasBackend ? '✅ Yes' : '❌ No'}\n`;
-            report += `- **Docker:** ${hasDocker ? '✅ Yes' : '❌ No'}\n`;
-            report += `- **Documentation:** ${hasDocs ? '✅ Yes' : '❌ No'}\n`;
-            report += `- **Configuration:** ${hasConfig ? '✅ Yes' : '❌ No'}\n\n`;
+            const hasFrontend = outputs.has_frontend_changes === 'true';
+            const hasBackend = outputs.has_backend_changes === 'true';
+            const hasDocker = outputs.has_docker_changes === 'true';
+            const hasDocs = outputs.has_docs_changes === 'true';
+            const hasConfig = outputs.has_config_changes === 'true';
+            
+            report += '- **Frontend:** ' + (hasFrontend ? '✅ Yes' : '❌ No') + '\n';
+            report += '- **Backend:** ' + (hasBackend ? '✅ Yes' : '❌ No') + '\n';
+            report += '- **Docker:** ' + (hasDocker ? '✅ Yes' : '❌ No') + '\n';
+            report += '- **Documentation:** ' + (hasDocs ? '✅ Yes' : '❌ No') + '\n';
+            report += '- **Configuration:** ' + (hasConfig ? '✅ Yes' : '❌ No') + '\n\n';
 
             // Validation results
             report += '## ✅ Validation Results\n\n';
@@ -759,7 +765,7 @@ jobs:
                 status = '⏳ Running';
               }
               
-              report += `- **${check.name}:** ${status}\n`;
+              report += '- **' + check.name + ':** ' + status + '\n';
             }
 
             report += '\n';
@@ -775,20 +781,21 @@ jobs:
               for (const check of checks) {
                 const result = needs[check.key];
                 if (result && result.result === 'failure') {
-                  report += `- Fix issues found in ${check.name}\n`;
+                  report += '- Fix issues found in ' + check.name + '\n';
                 }
               }
               report += '\n';
             }
 
             // Size recommendations
-            const prSize = '${{ needs['pr-analysis'].outputs.pr_size }}';
+            const prSize = outputs.pr_size || '';
             if (prSize === 'xlarge') {
               report += '💡 **Tip:** Consider breaking this large PR into smaller, focused PRs for easier review.\n\n';
             }
 
             // Breaking change recommendations
-            if ('${{ needs['pr-analysis'].outputs.is_breaking }}' === 'true') {
+            const isBreaking = outputs.is_breaking === 'true';
+            if (isBreaking) {
               report += '🔄 **Breaking Changes Detected:** Ensure all documentation is updated and consider semantic versioning implications.\n\n';
             }
 
