@@ -8,16 +8,11 @@ updates:
       day: 'monday'
       time: '09:00'
     open-pull-requests-limit: 5
-    reviewers:
-      - '@autodev-ai/core-team'
-    assignees:
-      - '@autodev-ai/maintainers'
     commit-message:
       prefix: 'npm'
       prefix-development: 'npm(dev)'
       include: 'scope'
     labels:
-      - 'dependencies'
       - 'javascript'
     ignore:
       # Ignore major version updates for critical dependencies
@@ -55,15 +50,10 @@ updates:
       day: 'tuesday'
       time: '09:00'
     open-pull-requests-limit: 5
-    reviewers:
-      - '@autodev-ai/rust-team'
-    assignees:
-      - '@autodev-ai/maintainers'
     commit-message:
       prefix: 'cargo'
       include: 'scope'
     labels:
-      - 'dependencies'
       - 'rust'
     ignore:
       # Ignore major version updates for Tauri
@@ -92,16 +82,11 @@ updates:
       day: 'wednesday'
       time: '09:00'
     open-pull-requests-limit: 3
-    reviewers:
-      - '@autodev-ai/devops-team'
-    assignees:
-      - '@autodev-ai/maintainers'
     commit-message:
       prefix: 'ci'
       include: 'scope'
     labels:
-      - 'dependencies'
-      - 'github-actions'
+      - 'ci'
     groups:
       setup-actions:
         patterns:
@@ -122,10 +107,7 @@ updates:
       day: 'thursday'
       time: '09:00'
     open-pull-requests-limit: 2
-    reviewers:
-      - '@autodev-ai/devops-team'
     commit-message:
       prefix: 'docker'
     labels:
-      - 'dependencies'
       - 'docker'
