@@ -28,7 +28,7 @@ clap = { version = "4.0", features = ["derive"] }
 # Window state management using built-in Tauri APIs (Tauri v1.5 compatible)
 directories = "5.0"
 tauri-plugin-window-state = "2.4.0"
-tauri-plugin-single-instance = "2.0"
+tauri-plugin-single-instance = "2.3"
 # Additional plugins for complete system - using compatible versions
 # tauri-plugin-global-shortcut = "2.0"
 # tauri-plugin-notification = "2.0"
