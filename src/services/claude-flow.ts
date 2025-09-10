@@ -39,7 +39,7 @@ class ClaudeFlowOrchestrator {
   private agentCapabilities: Map<string, AgentCapability>;
   private taskQueue: Array<any>;
   private memoryStore: Map<string, any>;
-  private hooks: CoordinationHooks;
+  private hooks!: CoordinationHooks;
 
   constructor(openRouterClient: OpenRouterClient) {
     this.openRouterClient = openRouterClient;
@@ -284,8 +284,8 @@ class ClaudeFlowOrchestrator {
     if (!swarm) return [];
 
     const availableAgents = Array.from(swarm.agents.values())
-      .filter(agent => agent.status === 'idle')
-      .sort((a, b) => {
+      .filter((agent: any) => agent.status === 'idle')
+      .sort((a: any, b: any) => {
         const aCapability = this.agentCapabilities.get(a.type);
         const bCapability = this.agentCapabilities.get(b.type);
         
@@ -298,7 +298,7 @@ class ClaudeFlowOrchestrator {
         return bScore - aScore;
       });
 
-    return availableAgents.slice(0, maxAgents).map(agent => agent.id);
+    return availableAgents.slice(0, maxAgents).map((agent: any) => agent.id);
   }
 
   private calculateAgentTaskScore(
@@ -560,7 +560,10 @@ class ClaudeFlowOrchestrator {
 }
 
 export {
-  ClaudeFlowOrchestrator,
+  ClaudeFlowOrchestrator
+};
+
+export type {
   SwarmTopology,
   TaskPriority,
   AgentCapability,

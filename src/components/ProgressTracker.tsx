@@ -6,8 +6,7 @@ import {
   AlertCircle, 
   Play,
   Pause,
-  Square,
-  RotateCcw
+  Square
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -41,7 +40,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   className,
   steps = [],
   showEstimatedTime = true,
-  showSteps = false,
+  showSteps: _showSteps = false,
   onCancel,
   onPause,
   onResume,
@@ -189,7 +188,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         </div>
 
         <div className="space-y-3">
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <div key={step.id} className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 {getStatusIcon(step.status)}

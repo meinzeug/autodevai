@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Zap, 
   Brain, 
@@ -9,7 +9,6 @@ import {
   Activity,
   Terminal,
   CheckCircle2,
-  AlertCircle,
   Sun,
   Moon,
   Maximize2,
@@ -29,7 +28,6 @@ import {
   ExecutionOutput,
   ClaudeFlowCommand,
   OrchestrationConfig,
-  ExecutionMode,
   NotificationMessage
 } from './types';
 import toast from 'react-hot-toast';
@@ -70,7 +68,7 @@ function AppContent() {
     activeTab: 'orchestration'
   });
   
-  const [notifications, setNotifications] = useState<NotificationMessage[]>([]);
+  const [_notifications, _setNotifications] = useState<NotificationMessage[]>([]);
   const tauriService = useMemo(() => TauriService.getInstance(), []);
 
   // Initialize Tauri service and event listeners

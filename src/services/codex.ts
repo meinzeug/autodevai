@@ -135,7 +135,7 @@ class CodexIntegration {
       return codexResponse;
     } catch (error) {
       console.error('Codex generation error:', error);
-      throw new Error(`Failed to generate ${request.language} code: ${error.message}`);
+      throw new Error(`Failed to generate ${request.language} code: ${(error as Error).message}`);
     }
   }
 
@@ -150,7 +150,7 @@ class CodexIntegration {
       optimization: `Optimize the provided ${language} code for better performance, readability, and maintainability while preserving functionality.`
     };
 
-    return `${basePrompt}\n\n${taskPrompts[taskType] || taskPrompts.generation}\n\nAlways respond with:
+    return `${basePrompt}\n\n${(taskPrompts as any)[taskType] || taskPrompts.generation}\n\nAlways respond with:
 1. The requested code (properly formatted)
 2. A clear explanation of what the code does
 3. Suggestions for improvements or alternatives
@@ -199,7 +199,7 @@ class CodexIntegration {
       'go': 0.1
     };
 
-    score += languageComplexity[language.toLowerCase()] || 0;
+    score += (languageComplexity as any)[language.toLowerCase()] || 0;
     score = Math.max(0.1, Math.min(1.0, score));
 
     return {
@@ -215,7 +215,7 @@ class CodexIntegration {
     const sections = {
       code: '',
       explanation: '',
-      suggestions: []
+      suggestions: [] as string[]
     };
 
     // Extract code blocks
@@ -311,7 +311,7 @@ Provide detailed analysis with specific line numbers where applicable.`;
     const performance_score = extractScore('performance');
 
     // Extract issues
-    const issues = [];
+    const issues: Array<{type: 'error' | 'warning' | 'suggestion'; message: string; severity: number}> = [];
     const issuePatterns = [
       /error[:\s]*(.*)/gi,
       /warning[:\s]*(.*)/gi,
@@ -386,7 +386,7 @@ Provide:
       : originalCode;
 
     // Extract improvements
-    const improvements = [];
+    const improvements: Array<{type: 'performance' | 'readability' | 'security' | 'memory'; description: string; impact: number}> = [];
     const improvementPatterns = [
       /performance[:\s]*(.*)/gi,
       /readability[:\s]*(.*)/gi,
@@ -495,7 +495,10 @@ Continue the code naturally, maintaining style and patterns.`;
 }
 
 export {
-  CodexIntegration,
+  CodexIntegration
+};
+
+export type {
   CodexRequest,
   CodexResponse,
   CodeAnalysis,

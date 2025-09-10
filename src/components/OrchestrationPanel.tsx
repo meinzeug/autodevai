@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Settings, RefreshCw, Container, Cpu, Activity } from 'lucide-react';
+import { Play, Settings, RefreshCw, Container } from 'lucide-react';
 import { TauriService } from '../services/tauri';
 import { ExecutionMode, ClaudeFlowCommand, OrchestrationConfig, DockerContainer } from '../types';
 import { cn } from '../utils/cn';
@@ -97,7 +97,7 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
 
   const createDockerSandbox = async () => {
     try {
-      const containerId = await tauriService.createDockerSandbox(
+      await tauriService.createDockerSandbox(
         'autodev-ai:latest',
         `autodev-sandbox-${Date.now()}`
       );
@@ -315,7 +315,7 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
                     className="flex items-center justify-between text-xs p-2 bg-gray-700 rounded"
                   >
                     <div className="flex items-center space-x-2">
-                      <Docker className="w-3 h-3 text-blue-400" />
+                      <Container className="w-3 h-3 text-blue-400" />
                       <span className="text-white">{container.name}</span>
                     </div>
                     <span

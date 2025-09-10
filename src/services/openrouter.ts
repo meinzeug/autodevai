@@ -292,7 +292,7 @@ class OpenRouterClient {
   async healthCheck(): Promise<boolean> {
     try {
       const response = await this.makeRequest('/models', {});
-      return Array.isArray(response) || response.data;
+      return Array.isArray(response) || !!(response as any).data;
     } catch (error) {
       console.error('OpenRouter health check failed:', error);
       return false;
@@ -314,7 +314,10 @@ class OpenRouterClient {
 }
 
 export {
-  OpenRouterClient,
+  OpenRouterClient
+};
+
+export type {
   OpenRouterConfig,
   OpenRouterResponse,
   ModelCapabilities,
