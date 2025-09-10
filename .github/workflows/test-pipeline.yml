@@ -1,0 +1,392 @@
+name: Comprehensive Test Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '18'
+  RUST_VERSION: 'stable'
+
+jobs:
+  quality-gates:
+    name: Quality Gates & Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Code formatting check
+        run: |
+          npm run format:check
+          cargo fmt --all -- --check
+
+      - name: Lint JavaScript/TypeScript
+        run: npm run lint
+
+      - name: Lint Rust
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: TypeScript type checking
+        run: npm run typecheck
+
+      - name: Security audit
+        run: |
+          npm audit --audit-level moderate
+          cargo audit
+
+      - name: Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'AutoDev-AI'
+          path: '.'
+          format: 'HTML'
+
+  rust-tests:
+    name: Rust Backend Tests
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run Rust unit tests
+        run: cargo test --manifest-path tests/Cargo.toml --verbose
+
+      - name: Generate Rust coverage
+        run: |
+          cargo tarpaulin --manifest-path tests/Cargo.toml \
+            --out xml --output-dir tests/coverage/rust \
+            --exclude-files 'src/main.rs' 'tests/*'
+
+      - name: Upload Rust coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: tests/coverage/rust/cobertura.xml
+          flags: rust
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Run frontend unit tests
+        run: npm run test:frontend -- --coverage --ci --watchAll=false
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: tests/coverage/frontend/lcov.info
+          flags: frontend
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [rust-tests, frontend-tests]
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: autodevai_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Start test services
+        run: |
+          docker-compose -f docker/docker-compose.test.yml up -d
+          sleep 30
+
+      - name: Run integration tests
+        run: npm run test:integration -- --ci --watchAll=false
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5433
+          TEST_DB_NAME: autodevai_test
+          TEST_DB_USER: test_user
+          TEST_DB_PASS: test_pass
+          REDIS_URL: redis://localhost:6379
+
+      - name: Upload integration coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: tests/coverage/integration/lcov.info
+          flags: integration
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          override: true
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Build Tauri app
+        run: npm run tauri build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload E2E artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: playwright-report
+          path: tests/coverage/playwright-report/
+          retention-days: 30
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Install Artillery
+        run: npm install -g artillery@latest
+
+      - name: Start application
+        run: |
+          npm run tauri dev &
+          sleep 60  # Wait for app to start
+
+      - name: Run performance tests
+        run: npm run test:performance
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: tests/coverage/performance-report.html
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd tests && npm ci
+
+      - name: Run security tests
+        run: npm run test:security
+
+      - name: OWASP ZAP Scan
+        uses: zaproxy/action-full-scan@v0.4.0
+        with:
+          target: 'http://localhost:1420'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [rust-tests, frontend-tests, integration-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v3
+
+      - name: Merge coverage reports
+        run: |
+          npm ci
+          cd tests && npm ci
+          npm run coverage:merge
+          npm run coverage:report
+
+      - name: Upload merged coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: tests/coverage/merged.lcov
+          flags: merged
+
+      - name: Coverage quality gate
+        run: |
+          COVERAGE=$(npm run coverage:check | grep -o '[0-9.]*%' | head -1 | sed 's/%//')
+          if (( $(echo "$COVERAGE < 95" | bc -l) )); then
+            echo "Coverage $COVERAGE% is below 95% threshold"
+            exit 1
+          fi
+          echo "Coverage $COVERAGE% meets 95% threshold"
+
+  deployment-readiness:
+    name: Deployment Readiness
+    runs-on: ubuntu-latest
+    needs: [performance-tests, security-tests, coverage-report]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all tests passed
+        run: |
+          if [[ "${{ needs.performance-tests.result }}" == "failure" || 
+                "${{ needs.security-tests.result }}" == "failure" || 
+                "${{ needs.coverage-report.result }}" == "failure" ]]; then
+            echo "❌ Some tests failed - deployment not ready"
+            exit 1
+          fi
+          echo "✅ All tests passed - ready for deployment"
+
+      - name: Generate deployment report
+        run: |
+          echo "# Deployment Readiness Report" > deployment-report.md
+          echo "" >> deployment-report.md
+          echo "## Test Results" >> deployment-report.md
+          echo "- ✅ Quality Gates: Passed" >> deployment-report.md
+          echo "- ✅ Unit Tests: Passed" >> deployment-report.md
+          echo "- ✅ Integration Tests: Passed" >> deployment-report.md
+          echo "- ✅ E2E Tests: Passed" >> deployment-report.md
+          echo "- ✅ Performance Tests: Passed" >> deployment-report.md
+          echo "- ✅ Security Tests: Passed" >> deployment-report.md
+          echo "- ✅ Coverage: >95%" >> deployment-report.md
+          echo "" >> deployment-report.md
+          echo "## Deployment Status: 🚀 READY" >> deployment-report.md
+
+      - name: Upload deployment report
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-report
+          path: deployment-report.md

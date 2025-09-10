@@ -1,0 +1,135 @@
+# AutoDev-AI Neural Bridge Platform - Prometheus Configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'autodev-ai-monitor'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "rules/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # AutoDev-AI Main Application
+  - job_name: 'autodev-ai-app'
+    static_configs:
+      - targets: ['autodev-ai:3000']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+
+  # Docker Metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Nginx Metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 15s
+
+  # Sandbox Manager
+  - job_name: 'sandbox-manager'
+    static_configs:
+      - targets: ['sandbox-manager:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Neural Bridge Metrics
+  - job_name: 'neural-bridge'
+    static_configs:
+      - targets: ['autodev-ai:3000']
+    scrape_interval: 20s
+    metrics_path: /neural/metrics
+    honor_labels: true
+
+  # Elasticsearch Metrics
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: /_prometheus/metrics
+
+  # Custom Application Metrics
+  - job_name: 'autodev-custom-metrics'
+    static_configs:
+      - targets: ['autodev-ai:3000']
+    scrape_interval: 30s
+    metrics_path: /api/metrics
+    honor_labels: true
+
+  # Sandbox Metrics (Dynamic Discovery)
+  - job_name: 'sandboxes'
+    static_configs:
+      - targets: []
+    scrape_interval: 60s
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: sandbox-manager:8080
+      - target_label: __metrics_path__
+        replacement: /sandbox/metrics
+
+  # Claude Flow Hive Mind Metrics
+  - job_name: 'claude-flow-hive'
+    static_configs:
+      - targets: ['autodev-ai:3000']
+    scrape_interval: 45s
+    metrics_path: /hive/metrics
+    honor_labels: true
+
+# Remote write configuration (for long-term storage)
+# remote_write:
+#   - url: "http://victoriametrics:8428/api/v1/write"
+#     queue_config:
+#       max_samples_per_send: 10000
+#       max_shards: 30
+
+# Remote read configuration
+# remote_read:
+#   - url: "http://victoriametrics:8428/api/v1/read"

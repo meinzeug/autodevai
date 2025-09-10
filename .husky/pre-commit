@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# AutoDev-AI Pre-commit Hook
+echo "🔍 Running pre-commit checks..."
+
+# Run Claude Flow coordination hooks
+npx claude-flow@alpha hooks pre-commit --description "pre-commit validation"
+
+# Run lint-staged for file validation
+npx lint-staged
+
+# Run TypeScript check
+npm run typecheck
+
+# Run tests on staged files
+npm run test -- --run --passWithNoTests
+
+echo "✅ Pre-commit checks passed!"

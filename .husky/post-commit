@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Post-commit coordination
+echo "📝 Post-commit processing..."
+
+# Update Claude Flow memory with latest changes
+npx claude-flow@alpha hooks post-commit --export-metrics true
+
+# Generate commit summary for hive mind
+npx claude-flow@alpha memory store "hive/commits/latest" "$(git log -1 --pretty=format:'%H:%s')"
+
+echo "✅ Post-commit processing complete!"

@@ -1,0 +1,468 @@
+# Production Docker Compose for AutoDev-AI Neural Bridge Platform
+# Optimized for production deployment with full monitoring stack
+
+version: '3.8'
+
+# AutoDev-AI Neural Bridge Platform - Production Docker Compose
+# Port allocation: 50000-50100 (strictly enforced)
+# Main GUI: 50000, Database: 50050, Cache: 50051, Monitoring: 50090-50091
+# Sandboxes: 50010-50089 (reserved for dynamic project containers)
+
+services:
+  # =================================
+  # CORE APPLICATION SERVICES
+  # =================================
+  
+  autodev-ai:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: runtime
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: autodev-ai:production
+    container_name: autodev-ai-platform
+    restart: unless-stopped
+    ports:
+      - "50000:50000"  # Main GUI
+      - "50001:50001"  # API
+      - "50002:50002"  # WebSocket
+      - "50003:50003"  # Metrics
+    environment:
+      - RUST_LOG=info
+      - NODE_ENV=production
+      - AUTODEV_DATA_DIR=/app/data
+      - AUTODEV_LOG_DIR=/app/logs
+      - AUTODEV_CACHE_DIR=/app/cache
+      - AUTODEV_PORT_RANGE=50000-50100
+      - CLAUDE_FLOW_ENABLED=true
+      - NEURAL_BRIDGE_ENABLED=true
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+    volumes:
+      - autodev_data:/app/data
+      - autodev_logs:/app/logs
+      - autodev_cache:/app/cache
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - autodev_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "./autodev-ai", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # =================================
+  # DATABASE SERVICES
+  # =================================
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: autodev-ai-postgres
+    restart: unless-stopped
+    ports:
+      - "50050:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256"
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - postgres_logs:/var/log/postgresql
+    networks:
+      - autodev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    command: >
+      postgres
+        -c shared_preload_libraries=pg_stat_statements
+        -c pg_stat_statements.track=all
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c log_statement=mod
+        -c log_min_duration_statement=1000
+        -c log_checkpoints=on
+        -c log_connections=on
+        -c log_disconnections=on
+        -c log_lock_waits=on
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # PostgreSQL metrics exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: autodev-ai-postgres-exporter
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    networks:
+      - autodev_network
+    depends_on:
+      - postgres
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    container_name: autodev-ai-redis
+    restart: unless-stopped
+    ports:
+      - "50051:6379"
+    volumes:
+      - redis_data:/data
+      - redis_logs:/var/log/redis
+    networks:
+      - autodev_network
+    command: >
+      redis-server 
+        --appendonly yes 
+        --requirepass ${REDIS_PASSWORD}
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --tcp-keepalive 300
+        --save 900 1
+        --save 300 10
+        --save 60 10000
+        --rdbcompression yes
+        --rdbchecksum yes
+        --stop-writes-on-bgsave-error yes
+        --logfile /var/log/redis/redis.log
+        --loglevel notice
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # Redis metrics exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: autodev-ai-redis-exporter
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - autodev_network
+    depends_on:
+      - redis
+    security_opt:
+      - no-new-privileges:true
+
+  # =================================
+  # MONITORING SERVICES
+  # =================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: autodev-ai-prometheus
+    restart: unless-stopped
+    ports:
+      - "50091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+      - prometheus_rules:/etc/prometheus/rules:ro
+    networks:
+      - autodev_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--storage.tsdb.wal-compression'
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '0.5'
+        reservations:
+          memory: 1G
+          cpus: '0.25'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: autodev-ai-grafana
+    restart: unless-stopped
+    ports:
+      - "50090:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECRET_KEY}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,redis-datasource,postgres-datasource
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION=false
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
+      - GF_LOG_LEVEL=warn
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - autodev_network
+    depends_on:
+      - prometheus
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # =================================
+  # REVERSE PROXY & LOAD BALANCER
+  # =================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: autodev-ai-nginx
+    restart: unless-stopped
+    ports:
+      - "50080:80"
+      - "50081:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - autodev_network
+    depends_on:
+      - autodev-ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # =================================
+  # LOG AGGREGATION
+  # =================================
+
+  vector:
+    image: timberio/vector:latest-alpine
+    container_name: autodev-ai-vector
+    restart: unless-stopped
+    volumes:
+      - ./vector.toml:/etc/vector/vector.toml:ro
+      - autodev_logs:/app/logs:ro
+      - nginx_logs:/var/log/nginx:ro
+      - postgres_logs:/var/log/postgresql:ro
+      - redis_logs:/var/log/redis:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - autodev_network
+    depends_on:
+      - autodev-ai
+      - prometheus
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # =================================
+  # SYSTEM MONITORING
+  # =================================
+
+  # Container monitoring
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: autodev-ai-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    networks:
+      - autodev_network
+    security_opt:
+      - no-new-privileges:false  # Required for cAdvisor
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.1'
+
+  # Host metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: autodev-ai-node-exporter
+    restart: unless-stopped
+    pid: host
+    network_mode: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    security_opt:
+      - no-new-privileges:true
+
+# =================================
+# NETWORKS
+# =================================
+
+networks:
+  autodev_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          ip_range: 172.20.1.0/24
+          gateway: 172.20.1.1
+    driver_opts:
+      com.docker.network.bridge.name: autodev-bridge
+      com.docker.network.driver.mtu: 1500
+
+# =================================
+# VOLUMES
+# =================================
+
+volumes:
+  # Application data
+  autodev_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+  
+  autodev_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}
+  
+  autodev_cache:
+    driver: local
+
+  # Database volumes
+  postgres_data:
+    driver: local
+  
+  postgres_logs:
+    driver: local
+  
+  redis_data:
+    driver: local
+  
+  redis_logs:
+    driver: local
+
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  
+  prometheus_rules:
+    driver: local
+  
+  grafana_data:
+    driver: local
+
+  # Nginx logs
+  nginx_logs:
+    driver: local

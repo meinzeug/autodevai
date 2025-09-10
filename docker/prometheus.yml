@@ -1,0 +1,131 @@
+# Prometheus configuration for AutoDev-AI Neural Bridge Platform
+# Monitors all services in the Docker Compose stack
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'autodev-ai'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # AutoDev-AI main application
+  - job_name: 'autodev-ai'
+    static_configs:
+      - targets: ['autodev-ai:50000']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_timeout: 5s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # PostgreSQL monitoring (requires postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Redis monitoring (requires redis_exporter)  
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Docker container metrics (requires cadvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    honor_labels: true
+
+  # Node exporter for host metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Nginx monitoring
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Claude Flow Swarm metrics
+  - job_name: 'claude-flow-swarm'
+    static_configs:
+      - targets: ['autodev-ai:50001']
+    scrape_interval: 10s
+    metrics_path: /api/metrics/swarm
+    params:
+      format: ['prometheus']
+
+  # Neural Bridge metrics
+  - job_name: 'neural-bridge'
+    static_configs:
+      - targets: ['autodev-ai:50002']
+    scrape_interval: 15s
+    metrics_path: /api/metrics/neural
+    params:
+      format: ['prometheus']
+
+  # Project Sandbox monitoring (dynamic port range 50010-50089)
+  - job_name: 'project-sandboxes'
+    scrape_interval: 30s
+    metrics_path: /metrics
+    static_configs:
+      - targets: []
+    # Note: This will be populated dynamically by service discovery
+    # or updated via API when sandboxes are created/destroyed
+
+  # Vector log processing metrics
+  - job_name: 'vector'
+    static_configs:
+      - targets: ['vector:9598']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus
+    retention.time: 30d
+    retention.size: 10GB
+    wal-compression: true
+
+# Remote write configuration (for long-term storage)
+# remote_write:
+#   - url: "http://influxdb:8086/api/v1/prom/write?db=prometheus"
+#     queue_config:
+#       max_samples_per_send: 10000
+#       capacity: 10000
+#       max_shards: 10
+
+# Recording rules for performance optimization
+# rule_files:
+#   - /etc/prometheus/rules/*.yml

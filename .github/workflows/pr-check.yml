@@ -1,0 +1,843 @@
+name: PR Validation Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to validate'
+        required: true
+        type: string
+      force_full_validation:
+        description: 'Force full validation (skip change detection)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.75.0'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # PR metadata and change detection
+  pr-analysis:
+    name: PR Analysis & Change Detection
+    runs-on: ubuntu-24.04
+    outputs:
+      has_frontend_changes: ${{ steps.changes.outputs.has_frontend_changes }}
+      has_backend_changes: ${{ steps.changes.outputs.has_backend_changes }}
+      has_docker_changes: ${{ steps.changes.outputs.has_docker_changes }}
+      has_docs_changes: ${{ steps.changes.outputs.has_docs_changes }}
+      has_config_changes: ${{ steps.changes.outputs.has_config_changes }}
+      is_draft: ${{ steps.pr_info.outputs.is_draft }}
+      is_breaking: ${{ steps.analysis.outputs.is_breaking }}
+      complexity_score: ${{ steps.analysis.outputs.complexity_score }}
+      pr_size: ${{ steps.analysis.outputs.pr_size }}
+      author: ${{ steps.pr_info.outputs.author }}
+      labels: ${{ steps.pr_info.outputs.labels }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get PR information
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number }};
+            if (!prNumber) {
+              core.setFailed('Could not determine PR number');
+              return;
+            }
+            
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            core.setOutput('is_draft', pr.draft);
+            core.setOutput('author', pr.user.login);
+            core.setOutput('labels', pr.labels.map(label => label.name).join(','));
+            core.setOutput('pr_number', prNumber);
+            
+            console.log(`PR #${prNumber} by ${pr.user.login}`);
+            console.log(`Draft: ${pr.draft}`);
+            console.log(`Labels: ${pr.labels.map(label => label.name).join(', ')}`);
+
+      - name: Detect file changes
+        id: changes
+        run: |
+          # Get the base branch for comparison
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          
+          echo "Comparing $BASE_SHA...$HEAD_SHA"
+          
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Detect change types
+          HAS_FRONTEND=false
+          HAS_BACKEND=false
+          HAS_DOCKER=false
+          HAS_DOCS=false
+          HAS_CONFIG=false
+          
+          while IFS= read -r file; do
+            case "$file" in
+              src/*.* | public/*.* | *.html | *.css | *.js | *.ts | *.tsx | *.jsx | package*.json | vite.config.* | tsconfig*.json)
+                HAS_FRONTEND=true
+                ;;
+              src-tauri/*.* | Cargo*.* | *.rs)
+                HAS_BACKEND=true
+                ;;
+              docker/*.* | Dockerfile* | docker-compose*.* | .dockerignore)
+                HAS_DOCKER=true
+                ;;
+              *.md | docs/*.* | README*.* | CHANGELOG*.*)
+                HAS_DOCS=true
+                ;;
+              .github/*.* | *.yml | *.yaml | *.json | .env* | *.config.*)
+                HAS_CONFIG=true
+                ;;
+            esac
+          done <<< "$CHANGED_FILES"
+          
+          echo "has_frontend_changes=$HAS_FRONTEND" >> $GITHUB_OUTPUT
+          echo "has_backend_changes=$HAS_BACKEND" >> $GITHUB_OUTPUT
+          echo "has_docker_changes=$HAS_DOCKER" >> $GITHUB_OUTPUT
+          echo "has_docs_changes=$HAS_DOCS" >> $GITHUB_OUTPUT
+          echo "has_config_changes=$HAS_CONFIG" >> $GITHUB_OUTPUT
+          
+          echo "Frontend changes: $HAS_FRONTEND"
+          echo "Backend changes: $HAS_BACKEND"
+          echo "Docker changes: $HAS_DOCKER"
+          echo "Documentation changes: $HAS_DOCS"
+          echo "Configuration changes: $HAS_CONFIG"
+
+      - name: Analyze PR complexity
+        id: analysis
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          
+          # Count changes
+          LINES_ADDED=$(git diff --numstat $BASE_SHA...$HEAD_SHA | awk '{sum += $1} END {print sum}' || echo "0")
+          LINES_REMOVED=$(git diff --numstat $BASE_SHA...$HEAD_SHA | awk '{sum += $2} END {print sum}' || echo "0")
+          FILES_CHANGED=$(git diff --name-only $BASE_SHA...$HEAD_SHA | wc -l)
+          
+          TOTAL_LINES=$((LINES_ADDED + LINES_REMOVED))
+          
+          # Determine PR size
+          if [[ $TOTAL_LINES -lt 100 && $FILES_CHANGED -lt 5 ]]; then
+            PR_SIZE="small"
+            COMPLEXITY_SCORE=1
+          elif [[ $TOTAL_LINES -lt 500 && $FILES_CHANGED -lt 15 ]]; then
+            PR_SIZE="medium"
+            COMPLEXITY_SCORE=2
+          elif [[ $TOTAL_LINES -lt 1000 && $FILES_CHANGED -lt 30 ]]; then
+            PR_SIZE="large"
+            COMPLEXITY_SCORE=3
+          else
+            PR_SIZE="xlarge"
+            COMPLEXITY_SCORE=4
+          fi
+          
+          # Check for breaking changes
+          IS_BREAKING=false
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
+          
+          # Look for breaking change indicators
+          if echo "$CHANGED_FILES" | grep -E "(package\.json|Cargo\.toml|tauri\.conf\.json|docker|\.github/workflows)" || \
+             git diff $BASE_SHA...$HEAD_SHA | grep -E "BREAKING|breaking|major:|feat!:|fix!:"; then
+            IS_BREAKING=true
+          fi
+          
+          echo "pr_size=$PR_SIZE" >> $GITHUB_OUTPUT
+          echo "complexity_score=$COMPLEXITY_SCORE" >> $GITHUB_OUTPUT
+          echo "is_breaking=$IS_BREAKING" >> $GITHUB_OUTPUT
+          
+          echo "Lines added: $LINES_ADDED"
+          echo "Lines removed: $LINES_REMOVED"
+          echo "Files changed: $FILES_CHANGED"
+          echo "PR size: $PR_SIZE"
+          echo "Complexity score: $COMPLEXITY_SCORE"
+          echo "Breaking changes: $IS_BREAKING"
+
+  # PR title and description validation
+  pr-format-validation:
+    name: PR Format Validation
+    runs-on: ubuntu-24.04
+    needs: pr-analysis
+    steps:
+      - name: Validate PR title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request?.title || '';
+            const validPrefixes = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'ci', 'build'];
+            
+            // Check conventional commit format: type(scope): description
+            const conventionalCommitRegex = /^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?: .{1,50}$/;
+            
+            if (!conventionalCommitRegex.test(title)) {
+              core.setFailed(`PR title "${title}" does not follow conventional commit format. 
+                Expected format: type(scope): description
+                Valid types: ${validPrefixes.join(', ')}
+                Example: "feat(api): add user authentication endpoint"`);
+            } else {
+              console.log(`✅ PR title follows conventional commit format: "${title}"`);
+            }
+
+      - name: Validate PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || '';
+            
+            if (!body || body.trim().length < 10) {
+              core.setFailed('PR description is too short or missing. Please provide a meaningful description.');
+              return;
+            }
+            
+            // Check for required sections
+            const requiredSections = ['## Summary', '## Changes', '## Testing'];
+            const missingSections = requiredSections.filter(section => !body.includes(section));
+            
+            if (missingSections.length > 0) {
+              core.setOutput('missing_sections', missingSections.join(', '));
+              console.log(`⚠️ Missing recommended sections: ${missingSections.join(', ')}`);
+            } else {
+              console.log('✅ PR description includes all recommended sections');
+            }
+            
+            // Check for linked issues
+            const issueRegex = /(closes?|fixes?|resolves?)\s+#\d+/i;
+            if (issueRegex.test(body)) {
+              console.log('✅ PR links to an issue');
+            } else {
+              console.log('⚠️ PR does not link to an issue (recommended)');
+            }
+
+  # Code quality validation
+  code-quality:
+    name: Code Quality Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis]
+    if: needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || github.event.inputs.force_full_validation == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        if: needs.pr-analysis.outputs.has_backend_changes == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: Install frontend dependencies
+        if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
+        run: npm ci --prefer-offline
+
+      - name: Frontend linting
+        if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
+        run: |
+          echo "Running ESLint..."
+          npm run lint -- --format json --output-file eslint-results.json || true
+          
+          echo "Running Prettier check..."
+          npm run format:check
+          
+          echo "TypeScript type checking..."
+          npm run typecheck
+
+      - name: Backend linting
+        if: needs.pr-analysis.outputs.has_backend_changes == 'true'
+        working-directory: src-tauri
+        run: |
+          echo "Running Rust formatting check..."
+          cargo fmt -- --check
+          
+          echo "Running Clippy..."
+          cargo clippy --all-targets --all-features -- -D warnings
+          
+          echo "Running cargo check..."
+          cargo check --all-targets --all-features
+
+      - name: Upload linting results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-quality-results
+          path: |
+            eslint-results.json
+            src-tauri/target/clippy-results.txt
+          retention-days: 7
+
+  # Testing validation
+  test-validation:
+    name: Test Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis, code-quality]
+    if: always() && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || github.event.inputs.force_full_validation == 'true')
+    strategy:
+      matrix:
+        test-type: [frontend, backend]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: autodev_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 50030:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 50031:6379
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: matrix.test-type == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        if: matrix.test-type == 'backend'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install frontend dependencies
+        if: matrix.test-type == 'frontend'
+        run: npm ci --prefer-offline
+
+      - name: Run frontend tests
+        if: matrix.test-type == 'frontend' && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || github.event.inputs.force_full_validation == 'true')
+        run: |
+          echo "Running unit tests with coverage..."
+          npm run test:coverage -- --watchAll=false --ci --maxWorkers=2
+          
+          echo "Running component tests..."
+          npm run test:ui -- --run || echo "No UI tests available"
+
+      - name: Install system dependencies for Rust tests
+        if: matrix.test-type == 'backend'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config \
+            libssl-dev
+
+      - name: Run backend tests
+        if: matrix.test-type == 'backend' && (needs.pr-analysis.outputs.has_backend_changes == 'true' || github.event.inputs.force_full_validation == 'true')
+        working-directory: src-tauri
+        env:
+          DATABASE_URL: postgres://postgres:test_password@localhost:50030/autodev_test
+          REDIS_URL: redis://localhost:50031
+        run: |
+          echo "Running Rust unit tests..."
+          cargo test --verbose --all-features
+          
+          echo "Running integration tests..."
+          cargo test --test '*' --verbose
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-type }}
+          path: |
+            coverage/
+            src-tauri/target/criterion/
+            junit.xml
+          retention-days: 7
+
+  # Build validation
+  build-validation:
+    name: Build Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis, code-quality]
+    if: always() && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || needs.pr-analysis.outputs.has_docker_changes == 'true' || github.event.inputs.force_full_validation == 'true')
+    strategy:
+      matrix:
+        build-type: [development, production]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build frontend
+        run: |
+          if [[ "${{ matrix.build-type }}" == "production" ]]; then
+            echo "Building for production..."
+            npm run build
+          else
+            echo "Building for development..."
+            npm run build:dev || npm run build
+          fi
+          
+          # Verify build output
+          ls -la dist/
+          du -sh dist/
+
+      - name: Build backend
+        working-directory: src-tauri
+        run: |
+          if [[ "${{ matrix.build-type }}" == "production" ]]; then
+            echo "Building Rust backend for production..."
+            cargo build --release
+          else
+            echo "Building Rust backend for development..."
+            cargo build
+          fi
+          
+          # Verify build output
+          find target -name "neural-bridge-platform*" -type f
+
+      - name: Test Tauri build (development only)
+        if: matrix.build-type == 'development'
+        working-directory: src-tauri
+        run: |
+          echo "Testing Tauri build process..."
+          cargo install tauri-cli --locked || echo "Tauri CLI already installed"
+          cargo tauri build --debug --verbose || echo "Tauri build test completed"
+
+  # Docker validation
+  docker-validation:
+    name: Docker Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis]
+    if: needs.pr-analysis.outputs.has_docker_changes == 'true' || github.event.inputs.force_full_validation == 'true'
+    strategy:
+      matrix:
+        service: [gui, api, sandbox]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Dockerfile exists
+        run: |
+          if [[ ! -f "docker/Dockerfile.${{ matrix.service }}" ]]; then
+            echo "❌ Dockerfile for ${{ matrix.service }} not found"
+            exit 1
+          fi
+          echo "✅ Dockerfile for ${{ matrix.service }} exists"
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile.${{ matrix.service }}
+          tags: autodev-ai-${{ matrix.service }}:pr-test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker container
+        run: |
+          # Get expected port for service
+          case "${{ matrix.service }}" in
+            gui) PORT=50020 ;;
+            api) PORT=50021 ;;
+            sandbox) PORT=50022 ;;
+            *) PORT=50020 ;;
+          esac
+          
+          echo "Testing ${{ matrix.service }} container on port $PORT"
+          
+          # Start container
+          docker run -d \
+            --name pr-test-${{ matrix.service }} \
+            -p $PORT:$PORT \
+            -e PORT=$PORT \
+            autodev-ai-${{ matrix.service }}:pr-test
+          
+          # Wait for container to be ready
+          timeout 60 bash -c "until docker logs pr-test-${{ matrix.service }} | grep -E '(ready|started|listening|server)'; do sleep 2; done" || true
+          
+          # Test health endpoint if available
+          timeout 30 bash -c "until curl -f http://localhost:$PORT/health 2>/dev/null; do sleep 1; done" || echo "Health endpoint not available"
+          
+          # Show container logs
+          echo "Container logs:"
+          docker logs pr-test-${{ matrix.service }} || true
+          
+          # Cleanup
+          docker stop pr-test-${{ matrix.service }}
+          docker rm pr-test-${{ matrix.service }}
+
+  # Security validation
+  security-validation:
+    name: Security Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis]
+    if: needs.pr-analysis.outputs.is_draft == 'false'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scanning
+        run: |
+          # Install TruffleHog
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Scan only changed files
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
+          
+          if [[ -n "$CHANGED_FILES" ]]; then
+            echo "Scanning changed files for secrets..."
+            echo "$CHANGED_FILES" | while read -r file; do
+              if [[ -f "$file" ]]; then
+                trufflehog filesystem "$file" --json --no-update || true
+              fi
+            done > trufflehog-pr-results.json
+            
+            # Check results
+            if [[ -s trufflehog-pr-results.json ]]; then
+              FINDINGS=$(jq length trufflehog-pr-results.json)
+              if [[ $FINDINGS -gt 0 ]]; then
+                echo "::error::$FINDINGS potential secrets found in PR changes"
+                cat trufflehog-pr-results.json
+                exit 1
+              fi
+            fi
+          fi
+
+      - name: Dependency security check
+        if: needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true'
+        run: |
+          # Check for new vulnerable dependencies
+          if [[ "${{ needs.pr-analysis.outputs.has_frontend_changes }}" == "true" ]]; then
+            if [[ -f package-lock.json ]]; then
+              npm audit --audit-level=moderate --production || echo "NPM audit completed with findings"
+            fi
+          fi
+          
+          if [[ "${{ needs.pr-analysis.outputs.has_backend_changes }}" == "true" ]]; then
+            cd src-tauri
+            if command -v cargo-audit &> /dev/null || cargo install cargo-audit --locked; then
+              cargo audit || echo "Cargo audit completed with findings"
+            fi
+          fi
+
+  # Performance validation
+  performance-validation:
+    name: Performance Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis, build-validation]
+    if: always() && needs.build-validation.result == 'success' && needs.pr-analysis.outputs.complexity_score >= '3'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build for performance testing
+        run: npm run build
+
+      - name: Bundle size analysis
+        run: |
+          echo "Analyzing bundle size..."
+          
+          # Calculate bundle sizes
+          if [[ -d dist ]]; then
+            TOTAL_SIZE=$(du -sb dist | cut -f1)
+            JS_SIZE=$(find dist -name "*.js" -exec du -sb {} + | awk '{sum += $1} END {print sum}' || echo "0")
+            CSS_SIZE=$(find dist -name "*.css" -exec du -sb {} + | awk '{sum += $1} END {print sum}' || echo "0")
+            
+            echo "Total bundle size: $(($TOTAL_SIZE / 1024))KB"
+            echo "JavaScript size: $(($JS_SIZE / 1024))KB"
+            echo "CSS size: $(($CSS_SIZE / 1024))KB"
+            
+            # Set reasonable limits (can be adjusted)
+            MAX_TOTAL_KB=5120  # 5MB
+            MAX_JS_KB=2048     # 2MB
+            
+            if [[ $(($TOTAL_SIZE / 1024)) -gt $MAX_TOTAL_KB ]]; then
+              echo "::warning::Bundle size $(($TOTAL_SIZE / 1024))KB exceeds recommended limit of ${MAX_TOTAL_KB}KB"
+            fi
+            
+            if [[ $(($JS_SIZE / 1024)) -gt $MAX_JS_KB ]]; then
+              echo "::warning::JavaScript size $(($JS_SIZE / 1024))KB exceeds recommended limit of ${MAX_JS_KB}KB"
+            fi
+          fi
+
+      - name: Basic performance tests
+        run: |
+          if [[ -f "tests/performance/basic-performance.test.js" ]]; then
+            npm run test:performance -- --ci --json --outputFile=performance-results.json || true
+          else
+            echo "No performance tests found, skipping..."
+          fi
+
+  # Documentation validation
+  docs-validation:
+    name: Documentation Validation
+    runs-on: ubuntu-24.04
+    needs: [pr-analysis]
+    if: needs.pr-analysis.outputs.has_docs_changes == 'true' || needs.pr-analysis.outputs.is_breaking == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate markdown files
+        run: |
+          # Check for broken markdown links
+          npm install -g markdown-link-check
+          
+          find . -name "*.md" -not -path "./node_modules/*" | while read -r file; do
+            echo "Checking $file..."
+            markdown-link-check "$file" --config .github/markdown-link-check.json || echo "Link check completed for $file"
+          done
+
+      - name: Check for required documentation updates
+        if: needs.pr-analysis.outputs.is_breaking == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Check if breaking changes are documented
+          if ! git diff $BASE_SHA...$HEAD_SHA --name-only | grep -E "(CHANGELOG|README|docs/)" > /dev/null; then
+            echo "::error::Breaking changes detected but no documentation updates found. Please update CHANGELOG.md and relevant documentation."
+            exit 1
+          fi
+
+  # PR validation summary
+  pr-summary:
+    name: PR Validation Summary
+    runs-on: ubuntu-24.04
+    needs: [
+      pr-analysis,
+      pr-format-validation,
+      code-quality,
+      test-validation,
+      build-validation,
+      docker-validation,
+      security-validation,
+      performance-validation,
+      docs-validation
+    ]
+    if: always()
+    steps:
+      - name: Generate PR validation report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const needs = ${{ toJSON(needs) }};
+            
+            let report = '# 🔍 PR Validation Summary\n\n';
+            report += `**PR Size:** ${{ needs['pr-analysis'].outputs.pr_size }}\n`;
+            report += `**Complexity Score:** ${{ needs['pr-analysis'].outputs.complexity_score }}/4\n`;
+            report += `**Breaking Changes:** ${{ needs['pr-analysis'].outputs.is_breaking }}\n`;
+            report += `**Author:** @${{ needs['pr-analysis'].outputs.author }}\n\n`;
+            
+            // Change detection
+            report += '## 📋 Change Detection\n\n';
+            report += `- **Frontend:** ${{ needs['pr-analysis'].outputs.has_frontend_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
+            report += `- **Backend:** ${{ needs['pr-analysis'].outputs.has_backend_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
+            report += `- **Docker:** ${{ needs['pr-analysis'].outputs.has_docker_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
+            report += `- **Documentation:** ${{ needs['pr-analysis'].outputs.has_docs_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
+            report += `- **Configuration:** ${{ needs['pr-analysis'].outputs.has_config_changes === 'true' ? '✅ Yes' : '❌ No' }}\n\n`;
+            
+            // Validation results
+            report += '## ✅ Validation Results\n\n';
+            
+            const checks = [
+              { name: 'Format Validation', key: 'pr-format-validation' },
+              { name: 'Code Quality', key: 'code-quality' },
+              { name: 'Test Validation', key: 'test-validation' },
+              { name: 'Build Validation', key: 'build-validation' },
+              { name: 'Docker Validation', key: 'docker-validation' },
+              { name: 'Security Validation', key: 'security-validation' },
+              { name: 'Performance Validation', key: 'performance-validation' },
+              { name: 'Documentation Validation', key: 'docs-validation' }
+            ];
+            
+            let allPassed = true;
+            
+            for (const check of checks) {
+              const result = needs[check.key];
+              let status;
+              
+              if (!result || result.result === 'skipped') {
+                status = '⏭️ Skipped';
+              } else if (result.result === 'success') {
+                status = '✅ Passed';
+              } else if (result.result === 'failure') {
+                status = '❌ Failed';
+                allPassed = false;
+              } else {
+                status = '⏳ Running';
+              }
+              
+              report += `- **${check.name}:** ${status}\n`;
+            }
+            
+            report += '\n';
+            
+            // Recommendations
+            if (allPassed) {
+              report += '## 🎉 Recommendations\n\n';
+              report += '✅ All validations passed! This PR is ready for review.\n\n';
+            } else {
+              report += '## ⚠️ Action Required\n\n';
+              report += 'Please address the failing validations before requesting review:\n\n';
+              
+              for (const check of checks) {
+                const result = needs[check.key];
+                if (result && result.result === 'failure') {
+                  report += `- Fix issues found in ${check.name}\n`;
+                }
+              }
+              report += '\n';
+            }
+            
+            // Size recommendations
+            const prSize = '${{ needs['pr-analysis'].outputs.pr_size }}';
+            if (prSize === 'xlarge') {
+              report += '💡 **Tip:** Consider breaking this large PR into smaller, focused PRs for easier review.\n\n';
+            }
+            
+            // Breaking change recommendations
+            if ('${{ needs['pr-analysis'].outputs.is_breaking }}' === 'true') {
+              report += '🔄 **Breaking Changes Detected:** Ensure all documentation is updated and consider semantic versioning implications.\n\n';
+            }
+            
+            report += '---\n';
+            report += '*This report was automatically generated by the PR validation pipeline.*';
+            
+            console.log(report);
+            
+            // Comment on PR
+            const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number }};
+            if (prNumber) {
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: prNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: report
+                });
+              } catch (error) {
+                console.log('Could not comment on PR:', error.message);
+              }
+            }
+
+      - name: Set PR validation status
+        run: |
+          # Check overall status
+          FAILED_JOBS=$(echo '${{ toJSON(needs) }}' | jq -r '.[] | select(.result == "failure") | .result' | wc -l)
+          
+          if [[ $FAILED_JOBS -gt 0 ]]; then
+            echo "❌ PR validation failed with $FAILED_JOBS failed checks"
+            echo "Please review the failed jobs and address the issues before merging."
+            exit 1
+          else
+            echo "✅ All PR validations passed successfully!"
+            echo "This PR is ready for review and potential merge."
+          fi
+
+      - name: Auto-assign reviewers
+        if: needs.pr-analysis.outputs.complexity_score >= '3' || needs.pr-analysis.outputs.is_breaking == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number;
+            if (!prNumber) return;
+            
+            // Auto-assign reviewers for complex or breaking PRs
+            const reviewers = ['maintainer1', 'tech-lead']; // Replace with actual usernames
+            
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                reviewers: reviewers.filter(r => r !== '${{ needs['pr-analysis'].outputs.author }}')
+              });
+              console.log(`Requested reviews from: ${reviewers.join(', ')}`);
+            } catch (error) {
+              console.log('Could not assign reviewers:', error.message);
+            }

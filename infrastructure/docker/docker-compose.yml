@@ -1,0 +1,226 @@
+version: '3.8'
+
+networks:
+  autodevai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_certs:
+    driver: local
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: autodevai-postgres
+    environment:
+      POSTGRES_DB: autodevai
+      POSTGRES_USER: autodevai
+      POSTGRES_PASSWORD: autodevai_secure_2024
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./configs/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./configs/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "50050:5432"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.10
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autodevai -d autodevai"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+
+  # Redis Cache and Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: autodevai-redis
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - redis_data:/data
+      - ./configs/redis/redis.conf:/etc/redis/redis.conf
+    ports:
+      - "50051:6379"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.11
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Main GUI Application
+  autodevai-gui:
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.gui
+    container_name: autodevai-gui
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://autodevai:autodevai_secure_2024@172.20.0.10:5432/autodevai
+      REDIS_URL: redis://172.20.0.11:6379
+      TAURI_APP_PORT: 50000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-autodevai_jwt_secret_2024}
+    volumes:
+      - ../src:/app/src
+      - ../public:/app/public
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "50000:3000"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Project Sandbox Manager
+  sandbox-manager:
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.sandbox
+    container_name: autodevai-sandbox-manager
+    environment:
+      SANDBOX_PORT_RANGE_START: 50010
+      SANDBOX_PORT_RANGE_END: 50089
+      MAX_CONCURRENT_SANDBOXES: 80
+      DATABASE_URL: postgresql://autodevai:autodevai_secure_2024@172.20.0.10:5432/autodevai
+      REDIS_URL: redis://172.20.0.11:6379
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./configs/sandboxes:/etc/sandboxes
+    ports:
+      - "50010-50089:50010-50089"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.30
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    privileged: true
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: autodevai-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - nginx_certs:/etc/nginx/certs
+      - ../public:/usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "443:443"
+      - "50060:50060"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.5
+    depends_on:
+      - autodevai-gui
+      - sandbox-manager
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana Monitoring
+  grafana:
+    image: grafana/grafana:latest
+    container_name: autodevai-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: autodevai_grafana_2024
+      GF_SERVER_HTTP_PORT: 3000
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: 172.20.0.10:5432
+      GF_DATABASE_NAME: autodevai_grafana
+      GF_DATABASE_USER: autodevai
+      GF_DATABASE_PASSWORD: autodevai_secure_2024
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "50090:3000"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.40
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Prometheus Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: autodevai-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "50091:9090"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.41
+    restart: unless-stopped
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: autodevai-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "50092:9100"
+    networks:
+      autodevai-network:
+        ipv4_address: 172.20.0.42
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:

@@ -1,0 +1,92 @@
+# Development Dockerfile for AutoDev-AI Neural Bridge Platform
+# Optimized for hot reloading and development workflow
+
+FROM node:18-alpine AS development
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S dev -u 1001
+
+# Install system dependencies including Rust
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++ \
+    git \
+    curl \
+    bash \
+    procps \
+    # Rust dependencies
+    musl-dev \
+    pkgconfig \
+    openssl-dev \
+    webkit2gtk-dev \
+    gtk+3.0-dev \
+    libayatana-appindicator3-dev \
+    librsvg-dev \
+    && rm -rf /var/cache/apk/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install cargo-watch for hot reloading
+RUN cargo install cargo-watch
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig*.json ./
+COPY vite.config.ts ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+
+# Install Node.js dependencies
+RUN npm install && npm cache clean --force
+
+# Copy Cargo files for Rust dependencies
+COPY src-tauri/Cargo.toml src-tauri/Cargo.lock ./src-tauri/
+
+# Pre-build Rust dependencies (cache layer)
+RUN cd src-tauri && \
+    mkdir -p src && \
+    echo "fn main() {}" > src/main.rs && \
+    cargo build && \
+    rm -rf src
+
+# Copy source code (will be mounted in development)
+COPY src/ ./src/
+COPY src-tauri/src/ ./src-tauri/src/
+COPY src-tauri/tauri.conf.json ./src-tauri/
+COPY src-tauri/build.rs ./src-tauri/
+COPY public/ ./public/
+COPY index.html ./
+
+# Set permissions
+RUN chown -R dev:nodejs /app
+USER dev
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:50000/health || exit 1
+
+# Expose development ports (aligned with production port range)
+EXPOSE 50000 50001 50002 50003 3001
+
+# Environment variables for development
+ENV NODE_ENV=development \
+    RUST_LOG=debug \
+    AUTODEV_HOT_RELOAD=true \
+    VITE_HMR_PORT=3001 \
+    CARGO_TARGET_DIR=/app/src-tauri/target
+
+# Development command with hot reloading
+CMD ["sh", "-c", "npm run dev -- --host 0.0.0.0 --port 50000 & cd src-tauri && cargo watch -x 'run --bin autodev-ai' & wait"]
+
+# Labels for development
+LABEL org.opencontainers.image.title="AutoDev-AI Neural Bridge Platform (Development)" \
+      org.opencontainers.image.description="Development container with hot reloading for AutoDev-AI" \
+      org.opencontainers.image.vendor="AutoDev-AI" \
+      org.opencontainers.image.version="dev"

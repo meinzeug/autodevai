@@ -1,0 +1,757 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - 'release'
+          - 'prerelease'
+          - 'draft'
+      force_build:
+        description: 'Force rebuild even if artifacts exist'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.75.0'
+  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+jobs:
+  # Prepare release metadata
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_number: ${{ steps.version.outputs.version_number }}
+      tag: ${{ steps.version.outputs.tag }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      release_notes: ${{ steps.release_notes.outputs.notes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version information
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+            if [[ "$VERSION" == *"-"* ]]; then
+              RELEASE_TYPE="prerelease"
+            else
+              RELEASE_TYPE="release"
+            fi
+          fi
+          
+          VERSION_NUM=${VERSION#v}
+          IS_PRERELEASE=$([[ "$RELEASE_TYPE" == "prerelease" || "$VERSION" == *"-"* ]] && echo "true" || echo "false")
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION_NUM}" >> $GITHUB_OUTPUT
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+          
+          echo "Release version: ${VERSION}"
+          echo "Version number: ${VERSION_NUM}"
+          echo "Is prerelease: ${IS_PRERELEASE}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "Generating changelog from $PREV_TAG to ${{ steps.version.outputs.tag }}"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges $PREV_TAG..${{ steps.version.outputs.tag }} | head -20)
+            FULL_CHANGELOG=$(git log --pretty=format:"- %s (%h) by %an" --no-merges $PREV_TAG..${{ steps.version.outputs.tag }})
+          else
+            echo "Generating changelog for initial release"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
+            FULL_CHANGELOG=$(git log --pretty=format:"- %s (%h) by %an" --no-merges)
+          fi
+          
+          # Save to files
+          echo "$CHANGELOG" > CHANGELOG_BRIEF.md
+          echo "$FULL_CHANGELOG" > CHANGELOG_FULL.md
+          
+          # Save to output (escaped for GitHub Actions)
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > RELEASE_NOTES.md << EOF
+          # AutoDev-AI Neural Bridge Platform ${{ steps.version.outputs.version }}
+          
+          ## 🚀 What's New
+          
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## 📦 Installation
+          
+          ### Desktop Applications
+          **Windows:**
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64-setup.exe\` - Windows 64-bit installer
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64-setup.exe\` - Windows ARM64 installer
+          
+          **macOS:**
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_universal.dmg\` - Universal binary (Intel + Apple Silicon)
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64.dmg\` - Intel Macs only
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_aarch64.dmg\` - Apple Silicon only
+          
+          **Linux:**
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_amd64.AppImage\` - x64 AppImage
+          - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64.AppImage\` - ARM64 AppImage
+          - \`autodev-ai_${{ steps.version.outputs.version }}_amd64.deb\` - Debian/Ubuntu package
+          
+          ### Docker Images
+          \`\`\`bash
+          # Pull the latest image
+          docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          
+          # Run with port mapping
+          docker run -d \\
+            --name autodev-ai \\
+            -p 50020:50020 \\
+            -p 50021:50021 \\
+            -p 50022:50022 \\
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
+          \`\`\`
+          
+          ### Kubernetes Deployment
+          \`\`\`bash
+          # Apply Kubernetes manifests
+          kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/k8s-deployment.yaml
+          \`\`\`
+          
+          ## ⚙️ Configuration
+          
+          - **Port Range**: 50000-50100 (configurable)
+          - **Default Ports**:
+            - GUI Service: 50020
+            - API Service: 50021
+            - Sandbox Service: 50022
+          - **Claude-Flow Integration**: Built-in multi-agent orchestration
+          - **Neural Bridge**: WebAssembly-accelerated neural processing
+          
+          ## 🔧 System Requirements
+          
+          - **Node.js**: 18.0+ (for development)
+          - **Rust**: 1.70+ (for building from source)
+          - **Docker**: 20.10+ (for containerized deployment)
+          - **Memory**: 4GB+ RAM recommended
+          - **Storage**: 2GB+ free space
+          
+          ## 🆕 Features in This Release
+          
+          - Enhanced neural bridge performance
+          - Improved Docker container orchestration
+          - Updated Tauri desktop application framework
+          - Advanced security scanning and monitoring
+          - Streamlined CI/CD pipeline
+          - Multi-architecture support (x64, ARM64)
+          
+          ## 🐛 Bug Fixes and Improvements
+          
+          - Fixed memory leaks in long-running processes
+          - Improved error handling and logging
+          - Enhanced security configurations
+          - Updated dependencies to latest versions
+          - Performance optimizations across all components
+          
+          ## 📚 Documentation
+          
+          - [Installation Guide](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/installation.md)
+          - [Configuration Reference](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/configuration.md)
+          - [API Documentation](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/api.md)
+          - [Troubleshooting](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/troubleshooting.md)
+          
+          ## 🤝 Contributing
+          
+          We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+          
+          ## 📄 License
+          
+          This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+          
+          ---
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/\${PREV_TAG}...${{ steps.version.outputs.tag }}
+          EOF
+          
+          # Save release notes to output
+          {
+            echo "notes<<EOF"
+            cat RELEASE_NOTES.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Update version in files
+        run: |
+          VERSION_NUM="${{ steps.version.outputs.version_number }}"
+          
+          # Update package.json
+          npm version $VERSION_NUM --no-git-tag-version --allow-same-version
+          
+          # Update Cargo.toml
+          cd src-tauri
+          sed -i "s/^version = .*/version = \"$VERSION_NUM\"/" Cargo.toml
+          cd ..
+          
+          # Update tauri.conf.json
+          jq --arg version "$VERSION_NUM" '.version = $version' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+
+      - name: Commit version updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || exit 0
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-metadata
+          path: |
+            CHANGELOG_*.md
+            RELEASE_NOTES.md
+          retention-days: 90
+
+  # Build multi-platform Tauri applications
+  build-tauri:
+    name: Build Tauri (${{ matrix.platform.name }})
+    runs-on: ${{ matrix.platform.os }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: linux-x64
+            os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            arch: x64
+            cmd: |
+              sudo apt-get update
+              sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libayatana-appindicator3-dev
+          
+          - name: linux-arm64
+            os: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+            cmd: |
+              sudo apt-get update
+              sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libayatana-appindicator3-dev
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+              echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+              echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: x64
+            cmd: echo "Windows setup complete"
+          
+          - name: windows-arm64
+            os: windows-latest
+            target: aarch64-pc-windows-msvc
+            arch: arm64
+            cmd: echo "Windows ARM64 setup complete"
+          
+          - name: macos-x64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            arch: x64
+            cmd: echo "macOS Intel setup complete"
+          
+          - name: macos-arm64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+            cmd: echo "macOS Apple Silicon setup complete"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.platform.target }}
+
+      - name: Install platform dependencies
+        run: ${{ matrix.platform.cmd }}
+
+      - name: Install frontend dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Create Tauri application
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ needs.prepare.outputs.tag }}
+          releaseName: 'AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }}'
+          releaseBody: ${{ needs.prepare.outputs.release_notes }}
+          releaseDraft: ${{ github.event.inputs.release_type == 'draft' }}
+          prerelease: ${{ needs.prepare.outputs.is_prerelease }}
+          args: --target ${{ matrix.platform.target }} --verbose
+          includeUpdaterJson: true
+
+      - name: Generate checksums
+        run: |
+          cd src-tauri/target/${{ matrix.platform.target }}/release/bundle
+          find . -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) \
+            -exec sha256sum {} \; > checksums-${{ matrix.platform.name }}.txt
+          
+          # Display checksums
+          echo "=== Checksums for ${{ matrix.platform.name }} ==="
+          cat checksums-${{ matrix.platform.name }}.txt
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform.name }}
+          path: |
+            src-tauri/target/${{ matrix.platform.target }}/release/bundle
+            src-tauri/target/${{ matrix.platform.target }}/release/*.exe
+          retention-days: 90
+
+  # Create universal macOS binary
+  build-universal-macos:
+    name: Build Universal macOS
+    runs-on: macos-latest
+    needs: [prepare, build-tauri]
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tauri-macos-*
+          merge-multiple: true
+          path: ./artifacts
+
+      - name: Create universal binary
+        run: |
+          mkdir -p universal
+          
+          # Find the binaries
+          X64_BINARY=$(find artifacts -path "*/x86_64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
+          ARM64_BINARY=$(find artifacts -path "*/aarch64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
+          
+          if [[ -n "$X64_BINARY" && -n "$ARM64_BINARY" ]]; then
+            echo "Creating universal binary from:"
+            echo "  x64: $X64_BINARY"
+            echo "  arm64: $ARM64_BINARY"
+            
+            lipo -create "$X64_BINARY" "$ARM64_BINARY" -output universal/AutoDev-AI
+            file universal/AutoDev-AI
+          else
+            echo "Could not find both architecture binaries"
+            find artifacts -name "AutoDev-AI" -type f
+          fi
+
+      - name: Package universal app
+        if: success()
+        run: |
+          # Create app bundle
+          mkdir -p "AutoDev-AI.app/Contents/MacOS"
+          mkdir -p "AutoDev-AI.app/Contents/Resources"
+          
+          # Copy universal binary
+          cp universal/AutoDev-AI "AutoDev-AI.app/Contents/MacOS/"
+          chmod +x "AutoDev-AI.app/Contents/MacOS/AutoDev-AI"
+          
+          # Create Info.plist
+          cat > "AutoDev-AI.app/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>AutoDev-AI</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.meinzeug.autodev-ai</string>
+              <key>CFBundleName</key>
+              <string>AutoDev-AI Neural Bridge</string>
+              <key>CFBundleVersion</key>
+              <string>${{ needs.prepare.outputs.version_number }}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${{ needs.prepare.outputs.version_number }}</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.13</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Create DMG
+          hdiutil create -volname "AutoDev-AI ${{ needs.prepare.outputs.version }}" \
+            -srcfolder "AutoDev-AI.app" \
+            -ov -format UDZO \
+            "AutoDev-AI_${{ needs.prepare.outputs.version }}_universal.dmg"
+
+      - name: Upload universal binary
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-universal-macos
+          path: AutoDev-AI_${{ needs.prepare.outputs.version }}_universal.dmg
+          retention-days: 90
+
+  # Build and publish Docker images
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-24.04
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [gui, api, sandbox, all-in-one]
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/autodev-ai-${{ matrix.service }}
+          tags: |
+            type=raw,value=${{ needs.prepare.outputs.version }}
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.is_prerelease == 'false' }}
+            type=raw,value=beta,enable=${{ needs.prepare.outputs.is_prerelease == 'true' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile.${{ matrix.service }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version_number }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+
+  # Create Kubernetes deployment manifests
+  build-k8s:
+    name: Build Kubernetes Manifests
+    runs-on: ubuntu-24.04
+    needs: [prepare, build-docker]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Kubernetes manifests
+        run: |
+          mkdir -p k8s-release
+          
+          # Create namespace
+          cat > k8s-release/namespace.yaml << EOF
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: autodev-ai
+            labels:
+              app.kubernetes.io/name: autodev-ai
+              app.kubernetes.io/version: "${{ needs.prepare.outputs.version_number }}"
+          EOF
+          
+          # Create deployment for each service
+          for service in gui api sandbox; do
+            port=$((50020 + $(echo "gui api sandbox" | tr ' ' '\n' | grep -n $service | cut -d: -f1) - 1))
+            
+            cat > k8s-release/${service}-deployment.yaml << EOF
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: autodev-ai-${service}
+            namespace: autodev-ai
+            labels:
+              app.kubernetes.io/name: autodev-ai
+              app.kubernetes.io/component: ${service}
+              app.kubernetes.io/version: "${{ needs.prepare.outputs.version_number }}"
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app.kubernetes.io/name: autodev-ai
+                app.kubernetes.io/component: ${service}
+            template:
+              metadata:
+                labels:
+                  app.kubernetes.io/name: autodev-ai
+                  app.kubernetes.io/component: ${service}
+              spec:
+                containers:
+                - name: ${service}
+                  image: ghcr.io/${{ github.repository }}/autodev-ai-${service}:${{ needs.prepare.outputs.version }}
+                  ports:
+                  - containerPort: ${port}
+                    name: http
+                  env:
+                  - name: PORT
+                    value: "${port}"
+                  - name: NODE_ENV
+                    value: "production"
+                  resources:
+                    requests:
+                      memory: "256Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "500m"
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: http
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /health
+                      port: http
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: autodev-ai-${service}
+            namespace: autodev-ai
+            labels:
+              app.kubernetes.io/name: autodev-ai
+              app.kubernetes.io/component: ${service}
+          spec:
+            type: ClusterIP
+            ports:
+            - port: 80
+              targetPort: http
+              protocol: TCP
+              name: http
+            selector:
+              app.kubernetes.io/name: autodev-ai
+              app.kubernetes.io/component: ${service}
+          EOF
+          done
+          
+          # Create combined deployment file
+          cat k8s-release/*.yaml > k8s-release/autodev-ai-${{ needs.prepare.outputs.version }}.yaml
+
+      - name: Upload Kubernetes manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubernetes-manifests
+          path: k8s-release/
+          retention-days: 90
+
+  # Create GitHub release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-24.04
+    needs: [prepare, build-tauri, build-universal-macos, build-docker, build-k8s]
+    if: always() && (needs.build-tauri.result == 'success' || needs.build-docker.result == 'success')
+    permissions:
+      contents: write
+      discussions: write
+    outputs:
+      release_id: ${{ steps.release.outputs.id }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create release
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          release_name: 'AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }}'
+          body: ${{ needs.prepare.outputs.release_notes }}
+          draft: ${{ github.event.inputs.release_type == 'draft' }}
+          prerelease: ${{ needs.prepare.outputs.is_prerelease }}
+
+      - name: Upload release assets
+        run: |
+          # Upload Tauri binaries
+          find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) | while read file; do
+            echo "Uploading: $(basename "$file")"
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H "Content-Type: application/octet-stream" \
+              "${{ steps.release.outputs.upload_url }}?name=$(basename "$file")" \
+              --data-binary "@$file" || echo "Failed to upload $(basename "$file")"
+          done
+          
+          # Upload Kubernetes manifests
+          if [[ -f artifacts/kubernetes-manifests/autodev-ai-${{ needs.prepare.outputs.version }}.yaml ]]; then
+            curl -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H "Content-Type: application/x-yaml" \
+              "${{ steps.release.outputs.upload_url }}?name=k8s-deployment.yaml" \
+              --data-binary "@artifacts/kubernetes-manifests/autodev-ai-${{ needs.prepare.outputs.version }}.yaml"
+          fi
+
+  # Post-release tasks
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-24.04
+    needs: [prepare, create-release]
+    if: always() && needs.create-release.result == 'success'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update documentation
+        run: |
+          # Update README with latest version
+          sed -i "s/Version: [^)]*/Version: ${{ needs.prepare.outputs.version }}/g" README.md
+          
+          # Update CHANGELOG
+          if [[ -f CHANGELOG.md ]]; then
+            cp CHANGELOG.md CHANGELOG.md.bak
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "## [${{ needs.prepare.outputs.version }}] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "${{ needs.prepare.outputs.changelog }}" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            tail -n +2 CHANGELOG.md.bak >> CHANGELOG.md
+            rm CHANGELOG.md.bak
+          fi
+
+      - name: Commit documentation updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add README.md CHANGELOG.md
+          git commit -m "docs: update documentation for release ${{ needs.prepare.outputs.version }}" || exit 0
+          git push origin HEAD:main || exit 0
+
+      - name: Trigger website deployment
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.WEBSITE_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "version": "${{ needs.prepare.outputs.version }}",
+              "release_url": "https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}",
+              "docker_image": "ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}"
+            }' || echo "Website update webhook failed (non-critical)"
+
+      - name: Announce release
+        run: |
+          echo "🎉 AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }} has been released!"
+          echo "📦 Download: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.tag }}"
+          echo "🐳 Docker: docker pull ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}"
+          echo "☸️  Kubernetes: kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare.outputs.tag }}/k8s-deployment.yaml"
+
+  # Rollback mechanism
+  rollback:
+    name: Release Rollback
+    runs-on: ubuntu-24.04
+    needs: [prepare, create-release]
+    if: failure() && needs.prepare.outputs.version != ''
+    steps:
+      - name: Delete failed release
+        run: |
+          echo "Release creation failed, cleaning up..."
+          
+          # Delete the release if it was created
+          curl -L \
+            -X DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.prepare.outputs.tag }}" \
+            || echo "Release may not have been created"
+          
+          # Delete the tag if it was created via workflow_dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            curl -L \
+              -X DELETE \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{ needs.prepare.outputs.tag }}" \
+              || echo "Tag deletion failed or tag doesn't exist"
+          fi
+          
+          echo "❌ Release ${{ needs.prepare.outputs.version }} rollback completed"

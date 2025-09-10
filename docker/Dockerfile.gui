@@ -1,0 +1,115 @@
+# AutoDev GUI Container - React Frontend with Local Tool Access
+FROM node:20-bullseye
+
+# Install system dependencies for GUI applications
+RUN apt-get update && apt-get install -y \
+    # X11 and GUI support
+    x11-apps \
+    xauth \
+    xvfb \
+    # Development tools
+    git \
+    curl \
+    wget \
+    vim \
+    # Build tools
+    build-essential \
+    python3 \
+    python3-pip \
+    # Browser support
+    chromium \
+    firefox-esr \
+    # System utilities
+    htop \
+    tree \
+    jq \
+    # Network tools
+    netcat \
+    telnet \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Create non-root user for security
+RUN groupadd -r autodev && useradd -r -g autodev -s /bin/bash autodev
+RUN mkdir -p /home/autodev && chown -R autodev:autodev /home/autodev
+RUN chown -R autodev:autodev /app
+
+# Copy application source
+COPY --chown=autodev:autodev . .
+
+# Build the React application
+RUN npm run build
+
+# Install global development tools
+RUN npm install -g \
+    @claudejs/claude-code \
+    create-react-app \
+    nodemon \
+    eslint \
+    prettier \
+    jest
+
+# Setup environment
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV DISPLAY=:0
+ENV REACT_APP_API_URL=http://localhost:50052
+
+# Create startup script
+RUN cat > /app/start-gui.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🚀 Starting AutoDev GUI Container..."
+
+# Setup X11 forwarding
+if [ -n "$DISPLAY" ]; then
+    echo "📺 Setting up X11 display: $DISPLAY"
+    xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f /tmp/.X11-auth add -
+    export XAUTHORITY=/tmp/.X11-auth
+fi
+
+# Start the React development server in background
+echo "🔧 Starting React development server..."
+npm start &
+
+# Start the production build server
+echo "🌐 Starting production server on port 3000..."
+npx serve -s build -l 3000 &
+
+# Keep container running and show logs
+echo "✅ AutoDev GUI started successfully!"
+echo "🌐 Web interface: http://localhost:50080"
+echo "🔧 Dev server: http://localhost:50081"
+echo "📱 React app ready!"
+
+# Wait for any process to exit
+wait -n
+
+# Exit with status of process that exited first
+exit $?
+EOF
+
+RUN chmod +x /app/start-gui.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Switch to non-root user
+USER autodev
+
+# Expose ports
+EXPOSE 3000 3001
+
+# Start the application
+CMD ["/app/start-gui.sh"]

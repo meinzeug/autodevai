@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autodev-ai
+  namespace: autodev-staging
+  labels:
+    app: autodev-ai
+    environment: staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: autodev-ai
+      environment: staging
+  template:
+    metadata:
+      labels:
+        app: autodev-ai
+        environment: staging
+    spec:
+      containers:
+      - name: autodev-ai
+        image: IMAGE_TAG
+        ports:
+        - containerPort: 50000
+          name: main
+        - containerPort: 50001
+          name: metrics
+        - containerPort: 50002
+          name: health
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: AUTODEV_PORT_RANGE
+          value: "50000-50100"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: autodev-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: autodev-secrets
+              key: redis-url
+        - name: CLAUDE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: autodev-secrets
+              key: claude-api-key
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+        - name: cache
+          mountPath: /app/cache
+        - name: config
+          mountPath: /app/config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 50002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 50002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: autodev-data
+      - name: cache
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: config
+        configMap:
+          name: autodev-config
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001

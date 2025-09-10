@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-manager
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: sandbox
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sandbox-manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sandbox-manager
+        app.kubernetes.io/component: sandbox
+    spec:
+      serviceAccountName: sandbox-manager-sa
+      containers:
+      - name: sandbox-manager
+        image: autodevai/sandbox-manager:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: autodevai-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: autodevai-secrets
+              key: REDIS_URL
+        - name: SANDBOX_PORT_RANGE_START
+          valueFrom:
+            configMapKeyRef:
+              name: autodevai-config
+              key: SANDBOX_PORT_RANGE_START
+        - name: SANDBOX_PORT_RANGE_END
+          valueFrom:
+            configMapKeyRef:
+              name: autodevai-config
+              key: SANDBOX_PORT_RANGE_END
+        - name: MAX_CONCURRENT_SANDBOXES
+          valueFrom:
+            configMapKeyRef:
+              name: autodevai-config
+              key: MAX_CONCURRENT_SANDBOXES
+        - name: KUBERNETES_NAMESPACE
+          value: "autodevai"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: sandbox-config
+          mountPath: /etc/sandboxes
+      volumes:
+      - name: sandbox-config
+        configMap:
+          name: sandbox-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-manager-service
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: sandbox
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app.kubernetes.io/name: sandbox-manager
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sandbox-manager-sa
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: rbac
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: autodevai
+  name: sandbox-manager-role
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: rbac
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["create", "delete", "get", "list", "watch", "update", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["create", "delete", "get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sandbox-manager-rolebinding
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: rbac
+subjects:
+- kind: ServiceAccount
+  name: sandbox-manager-sa
+  namespace: autodevai
+roleRef:
+  kind: Role
+  name: sandbox-manager-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sandbox-config
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: sandbox-manager
+    app.kubernetes.io/component: config
+data:
+  sandbox-template.yaml: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: sandbox-{{SANDBOX_ID}}
+      namespace: autodevai
+      labels:
+        app.kubernetes.io/name: sandbox
+        sandbox-id: "{{SANDBOX_ID}}"
+        project-id: "{{PROJECT_ID}}"
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          sandbox-id: "{{SANDBOX_ID}}"
+      template:
+        metadata:
+          labels:
+            sandbox-id: "{{SANDBOX_ID}}"
+            project-id: "{{PROJECT_ID}}"
+        spec:
+          containers:
+          - name: sandbox
+            image: "{{SANDBOX_IMAGE}}"
+            ports:
+            - containerPort: {{SANDBOX_PORT}}
+            env:
+            - name: SANDBOX_ID
+              value: "{{SANDBOX_ID}}"
+            - name: PROJECT_ID
+              value: "{{PROJECT_ID}}"
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: false

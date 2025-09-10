@@ -1,0 +1,717 @@
+name: Security Scanning & Analysis
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan to run'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+          - 'comprehensive'
+          - 'code-only'
+          - 'dependencies-only'
+          - 'container-only'
+          - 'secrets-only'
+      severity_threshold:
+        description: 'Minimum severity level to report'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+          - 'low'
+          - 'medium'
+          - 'high'
+          - 'critical'
+
+env:
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.75.0'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Security scan configuration
+  scan-config:
+    name: Scan Configuration
+    runs-on: ubuntu-24.04
+    outputs:
+      scan_code: ${{ steps.config.outputs.scan_code }}
+      scan_dependencies: ${{ steps.config.outputs.scan_dependencies }}
+      scan_containers: ${{ steps.config.outputs.scan_containers }}
+      scan_secrets: ${{ steps.config.outputs.scan_secrets }}
+      severity_threshold: ${{ steps.config.outputs.severity_threshold }}
+    steps:
+      - name: Configure scan types
+        id: config
+        run: |
+          SCAN_TYPE="${{ github.event.inputs.scan_type || 'comprehensive' }}"
+          SEVERITY="${{ github.event.inputs.severity_threshold || 'medium' }}"
+          
+          case "$SCAN_TYPE" in
+            comprehensive)
+              echo "scan_code=true" >> $GITHUB_OUTPUT
+              echo "scan_dependencies=true" >> $GITHUB_OUTPUT
+              echo "scan_containers=true" >> $GITHUB_OUTPUT
+              echo "scan_secrets=true" >> $GITHUB_OUTPUT
+              ;;
+            code-only)
+              echo "scan_code=true" >> $GITHUB_OUTPUT
+              echo "scan_dependencies=false" >> $GITHUB_OUTPUT
+              echo "scan_containers=false" >> $GITHUB_OUTPUT
+              echo "scan_secrets=true" >> $GITHUB_OUTPUT
+              ;;
+            dependencies-only)
+              echo "scan_code=false" >> $GITHUB_OUTPUT
+              echo "scan_dependencies=true" >> $GITHUB_OUTPUT
+              echo "scan_containers=false" >> $GITHUB_OUTPUT
+              echo "scan_secrets=false" >> $GITHUB_OUTPUT
+              ;;
+            container-only)
+              echo "scan_code=false" >> $GITHUB_OUTPUT
+              echo "scan_dependencies=false" >> $GITHUB_OUTPUT
+              echo "scan_containers=true" >> $GITHUB_OUTPUT
+              echo "scan_secrets=false" >> $GITHUB_OUTPUT
+              ;;
+            secrets-only)
+              echo "scan_code=false" >> $GITHUB_OUTPUT
+              echo "scan_dependencies=false" >> $GITHUB_OUTPUT
+              echo "scan_containers=false" >> $GITHUB_OUTPUT
+              echo "scan_secrets=true" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          
+          echo "severity_threshold=$SEVERITY" >> $GITHUB_OUTPUT
+          echo "Configured scan type: $SCAN_TYPE with severity threshold: $SEVERITY"
+
+  # CodeQL static analysis
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_code == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript', 'typescript']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
+          queries: +security-extended,security-and-quality
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build application
+        run: |
+          npm run build
+          npm run typecheck
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          upload: true
+
+  # Semgrep static analysis
+  semgrep-analysis:
+    name: Semgrep Security Scan
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_code == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/javascript
+            p/typescript
+            p/rust
+          generateSarif: "1"
+          severity: ${{ needs.scan-config.outputs.severity_threshold }}
+
+      - name: Upload Semgrep results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  # Secret scanning
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_secrets == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install TruffleHog
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run TruffleHog scan
+        run: |
+          trufflehog git file://. \
+            --branch=${{ github.ref_name }} \
+            --json \
+            --no-update \
+            > trufflehog-results.json || true
+          
+          # Check if any secrets were found
+          if [[ -s trufflehog-results.json ]]; then
+            echo "⚠️ Potential secrets detected!"
+            cat trufflehog-results.json
+            
+            # Count findings
+            FINDINGS=$(jq length trufflehog-results.json)
+            echo "Total findings: $FINDINGS"
+            
+            if [[ $FINDINGS -gt 0 ]]; then
+              echo "::error::$FINDINGS potential secrets found in the repository"
+            fi
+          else
+            echo "✅ No secrets detected"
+          fi
+
+      - name: Install GitLeaks
+        run: |
+          wget -O gitleaks.tar.gz https://github.com/zricethezav/gitleaks/releases/latest/download/gitleaks_8.18.4_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run GitLeaks scan
+        run: |
+          gitleaks detect \
+            --source . \
+            --report-format json \
+            --report-path gitleaks-report.json \
+            --verbose || true
+          
+          if [[ -s gitleaks-report.json ]]; then
+            echo "⚠️ GitLeaks detected potential secrets!"
+            cat gitleaks-report.json
+            
+            FINDINGS=$(jq length gitleaks-report.json)
+            if [[ $FINDINGS -gt 0 ]]; then
+              echo "::error::GitLeaks found $FINDINGS potential secrets"
+            fi
+          else
+            echo "✅ GitLeaks found no secrets"
+          fi
+
+      - name: Upload secret scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secret-scan-results
+          path: |
+            trufflehog-results.json
+            gitleaks-report.json
+          retention-days: 30
+
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_dependencies == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        scan-type: [npm, rust, mixed]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: matrix.scan-type == 'npm' || matrix.scan-type == 'mixed'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        if: matrix.scan-type == 'rust' || matrix.scan-type == 'mixed'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Install Node.js dependencies
+        if: matrix.scan-type == 'npm' || matrix.scan-type == 'mixed'
+        run: npm ci --prefer-offline
+
+      - name: Run npm audit
+        if: matrix.scan-type == 'npm' || matrix.scan-type == 'mixed'
+        run: |
+          echo "Running npm audit..."
+          npm audit --audit-level=${{ needs.scan-config.outputs.severity_threshold }} \
+            --json > npm-audit.json || true
+          
+          # Check if vulnerabilities were found
+          VULNERABILITIES=$(jq '.metadata.vulnerabilities.total' npm-audit.json 2>/dev/null || echo "0")
+          echo "Total npm vulnerabilities found: $VULNERABILITIES"
+          
+          if [[ $VULNERABILITIES -gt 0 ]]; then
+            echo "::warning::Found $VULNERABILITIES npm vulnerabilities"
+            jq '.vulnerabilities' npm-audit.json || true
+          fi
+
+      - name: Run Snyk scan (Node.js)
+        if: (matrix.scan-type == 'npm' || matrix.scan-type == 'mixed') && env.SNYK_TOKEN != ''
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=${{ needs.scan-config.outputs.severity_threshold }} --json-file-output=snyk-node.json
+        continue-on-error: true
+
+      - name: Install cargo-audit
+        if: matrix.scan-type == 'rust' || matrix.scan-type == 'mixed'
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        if: matrix.scan-type == 'rust' || matrix.scan-type == 'mixed'
+        working-directory: src-tauri
+        run: |
+          echo "Running cargo audit..."
+          cargo audit --json > ../cargo-audit.json || true
+          
+          # Check results
+          if [[ -s ../cargo-audit.json ]]; then
+            VULNERABILITIES=$(jq '.vulnerabilities.found | length' ../cargo-audit.json 2>/dev/null || echo "0")
+            echo "Total Rust vulnerabilities found: $VULNERABILITIES"
+            
+            if [[ $VULNERABILITIES -gt 0 ]]; then
+              echo "::warning::Found $VULNERABILITIES Rust vulnerabilities"
+              jq '.vulnerabilities.list' ../cargo-audit.json || true
+            fi
+          fi
+
+      - name: Install OSV Scanner
+        run: |
+          curl -L -o osv-scanner https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
+
+      - name: Run OSV Scanner
+        run: |
+          echo "Running OSV Scanner..."
+          osv-scanner \
+            --format json \
+            --output osv-results.json \
+            --lockfile package-lock.json \
+            --lockfile src-tauri/Cargo.lock \
+            . || true
+          
+          if [[ -s osv-results.json ]]; then
+            VULNERABILITIES=$(jq '.results | length' osv-results.json 2>/dev/null || echo "0")
+            echo "Total OSV vulnerabilities found: $VULNERABILITIES"
+          fi
+
+      - name: Generate dependency scan summary
+        run: |
+          echo "# Dependency Security Scan Results" > dependency-summary.md
+          echo "" >> dependency-summary.md
+          echo "**Scan Type:** ${{ matrix.scan-type }}" >> dependency-summary.md
+          echo "**Severity Threshold:** ${{ needs.scan-config.outputs.severity_threshold }}" >> dependency-summary.md
+          echo "" >> dependency-summary.md
+          
+          # NPM results
+          if [[ -f npm-audit.json ]]; then
+            NPM_VULNS=$(jq '.metadata.vulnerabilities.total' npm-audit.json 2>/dev/null || echo "0")
+            echo "- **NPM Vulnerabilities:** $NPM_VULNS" >> dependency-summary.md
+          fi
+          
+          # Rust results
+          if [[ -f cargo-audit.json ]]; then
+            RUST_VULNS=$(jq '.vulnerabilities.found | length' cargo-audit.json 2>/dev/null || echo "0")
+            echo "- **Rust Vulnerabilities:** $RUST_VULNS" >> dependency-summary.md
+          fi
+          
+          # OSV results
+          if [[ -f osv-results.json ]]; then
+            OSV_VULNS=$(jq '.results | length' osv-results.json 2>/dev/null || echo "0")
+            echo "- **OSV Scanner Vulnerabilities:** $OSV_VULNS" >> dependency-summary.md
+          fi
+
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-scan-${{ matrix.scan-type }}
+          path: |
+            npm-audit.json
+            cargo-audit.json
+            osv-results.json
+            snyk-node.json
+            dependency-summary.md
+          retention-days: 30
+
+  # Container security scanning
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_containers == 'true'
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      matrix:
+        service: [gui, api, sandbox]
+        scanner: [trivy, grype]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile.${{ matrix.service }}
+          tags: autodev-ai-${{ matrix.service }}:security-scan
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        if: matrix.scanner == 'trivy'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'autodev-ai-${{ matrix.service }}:security-scan'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.service }}.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+          limit-severities-for-sarif: true
+
+      - name: Install Grype
+        if: matrix.scanner == 'grype'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run Grype vulnerability scanner
+        if: matrix.scanner == 'grype'
+        run: |
+          grype autodev-ai-${{ matrix.service }}:security-scan \
+            -o json \
+            --file grype-${{ matrix.service }}.json \
+            --quiet || true
+
+      - name: Run Docker Scout (if available)
+        if: matrix.scanner == 'trivy'
+        run: |
+          if command -v docker &> /dev/null; then
+            docker scout cves autodev-ai-${{ matrix.service }}:security-scan \
+              --format json \
+              --output scout-${{ matrix.service }}.json || true
+          fi
+
+      - name: Run Syft for SBOM generation
+        if: matrix.scanner == 'grype'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft autodev-ai-${{ matrix.service }}:security-scan \
+            -o json \
+            --file sbom-${{ matrix.service }}.json
+
+      - name: Upload Trivy results
+        if: matrix.scanner == 'trivy'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
+      - name: Generate container scan summary
+        run: |
+          echo "# Container Security Scan - ${{ matrix.service }} (${{ matrix.scanner }})" > container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          echo "" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          echo "**Service:** ${{ matrix.service }}" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          echo "**Scanner:** ${{ matrix.scanner }}" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          echo "" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          
+          if [[ "${{ matrix.scanner }}" == "trivy" && -f "trivy-${{ matrix.service }}.sarif" ]]; then
+            TRIVY_ISSUES=$(jq '.runs[0].results | length' trivy-${{ matrix.service }}.sarif 2>/dev/null || echo "0")
+            echo "- **Trivy Issues:** $TRIVY_ISSUES" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          fi
+          
+          if [[ "${{ matrix.scanner }}" == "grype" && -f "grype-${{ matrix.service }}.json" ]]; then
+            GRYPE_ISSUES=$(jq '.matches | length' grype-${{ matrix.service }}.json 2>/dev/null || echo "0")
+            echo "- **Grype Issues:** $GRYPE_ISSUES" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          fi
+
+      - name: Upload container scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: container-scan-${{ matrix.service }}-${{ matrix.scanner }}
+          path: |
+            trivy-${{ matrix.service }}.sarif
+            grype-${{ matrix.service }}.json
+            scout-${{ matrix.service }}.json
+            sbom-${{ matrix.service }}.json
+            container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
+          retention-days: 30
+
+  # Infrastructure as Code scanning
+  iac-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_code == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: dockerfile,kubernetes,github_actions
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          quiet: true
+          soft_fail: true
+
+      - name: Install Terrascan
+        run: |
+          curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Linux_x86_64.tar.gz")" > terrascan.tar.gz
+          tar -xf terrascan.tar.gz terrascan && sudo mv terrascan /usr/local/bin
+
+      - name: Run Terrascan
+        run: |
+          terrascan scan \
+            --iac-dir . \
+            --iac-type all \
+            --output json \
+            --output-file terrascan-results.json || true
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+
+      - name: Upload IaC scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iac-scan-results
+          path: |
+            checkov-results.sarif
+            terrascan-results.json
+          retention-days: 30
+
+  # Custom security tests
+  custom-security-tests:
+    name: Custom Security Tests
+    runs-on: ubuntu-24.04
+    needs: scan-config
+    if: needs.scan-config.outputs.scan_code == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run custom security tests
+        run: |
+          if [[ -f "tests/security/run-security-tests.js" ]]; then
+            echo "Running custom security tests..."
+            npm run test:security
+          else
+            echo "No custom security tests found"
+          fi
+
+      - name: Run OWASP ZAP baseline scan
+        if: github.event_name != 'pull_request'
+        run: |
+          docker run -v $(pwd):/zap/wrk/:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:50020 \
+            -g gen.conf \
+            -J zap-report.json \
+            -r zap-report.html || true
+
+      - name: Upload custom security test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: custom-security-results
+          path: |
+            tests/security/reports/
+            zap-report.*
+          retention-days: 30
+
+  # Security scan summary
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-24.04
+    needs: [scan-config, codeql-analysis, semgrep-analysis, secret-scan, dependency-scan, container-scan, iac-scan, custom-security-tests]
+    if: always()
+    steps:
+      - name: Download all scan results
+        uses: actions/download-artifact@v4
+        with:
+          path: ./scan-results
+
+      - name: Generate security report
+        run: |
+          echo "# AutoDev-AI Security Scan Report" > security-report.md
+          echo "" >> security-report.md
+          echo "**Scan Date:** $(date -u)" >> security-report.md
+          echo "**Commit:** ${{ github.sha }}" >> security-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## Scan Configuration" >> security-report.md
+          echo "- **Code Analysis:** ${{ needs.scan-config.outputs.scan_code }}" >> security-report.md
+          echo "- **Dependency Scan:** ${{ needs.scan-config.outputs.scan_dependencies }}" >> security-report.md
+          echo "- **Container Scan:** ${{ needs.scan-config.outputs.scan_containers }}" >> security-report.md
+          echo "- **Secret Scan:** ${{ needs.scan-config.outputs.scan_secrets }}" >> security-report.md
+          echo "- **Severity Threshold:** ${{ needs.scan-config.outputs.severity_threshold }}" >> security-report.md
+          echo "" >> security-report.md
+          
+          echo "## Scan Results Summary" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Count total issues from all scans
+          TOTAL_ISSUES=0
+          
+          # CodeQL results
+          if [[ -f "scan-results"/*/*.sarif ]]; then
+            CODEQL_ISSUES=$(find scan-results -name "*.sarif" -exec jq '.runs[].results | length' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
+            echo "- **Static Analysis Issues:** $CODEQL_ISSUES" >> security-report.md
+            TOTAL_ISSUES=$((TOTAL_ISSUES + CODEQL_ISSUES))
+          fi
+          
+          # Secret scan results
+          if [[ -f "scan-results"/*secrets*/trufflehog-results.json ]]; then
+            SECRET_ISSUES=$(find scan-results -name "trufflehog-results.json" -exec jq 'length' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
+            echo "- **Potential Secrets:** $SECRET_ISSUES" >> security-report.md
+            TOTAL_ISSUES=$((TOTAL_ISSUES + SECRET_ISSUES))
+          fi
+          
+          # Dependency scan results
+          DEPENDENCY_ISSUES=0
+          if find scan-results -name "npm-audit.json" -exec test -s {} \; 2>/dev/null; then
+            NPM_ISSUES=$(find scan-results -name "npm-audit.json" -exec jq '.metadata.vulnerabilities.total' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
+            DEPENDENCY_ISSUES=$((DEPENDENCY_ISSUES + NPM_ISSUES))
+          fi
+          if find scan-results -name "cargo-audit.json" -exec test -s {} \; 2>/dev/null; then
+            RUST_ISSUES=$(find scan-results -name "cargo-audit.json" -exec jq '.vulnerabilities.found | length' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
+            DEPENDENCY_ISSUES=$((DEPENDENCY_ISSUES + RUST_ISSUES))
+          fi
+          echo "- **Dependency Vulnerabilities:** $DEPENDENCY_ISSUES" >> security-report.md
+          TOTAL_ISSUES=$((TOTAL_ISSUES + DEPENDENCY_ISSUES))
+          
+          echo "" >> security-report.md
+          echo "**Total Security Issues Found:** $TOTAL_ISSUES" >> security-report.md
+          echo "" >> security-report.md
+          
+          # Recommendations
+          echo "## Recommendations" >> security-report.md
+          echo "" >> security-report.md
+          if [[ $TOTAL_ISSUES -eq 0 ]]; then
+            echo "✅ No critical security issues detected. Continue with current security practices." >> security-report.md
+          else
+            echo "⚠️ Security issues detected. Please review and address the following:" >> security-report.md
+            echo "" >> security-report.md
+            echo "1. Review all high and critical severity findings" >> security-report.md
+            echo "2. Update dependencies with known vulnerabilities" >> security-report.md
+            echo "3. Verify that detected secrets are false positives or remove them" >> security-report.md
+            echo "4. Fix any static analysis violations" >> security-report.md
+            echo "5. Run security scans regularly in CI/CD pipeline" >> security-report.md
+          fi
+          
+          echo "" >> security-report.md
+          echo "## Detailed Results" >> security-report.md
+          echo "" >> security-report.md
+          echo "Detailed scan results are available in the workflow artifacts." >> security-report.md
+
+      - name: Upload security summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary-report
+          path: security-report.md
+          retention-days: 90
+
+      - name: Comment PR with security summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## 🔒 Security Scan Results\n\n' + report
+            });
+
+      - name: Set security status
+        run: |
+          # Check if any critical issues were found
+          CRITICAL_ISSUES=0
+          
+          # Check for critical issues in various scan results
+          if find scan-results -name "*.json" -exec grep -l "CRITICAL\|critical" {} \; 2>/dev/null | head -1; then
+            CRITICAL_ISSUES=1
+          fi
+          
+          if [[ $CRITICAL_ISSUES -eq 1 ]]; then
+            echo "❌ Critical security issues detected!"
+            echo "Please review the security scan results and address critical findings."
+            exit 1
+          else
+            echo "✅ No critical security issues detected."
+          fi

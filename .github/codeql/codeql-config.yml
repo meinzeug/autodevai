@@ -1,0 +1,33 @@
+name: "AutoDev-AI CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - name: security-and-quality
+    uses: security-and-quality
+  - name: security-extended  
+    uses: security-extended
+
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - exclude:
+      id: js/debugger-statement
+
+paths:
+  - src
+  - src-tauri/src
+  - public
+
+paths-ignore:
+  - node_modules
+  - dist
+  - build
+  - target
+  - "**/*.test.js"
+  - "**/*.test.ts"
+  - "**/*.spec.js"
+  - "**/*.spec.ts"
+  - tests/fixtures
+  - "**/*.min.js"
+  - "**/*.min.css"

@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  autodev-ai-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: autodev-ai-dev
+    ports:
+      - "5173:5173"
+      - "1420:1420"  # Tauri dev server
+    volumes:
+      - ../src:/app/src
+      - ../public:/app/public
+      - ../tests:/app/tests
+      - ../config:/app/config
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3001
+      - TAURI_DEBUG=true
+    networks:
+      - autodev-network
+    depends_on:
+      - redis-dev
+      - postgres-dev
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: autodev-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - autodev-network
+    command: redis-server --appendonly yes
+
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: autodev-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: autodev_ai_dev
+      POSTGRES_USER: developer
+      POSTGRES_PASSWORD: dev_password
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - autodev-network
+
+  nginx-dev:
+    image: nginx:alpine
+    container_name: autodev-nginx-dev
+    ports:
+      - "8080:80"
+    volumes:
+      - ../config/nginx.dev.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - autodev-ai-dev
+    networks:
+      - autodev-network
+
+volumes:
+  redis-dev-data:
+  postgres-dev-data:
+
+networks:
+  autodev-network:
+    driver: bridge
