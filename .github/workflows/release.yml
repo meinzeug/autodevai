@@ -144,33 +144,33 @@ jobs:
           GITHUB_REPOSITORY="${{ github.repository }}"
           
           cat > RELEASE_NOTES.md << 'EOF'
-# AutoDev-AI Neural Bridge Platform %RELEASE_VERSION%
+# AutoDev-AI Neural Bridge Platform __RELEASE_VERSION__
 
 ## 🚀 What's New
 
-%CHANGELOG%
+__CHANGELOG__
 
 ## 📦 Installation
 
 ### Desktop Applications
 **Windows:**
-- `AutoDev-AI_%RELEASE_VERSION%_x64-setup.exe` - Windows 64-bit installer
-- `AutoDev-AI_%RELEASE_VERSION%_arm64-setup.exe` - Windows ARM64 installer
+- `AutoDev-AI___RELEASE_VERSION___x64-setup.exe` - Windows 64-bit installer
+- `AutoDev-AI___RELEASE_VERSION___arm64-setup.exe` - Windows ARM64 installer
 
 **macOS:**
-- `AutoDev-AI_%RELEASE_VERSION%_universal.dmg` - Universal binary (Intel + Apple Silicon)
-- `AutoDev-AI_%RELEASE_VERSION%_x64.dmg` - Intel Macs only
-- `AutoDev-AI_%RELEASE_VERSION%_aarch64.dmg` - Apple Silicon only
+- `AutoDev-AI___RELEASE_VERSION___universal.dmg` - Universal binary (Intel + Apple Silicon)
+- `AutoDev-AI___RELEASE_VERSION___x64.dmg` - Intel Macs only
+- `AutoDev-AI___RELEASE_VERSION___aarch64.dmg` - Apple Silicon only
 
 **Linux:**
-- `AutoDev-AI_%RELEASE_VERSION%_amd64.AppImage` - x64 AppImage
-- `AutoDev-AI_%RELEASE_VERSION%_arm64.AppImage` - ARM64 AppImage
-- `autodev-ai_%RELEASE_VERSION%_amd64.deb` - Debian/Ubuntu package
+- `AutoDev-AI___RELEASE_VERSION___amd64.AppImage` - x64 AppImage
+- `AutoDev-AI___RELEASE_VERSION___arm64.AppImage` - ARM64 AppImage
+- `autodev-ai___RELEASE_VERSION___amd64.deb` - Debian/Ubuntu package
 
 ### Docker Images
 ```bash
 # Pull the latest image
-docker pull ghcr.io/%GITHUB_REPOSITORY%:%RELEASE_VERSION%
+docker pull ghcr.io/__GITHUB_REPOSITORY__:__RELEASE_VERSION__
 
 # Run with port mapping
 docker run -d \
@@ -178,13 +178,13 @@ docker run -d \
   -p 50020:50020 \
   -p 50021:50021 \
   -p 50022:50022 \
-  ghcr.io/%GITHUB_REPOSITORY%:%RELEASE_VERSION%
+  ghcr.io/__GITHUB_REPOSITORY__:__RELEASE_VERSION__
 ```
 
 ### Kubernetes Deployment
 ```bash
 # Apply Kubernetes manifests
-kubectl apply -f https://github.com/%GITHUB_REPOSITORY%/releases/download/%RELEASE_TAG%/k8s-deployment.yaml
+kubectl apply -f https://github.com/__GITHUB_REPOSITORY__/releases/download/__RELEASE_TAG__/k8s-deployment.yaml
 ```
 
 ## ⚙️ Configuration
@@ -239,21 +239,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Full Changelog**: https://github.com/%GITHUB_REPOSITORY%/compare/${PREV_TAG}...%RELEASE_TAG%
+**Full Changelog**: https://github.com/__GITHUB_REPOSITORY__/compare/${PREV_TAG}...__RELEASE_TAG__
 EOF
 
           # Safely substitute variables using sed
-          sed -i "s|%RELEASE_VERSION%|${RELEASE_VERSION}|g" RELEASE_NOTES.md
-          sed -i "s|%RELEASE_TAG%|${RELEASE_TAG}|g" RELEASE_NOTES.md
-          sed -i "s|%GITHUB_REPOSITORY%|${GITHUB_REPOSITORY}|g" RELEASE_NOTES.md
+          sed -i "s|__RELEASE_VERSION__|${RELEASE_VERSION}|g" RELEASE_NOTES.md
+          sed -i "s|__RELEASE_TAG__|${RELEASE_TAG}|g" RELEASE_NOTES.md
+          sed -i "s|__GITHUB_REPOSITORY__|${GITHUB_REPOSITORY}|g" RELEASE_NOTES.md
           
           # Insert changelog content safely
           if [[ -f CHANGELOG_BRIEF.md ]]; then
             # Use a temporary file to safely insert changelog
-            awk '/^%CHANGELOG%$/ {system("cat CHANGELOG_BRIEF.md"); next} {print}' RELEASE_NOTES.md > RELEASE_NOTES.tmp
+            awk '/^__CHANGELOG__$/ {system("cat CHANGELOG_BRIEF.md"); next} {print}' RELEASE_NOTES.md > RELEASE_NOTES.tmp
             mv RELEASE_NOTES.tmp RELEASE_NOTES.md
           else
-            sed -i 's|%CHANGELOG%|No changelog available|g' RELEASE_NOTES.md
+            sed -i 's|__CHANGELOG__|No changelog available|g' RELEASE_NOTES.md
           fi
 
           # Save release notes to output using heredoc
