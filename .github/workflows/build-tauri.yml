@@ -61,7 +61,7 @@ jobs:
           targets: ${{ matrix.platform.rust_target }}
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
