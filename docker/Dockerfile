@@ -2,7 +2,7 @@
 # Optimized for CI/CD with security scanning and performance
 
 # Stage 1: Frontend Build
-FROM node:18-alpine AS frontend-builder
+FROM node:24-alpine AS frontend-builder
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001

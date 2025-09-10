@@ -1,7 +1,7 @@
 # Development Dockerfile for AutoDev-AI Neural Bridge Platform
 # Optimized for hot reloading and development workflow
 
-FROM node:18-alpine AS development
+FROM node:24-alpine AS development
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S dev -u 1001
