@@ -20,7 +20,7 @@ jobs:
   # Environment setup and validation
   setup:
     name: Environment Setup
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       node-version: ${{ env.NODE_VERSION }}
       rust-version: ${{ env.RUST_VERSION }}
@@ -46,7 +46,7 @@ jobs:
   # Code quality and linting
   code-quality:
     name: Code Quality & Linting
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: setup
     steps:
       - name: Checkout repository
@@ -88,10 +88,20 @@ jobs:
           npm audit --audit-level=moderate --production
           cd src-tauri && cargo audit
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Code Quality & Linting'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Code quality checks or security audit failed'
+          labels: 'ci-failure,code-quality,security,automated'
+
   # Frontend testing
   test-frontend:
     name: Frontend Testing
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: setup
     strategy:
       matrix:
@@ -150,10 +160,20 @@ jobs:
             screenshots/
           retention-days: 7
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Frontend Testing (${{ matrix.test-type }})'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: '${{ matrix.test-type }} tests failed'
+          labels: 'ci-failure,testing,frontend,${{ matrix.test-type }},automated'
+
   # Backend testing
   test-backend:
     name: Backend Testing
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: setup
     services:
       postgres:
@@ -228,10 +248,20 @@ jobs:
         working-directory: src-tauri
         run: cargo bench --bench performance || true
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Backend Testing'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Backend tests failed'
+          labels: 'ci-failure,testing,backend,rust,automated'
+
   # Build validation
   build:
     name: Build Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [setup, code-quality]
     strategy:
       matrix:
@@ -296,10 +326,20 @@ jobs:
             src-tauri/target/*/neural-bridge-platform*
           retention-days: 7
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Build Validation (${{ matrix.target }})'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: '${{ matrix.target }} build failed'
+          labels: 'ci-failure,build,${{ matrix.target }},automated'
+
   # Tauri build testing
   tauri-build:
     name: Tauri Build Test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [build]
     steps:
       - name: Checkout repository
@@ -346,10 +386,20 @@ jobs:
           find src-tauri/target -name "*.deb" -o -name "*.AppImage" -o -name "bundle" | head -10
           ls -la src-tauri/target/debug/bundle/ || true
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Tauri Build Test'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Tauri build test failed'
+          labels: 'ci-failure,build,tauri,automated'
+
   # Docker build and testing
   docker-build:
     name: Docker Build & Test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [build]
     strategy:
       matrix:
@@ -398,10 +448,20 @@ jobs:
           docker stop test-${{ matrix.service }}
           docker rm test-${{ matrix.service }}
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Docker Build & Test (${{ matrix.service }})'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Docker build or test failed for ${{ matrix.service }} service'
+          labels: 'ci-failure,docker,build,${{ matrix.service }},automated'
+
   # Performance testing
   performance:
     name: Performance Testing
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [docker-build]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
@@ -435,10 +495,20 @@ jobs:
             coverage/
           retention-days: 30
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Performance Testing'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Performance tests failed'
+          labels: 'ci-failure,performance,testing,automated'
+
   # Security scanning
   security-scan:
     name: Security Scanning
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [code-quality]
     permissions:
       contents: read
@@ -479,10 +549,20 @@ jobs:
             trivy-scan.json
           retention-days: 30
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Security Scanning'
+          workflow-name: 'AutoDev-AI Build & Test Pipeline'
+          error-message: 'Security scan detected vulnerabilities'
+          labels: 'ci-failure,security,vulnerability,automated'
+
   # Deployment readiness check
   deploy-check:
     name: Deployment Readiness
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       [
         test-frontend,
@@ -548,7 +628,7 @@ jobs:
   # Status reporting
   status:
     name: Build Status
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [deploy-check]
     if: always()
     steps:

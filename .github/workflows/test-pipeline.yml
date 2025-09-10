@@ -16,23 +16,22 @@ env:
 jobs:
   quality-gates:
     name: Quality Gates & Security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
           components: rustfmt, clippy
 
       - name: Install dependencies
@@ -75,19 +74,18 @@ jobs:
 
   rust-tests:
     name: Rust Backend Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: quality-gates
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -113,15 +111,25 @@ jobs:
           file: tests/coverage/rust/cobertura.xml
           flags: rust
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Rust Backend Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Rust backend tests failed'
+          labels: 'ci-failure,testing,rust,backend,automated'
+
   frontend-tests:
     name: Frontend Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: quality-gates
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -140,9 +148,19 @@ jobs:
           file: tests/coverage/frontend/lcov.info
           flags: frontend
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Frontend Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Frontend tests failed'
+          labels: 'ci-failure,testing,frontend,automated'
+
   integration-tests:
     name: Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [rust-tests, frontend-tests]
     services:
       postgres:
@@ -173,7 +191,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -207,24 +225,33 @@ jobs:
           file: tests/coverage/integration/lcov.info
           flags: integration
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Integration Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Integration tests failed'
+          labels: 'ci-failure,testing,integration,automated'
+
   e2e-tests:
     name: End-to-End Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: integration-tests
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
 
       - name: Install dependencies
         run: |
@@ -243,23 +270,33 @@ jobs:
           CI: true
 
       - name: Upload E2E artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
           path: tests/coverage/playwright-report/
           retention-days: 30
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'End-to-End Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'End-to-end tests failed'
+          labels: 'ci-failure,testing,e2e,playwright,automated'
+
   performance-tests:
     name: Performance Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: e2e-tests
     if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -281,20 +318,30 @@ jobs:
         run: npm run test:performance
 
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-report
           path: tests/coverage/performance-report.html
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Performance Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Performance tests failed'
+          labels: 'ci-failure,testing,performance,automated'
+
   security-tests:
     name: Security Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: integration-tests
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -314,21 +361,41 @@ jobs:
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a'
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Security Tests'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Security tests failed or vulnerabilities detected'
+          labels: 'ci-failure,testing,security,owasp,automated'
+
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Quality Gates & Security'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Quality gates or security checks failed'
+          labels: 'ci-failure,quality-gates,security,automated'
+
   coverage-report:
     name: Coverage Report
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [rust-tests, frontend-tests, integration-tests]
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Download coverage reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Merge coverage reports
         run: |
@@ -352,9 +419,19 @@ jobs:
           fi
           echo "Coverage $COVERAGE% meets 95% threshold"
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Coverage Report'
+          workflow-name: 'Comprehensive Test Pipeline'
+          error-message: 'Coverage report generation failed or coverage below 95% threshold'
+          labels: 'ci-failure,coverage,quality-gate,automated'
+
   deployment-readiness:
     name: Deployment Readiness
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [performance-tests, security-tests, coverage-report]
     if: always()
     steps:
@@ -386,7 +463,7 @@ jobs:
           echo "## Deployment Status: 🚀 READY" >> deployment-report.md
 
       - name: Upload deployment report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-report
           path: deployment-report.md

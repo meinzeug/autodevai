@@ -1,0 +1,97 @@
+name: 'Create Failure Issue'
+description: 'Creates a GitHub issue when a job fails'
+inputs:
+  github-token:
+    description: 'GitHub token for creating issues'
+    required: true
+  job-name:
+    description: 'Name of the failed job'
+    required: true
+  workflow-name:
+    description: 'Name of the workflow'
+    required: true
+  error-message:
+    description: 'Error message or details'
+    required: false
+    default: 'No specific error message provided'
+  labels:
+    description: 'Comma-separated list of labels'
+    required: false
+    default: 'ci-failure,automated'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create issue for failure
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const jobName = '${{ inputs.job-name }}';
+          const workflowName = '${{ inputs.workflow-name }}';
+          const errorMessage = `${{ inputs.error-message }}`;
+          const labels = '${{ inputs.labels }}'.split(',').map(l => l.trim());
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          
+          // Check for existing open issue
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: labels.join(',')
+          });
+          
+          const existingIssue = issues.data.find(issue => 
+            issue.title.includes(jobName) && 
+            issue.title.includes(workflowName)
+          );
+          
+          if (existingIssue) {
+            // Update existing issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssue.number,
+              body: `🔄 **Another failure detected**
+              
+              - **Run**: [#${context.runNumber}](${runUrl})
+              - **Commit**: \`${context.sha.substring(0, 7)}\`
+              - **Time**: ${new Date().toISOString()}
+              
+              ${errorMessage ? `**Error Details:**\n\`\`\`\n${errorMessage}\n\`\`\`` : ''}`
+            });
+            
+            console.log(`Updated existing issue #${existingIssue.number}`);
+          } else {
+            // Create new issue
+            const issueTitle = `🚨 ${workflowName}: ${jobName} Failed`;
+            const issueBody = `## Workflow Failure Report
+            
+            ### 📋 Summary
+            The job **${jobName}** in workflow **${workflowName}** has failed.
+            
+            ### 🔗 Details
+            - **Workflow Run**: [View Run #${context.runNumber}](${runUrl})
+            - **Commit**: \`${context.sha.substring(0, 7)}\` by @${context.actor}
+            - **Branch**: \`${context.ref.replace('refs/heads/', '')}\`
+            - **Event**: ${context.eventName}
+            
+            ### ❌ Error Information
+            ${errorMessage ? `\`\`\`\n${errorMessage}\n\`\`\`` : 'No specific error details available.'}
+            
+            ### 🔧 Action Required
+            Please investigate and fix the issue. The workflow will not proceed until this is resolved.
+            
+            ---
+            *This issue was automatically created by the CI/CD failure detection system.*`;
+            
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: labels
+            });
+            
+            console.log(`Created issue #${issue.data.number}: ${issue.data.html_url}`);
+          }

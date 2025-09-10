@@ -29,7 +29,7 @@ env:
 jobs:
   frontend-performance:
     name: Frontend Performance Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -109,7 +109,7 @@ jobs:
           done
 
       - name: Upload Lighthouse reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lighthouse-reports
           path: |
@@ -119,7 +119,7 @@ jobs:
 
   backend-performance:
     name: Backend Performance Testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -127,7 +127,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -186,7 +186,7 @@ jobs:
           cargo tree --depth 1 >> memory-report.md
 
       - name: Upload performance reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-performance
           path: |
@@ -196,7 +196,7 @@ jobs:
 
   e2e-performance:
     name: End-to-End Performance Testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -261,7 +261,7 @@ jobs:
           kill $FRONTEND_PID || true
 
       - name: Upload E2E reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: e2e-performance
           path: |
@@ -271,7 +271,7 @@ jobs:
 
   load-testing:
     name: Load Testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: github.event_name == 'schedule' || github.event.inputs.benchmark_type == 'load' || github.event.inputs.benchmark_type == 'all'
     steps:
       - uses: actions/checkout@v4
@@ -378,7 +378,7 @@ jobs:
           kill $FRONTEND_PID || true
 
       - name: Upload load test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: load-test-results
           path: |
@@ -390,14 +390,14 @@ jobs:
 
   performance-regression-check:
     name: Performance Regression Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [frontend-performance, backend-performance, e2e-performance]
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
 
       - name: Download current performance data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Download baseline performance data
         continue-on-error: true
@@ -458,12 +458,12 @@ jobs:
 
   performance-alerts:
     name: Performance Alerting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [frontend-performance, backend-performance, load-testing]
     if: always() && (github.event_name == 'schedule' || github.event_name == 'push')
     steps:
       - name: Download performance data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Check performance thresholds
         run: |

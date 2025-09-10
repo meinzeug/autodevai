@@ -18,30 +18,14 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             rust_target: x86_64-unknown-linux-gnu
             arch: x64
             name: linux-x64
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             rust_target: aarch64-unknown-linux-gnu
             arch: arm64
             name: linux-arm64
-          - os: windows-latest
-            rust_target: x86_64-pc-windows-msvc
-            arch: x64
-            name: windows-x64
-          - os: windows-latest
-            rust_target: aarch64-pc-windows-msvc
-            arch: arm64
-            name: windows-arm64
-          - os: macos-latest
-            rust_target: x86_64-apple-darwin
-            arch: x64
-            name: macos-x64
-          - os: macos-latest
-            rust_target: aarch64-apple-darwin
-            arch: arm64
-            name: macos-arm64
 
     runs-on: ${{ matrix.platform.os }}
 
@@ -61,7 +45,7 @@ jobs:
           targets: ${{ matrix.platform.rust_target }}
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -70,7 +54,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.platform.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
 
       - name: Install Linux dependencies
-        if: matrix.platform.os == 'ubuntu-latest'
+        if: contains(matrix.platform.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -80,7 +64,7 @@ jobs:
             patchelf
 
       - name: Install ARM64 cross-compilation tools (Linux)
-        if: matrix.platform.os == 'ubuntu-latest' && matrix.platform.arch == 'arm64'
+        if: contains(matrix.platform.os, 'ubuntu') && matrix.platform.arch == 'arm64'
         run: |
           sudo apt-get install -y gcc-aarch64-linux-gnu
           echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
@@ -111,7 +95,7 @@ jobs:
           args: --target ${{ matrix.platform.rust_target }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tauri-${{ matrix.platform.name }}
           path: |
@@ -120,52 +104,14 @@ jobs:
             src-tauri/target/${{ matrix.platform.rust_target }}/release/autodev-ai
           retention-days: 30
 
-  create-universal-macos:
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: macos-latest
-    needs: build-tauri
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download x64 artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: tauri-macos-x64
-          path: ./artifacts/x64
-
-      - name: Download ARM64 artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: tauri-macos-arm64
-          path: ./artifacts/arm64
-
-      - name: Create universal binary
-        run: |
-          mkdir -p ./artifacts/universal
-          lipo -create \
-            ./artifacts/x64/AutoDev-AI.app/Contents/MacOS/AutoDev-AI \
-            ./artifacts/arm64/AutoDev-AI.app/Contents/MacOS/AutoDev-AI \
-            -output ./artifacts/universal/AutoDev-AI
-
-          # Copy one of the app bundles and replace the binary
-          cp -R ./artifacts/x64/AutoDev-AI.app ./artifacts/universal/
-          cp ./artifacts/universal/AutoDev-AI ./artifacts/universal/AutoDev-AI.app/Contents/MacOS/
-
-      - name: Upload universal binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: tauri-macos-universal
-          path: ./artifacts/universal/AutoDev-AI.app
-          retention-days: 30
 
   security-scan-builds:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-tauri
     if: github.event_name == 'pull_request'
     steps:
       - name: Download Linux build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tauri-linux-x64
           path: ./build-artifacts
@@ -184,22 +130,19 @@ jobs:
           find ./build-artifacts -type f -name "*.so" -o -name "*.dylib" -o -name "*.dll" | head -10
 
   performance-benchmarks:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ubuntu-22.04
     needs: build-tauri
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: tauri-${{ matrix.os == 'ubuntu-latest' && 'linux-x64' || matrix.os == 'windows-latest' && 'windows-x64' || 'macos-x64' }}
+          name: tauri-linux-x64
           path: ./app
 
       - name: Setup performance testing
         run: |
-          echo "Setting up performance benchmarks for ${{ matrix.os }}"
+          echo "Setting up performance benchmarks for Linux"
 
       - name: Run startup time benchmark
         timeout-minutes: 5
@@ -213,8 +156,8 @@ jobs:
           echo "Running memory usage tests..."
 
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: performance-results-${{ matrix.os }}
+          name: performance-results-linux
           path: ./performance-results/
           retention-days: 7

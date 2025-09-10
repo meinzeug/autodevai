@@ -37,7 +37,7 @@ jobs:
   # Prepare release metadata
   prepare:
     name: Prepare Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.version.outputs.version }}
       version_number: ${{ steps.version.outputs.version_number }}
@@ -256,7 +256,7 @@ jobs:
       matrix:
         platform:
           - name: linux-x64
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             arch: x64
             cmd: |
@@ -264,7 +264,7 @@ jobs:
               sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libayatana-appindicator3-dev
 
           - name: linux-arm64
-            os: ubuntu-24.04
+            os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             arch: arm64
             cmd: |
@@ -273,30 +273,6 @@ jobs:
               sudo apt-get install -y gcc-aarch64-linux-gnu
               echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
               echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
-          - name: windows-x64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-            arch: x64
-            cmd: echo "Windows setup complete"
-
-          - name: windows-arm64
-            os: windows-latest
-            target: aarch64-pc-windows-msvc
-            arch: arm64
-            cmd: echo "Windows ARM64 setup complete"
-
-          - name: macos-x64
-            os: macos-latest
-            target: x86_64-apple-darwin
-            arch: x64
-            cmd: echo "macOS Intel setup complete"
-
-          - name: macos-arm64
-            os: macos-latest
-            target: aarch64-apple-darwin
-            arch: arm64
-            cmd: echo "macOS Apple Silicon setup complete"
 
     steps:
       - name: Checkout repository
@@ -365,90 +341,10 @@ jobs:
             src-tauri/target/${{ matrix.platform.target }}/release/*.exe
           retention-days: 90
 
-  # Create universal macOS binary
-  build-universal-macos:
-    name: Build Universal macOS
-    runs-on: macos-latest
-    needs: [prepare, build-tauri]
-    steps:
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: tauri-macos-*
-          merge-multiple: true
-          path: ./artifacts
-
-      - name: Create universal binary
-        run: |
-          mkdir -p universal
-
-          # Find the binaries
-          X64_BINARY=$(find artifacts -path "*/x86_64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
-          ARM64_BINARY=$(find artifacts -path "*/aarch64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
-
-          if [[ -n "$X64_BINARY" && -n "$ARM64_BINARY" ]]; then
-            echo "Creating universal binary from:"
-            echo "  x64: $X64_BINARY"
-            echo "  arm64: $ARM64_BINARY"
-            
-            lipo -create "$X64_BINARY" "$ARM64_BINARY" -output universal/AutoDev-AI
-            file universal/AutoDev-AI
-          else
-            echo "Could not find both architecture binaries"
-            find artifacts -name "AutoDev-AI" -type f
-          fi
-
-      - name: Package universal app
-        if: success()
-        run: |
-          # Create app bundle
-          mkdir -p "AutoDev-AI.app/Contents/MacOS"
-          mkdir -p "AutoDev-AI.app/Contents/Resources"
-
-          # Copy universal binary
-          cp universal/AutoDev-AI "AutoDev-AI.app/Contents/MacOS/"
-          chmod +x "AutoDev-AI.app/Contents/MacOS/AutoDev-AI"
-
-          # Create Info.plist
-          cat > "AutoDev-AI.app/Contents/Info.plist" << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleExecutable</key>
-              <string>AutoDev-AI</string>
-              <key>CFBundleIdentifier</key>
-              <string>com.meinzeug.autodev-ai</string>
-              <key>CFBundleName</key>
-              <string>AutoDev-AI Neural Bridge</string>
-              <key>CFBundleVersion</key>
-              <string>${{ needs.prepare.outputs.version_number }}</string>
-              <key>CFBundleShortVersionString</key>
-              <string>${{ needs.prepare.outputs.version_number }}</string>
-              <key>LSMinimumSystemVersion</key>
-              <string>10.13</string>
-          </dict>
-          </plist>
-          EOF
-
-          # Create DMG
-          hdiutil create -volname "AutoDev-AI ${{ needs.prepare.outputs.version }}" \
-            -srcfolder "AutoDev-AI.app" \
-            -ov -format UDZO \
-            "AutoDev-AI_${{ needs.prepare.outputs.version }}_universal.dmg"
-
-      - name: Upload universal binary
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-universal-macos
-          path: AutoDev-AI_${{ needs.prepare.outputs.version }}_universal.dmg
-          retention-days: 90
-
   # Build and publish Docker images
   build-docker:
     name: Build Docker Images
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: prepare
     permissions:
       contents: read
@@ -503,7 +399,7 @@ jobs:
   # Create Kubernetes deployment manifests
   build-k8s:
     name: Build Kubernetes Manifests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [prepare, build-docker]
     steps:
       - name: Checkout repository
@@ -615,9 +511,9 @@ jobs:
   # Create GitHub release
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
-      [prepare, build-tauri, build-universal-macos, build-docker, build-k8s]
+      [prepare, build-tauri, build-docker, build-k8s]
     if: always() && (needs.build-tauri.result == 'success' || needs.build-docker.result == 'success')
     permissions:
       contents: write
@@ -673,7 +569,7 @@ jobs:
   # Post-release tasks
   post-release:
     name: Post-Release Tasks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [prepare, create-release]
     if: always() && needs.create-release.result == 'success'
     steps:
@@ -727,7 +623,7 @@ jobs:
   # Rollback mechanism
   rollback:
     name: Release Rollback
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [prepare, create-release]
     if: failure() && needs.prepare.outputs.version != ''
     steps:

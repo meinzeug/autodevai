@@ -15,7 +15,7 @@ env:
 jobs:
   lint-and-format:
     name: Lint and Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -62,9 +62,19 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy -- -D warnings
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Lint and Format'
+          workflow-name: 'CI Pipeline'
+          error-message: 'Linting or formatting checks failed'
+          labels: 'ci-failure,lint,automated'
+
   test-frontend:
     name: Frontend Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -89,9 +99,19 @@ jobs:
           file: ./coverage/lcov.info
           flags: frontend
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Frontend Tests'
+          workflow-name: 'CI Pipeline'
+          error-message: 'Frontend tests failed'
+          labels: 'ci-failure,testing,frontend,automated'
+
   test-backend:
     name: Backend Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -113,7 +133,7 @@ jobs:
             pkg-config
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -129,9 +149,19 @@ jobs:
         working-directory: src-tauri
         run: cargo test --test integration_tests
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Backend Tests'
+          workflow-name: 'CI Pipeline'
+          error-message: 'Backend tests failed'
+          labels: 'ci-failure,testing,backend,rust,automated'
+
   security-scan:
     name: Security Scanning
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -165,9 +195,19 @@ jobs:
           cargo install cargo-audit
           cargo audit
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Security Scanning'
+          workflow-name: 'CI Pipeline'
+          error-message: 'Security vulnerabilities detected'
+          labels: 'ci-failure,security,automated'
+
   dependency-check:
     name: Dependency Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -192,7 +232,7 @@ jobs:
 
   build-validation:
     name: Build Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [lint-and-format, test-frontend, test-backend]
     steps:
       - uses: actions/checkout@v4
@@ -231,7 +271,7 @@ jobs:
         run: cargo build --release
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
@@ -239,9 +279,19 @@ jobs:
             src-tauri/target/release/
           retention-days: 7
 
+      - name: Create issue on failure
+        if: failure()
+        uses: ./.github/actions/create-failure-issue
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          job-name: 'Build Validation'
+          workflow-name: 'CI Pipeline'
+          error-message: 'Build validation failed'
+          labels: 'ci-failure,build,automated'
+
   performance-check:
     name: Performance Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [build-validation]
     steps:
       - uses: actions/checkout@v4

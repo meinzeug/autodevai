@@ -27,7 +27,7 @@ jobs:
   # PR metadata and change detection
   pr-analysis:
     name: PR Analysis & Change Detection
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       has_frontend_changes: ${{ steps.changes.outputs.has_frontend_changes }}
       has_backend_changes: ${{ steps.changes.outputs.has_backend_changes }}
@@ -178,7 +178,7 @@ jobs:
   # PR title and description validation
   pr-format-validation:
     name: PR Format Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: pr-analysis
     steps:
       - name: Validate PR title
@@ -233,7 +233,7 @@ jobs:
   # Code quality validation
   code-quality:
     name: Code Quality Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis]
     if: needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || github.event.inputs.force_full_validation == 'true'
     steps:
@@ -298,7 +298,7 @@ jobs:
   # Testing validation
   test-validation:
     name: Test Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis, code-quality]
     if: always() && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || github.event.inputs.force_full_validation == 'true')
     strategy:
@@ -397,7 +397,7 @@ jobs:
   # Build validation
   build-validation:
     name: Build Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis, code-quality]
     if: always() && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || needs.pr-analysis.outputs.has_backend_changes == 'true' || needs.pr-analysis.outputs.has_docker_changes == 'true' || github.event.inputs.force_full_validation == 'true')
     strategy:
@@ -469,7 +469,7 @@ jobs:
   # Docker validation
   docker-validation:
     name: Docker Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis]
     if: needs.pr-analysis.outputs.has_docker_changes == 'true' || github.event.inputs.force_full_validation == 'true'
     strategy:
@@ -536,7 +536,7 @@ jobs:
   # Security validation
   security-validation:
     name: Security Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis]
     if: needs.pr-analysis.outputs.is_draft == 'false'
     permissions:
@@ -598,7 +598,7 @@ jobs:
   # Performance validation
   performance-validation:
     name: Performance Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis, build-validation]
     if: always() && needs.build-validation.result == 'success' && needs.pr-analysis.outputs.complexity_score >= '3'
     steps:
@@ -655,7 +655,7 @@ jobs:
   # Documentation validation
   docs-validation:
     name: Documentation Validation
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [pr-analysis]
     if: needs.pr-analysis.outputs.has_docs_changes == 'true' || needs.pr-analysis.outputs.is_breaking == 'true'
     steps:
@@ -687,7 +687,7 @@ jobs:
   # PR validation summary
   pr-summary:
     name: PR Validation Summary
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       [
         pr-analysis,

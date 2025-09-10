@@ -40,7 +40,7 @@ jobs:
   # Security scan configuration
   scan-config:
     name: Scan Configuration
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     outputs:
       scan_code: ${{ steps.config.outputs.scan_code }}
       scan_dependencies: ${{ steps.config.outputs.scan_dependencies }}
@@ -93,7 +93,7 @@ jobs:
   # CodeQL static analysis
   codeql-analysis:
     name: CodeQL Security Analysis
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_code == 'true'
     permissions:
@@ -139,7 +139,7 @@ jobs:
   # Semgrep static analysis
   semgrep-analysis:
     name: Semgrep Security Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_code == 'true'
     permissions:
@@ -171,7 +171,7 @@ jobs:
   # Secret scanning
   secret-scan:
     name: Secret Detection
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_secrets == 'true'
     steps:
@@ -247,7 +247,7 @@ jobs:
   # Dependency vulnerability scanning
   dependency-scan:
     name: Dependency Security Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_dependencies == 'true'
     permissions:
@@ -387,7 +387,7 @@ jobs:
   # Container security scanning
   container-scan:
     name: Container Security Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_containers == 'true'
     permissions:
@@ -495,7 +495,7 @@ jobs:
   # Infrastructure as Code scanning
   iac-scan:
     name: Infrastructure Security Scan
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_code == 'true'
     steps:
@@ -544,7 +544,7 @@ jobs:
   # Custom security tests
   custom-security-tests:
     name: Custom Security Tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: scan-config
     if: needs.scan-config.outputs.scan_code == 'true'
     steps:
@@ -593,7 +593,7 @@ jobs:
   # Security scan summary
   security-summary:
     name: Security Scan Summary
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs:
       [
         scan-config,
