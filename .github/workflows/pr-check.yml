@@ -49,7 +49,7 @@ jobs:
 
       - name: Get PR information
         id: pr_info
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number }};
@@ -182,7 +182,7 @@ jobs:
     needs: pr-analysis
     steps:
       - name: Validate PR title
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const title = context.payload.pull_request?.title || '';
@@ -201,7 +201,7 @@ jobs:
             }
 
       - name: Validate PR description
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const body = context.payload.pull_request?.body || '';
@@ -703,7 +703,7 @@ jobs:
     if: always()
     steps:
       - name: Generate PR validation report
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const needs = ${{ toJSON(needs) }};
@@ -828,7 +828,7 @@ jobs:
 
       - name: Auto-assign reviewers
         if: needs.pr-analysis.outputs.complexity_score >= '3' || needs.pr-analysis.outputs.is_breaking == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prNumber = context.payload.pull_request?.number;
