@@ -1,5 +1,5 @@
 //! Event System
-//! 
+//!
 //! Provides a comprehensive event system for inter-component communication
 //! with event routing, filtering, persistence, and real-time updates.
 
@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State, Window};
-use tokio::sync::{broadcast, RwLock, Mutex};
+use tokio::sync::{broadcast, Mutex, RwLock};
 use uuid::Uuid;
 
 /// Event severity levels
@@ -237,16 +237,16 @@ impl EventSystem {
     /// Emit a new event
     pub async fn emit(&self, event: Event) -> Result<(), Box<dyn std::error::Error>> {
         let config = self.config.read().await;
-        
+
         // Add to event queue
         {
             let mut events = self.events.write().await;
-            
+
             // Enforce max events limit
             if events.len() >= config.max_events {
                 events.pop_front();
             }
-            
+
             events.push_back(event.clone());
         }
 
@@ -279,10 +279,11 @@ impl EventSystem {
         let events = self.events.read().await;
         let mut matched_events = Vec::new();
 
-        for event in events.iter().rev() { // Most recent first
+        for event in events.iter().rev() {
+            // Most recent first
             if self.matches_filter(event, &filter) {
                 matched_events.push(event.clone());
-                
+
                 if let Some(limit) = filter.limit {
                     if matched_events.len() >= limit {
                         break;
@@ -321,11 +322,11 @@ impl EventSystem {
     pub async fn unsubscribe(&self, subscription_id: &str) -> bool {
         let mut subscriptions = self.subscriptions.write().await;
         let removed = subscriptions.remove(subscription_id).is_some();
-        
+
         if removed {
             log::debug!("Removed event subscription: {}", subscription_id);
         }
-        
+
         removed
     }
 
@@ -339,7 +340,7 @@ impl EventSystem {
         let mut events = self.events.write().await;
         let count = events.len();
         events.clear();
-        
+
         // Reset statistics
         let mut stats = self.stats.lock().await;
         stats.total_events = 0;
@@ -347,7 +348,7 @@ impl EventSystem {
         stats.events_by_category.clear();
         stats.recent_events = 0;
         stats.error_rate = 0.0;
-        
+
         log::info!("Cleared {} events", count);
         count
     }
@@ -418,36 +419,45 @@ impl EventSystem {
         stats.total_events += 1;
 
         // Update severity counts
-        *stats.events_by_severity.entry(event.severity.clone()).or_insert(0) += 1;
+        *stats
+            .events_by_severity
+            .entry(event.severity.clone())
+            .or_insert(0) += 1;
 
         // Update category counts
-        *stats.events_by_category.entry(event.category.clone()).or_insert(0) += 1;
+        *stats
+            .events_by_category
+            .entry(event.category.clone())
+            .or_insert(0) += 1;
 
         // Update recent events (last hour)
         let one_hour_ago = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
-            .as_millis() as u64 - 3600000;
+            .as_millis() as u64
+            - 3600000;
 
         if event.timestamp > one_hour_ago {
             stats.recent_events += 1;
         }
 
         // Update error rate (errors per minute in last hour)
-        let error_count = stats.events_by_severity
+        let error_count = stats
+            .events_by_severity
             .get(&EventSeverity::Error)
             .unwrap_or(&0)
-            + stats.events_by_severity
+            + stats
+                .events_by_severity
                 .get(&EventSeverity::Critical)
                 .unwrap_or(&0);
-        
+
         stats.error_rate = error_count as f64 / 60.0; // Rough estimate
     }
 
     /// Notify subscribers about new events
     async fn notify_subscribers(&self, event: &Event) {
         let subscriptions = self.subscriptions.read().await;
-        
+
         for subscription in subscriptions.values() {
             if self.matches_filter(event, &subscription.filter) {
                 if let Some(window_label) = &subscription.window_label {
@@ -470,7 +480,9 @@ impl EventSystem {
             EventSeverity::Info => log::info!("[{}] {}", event.source.component, event.title),
             EventSeverity::Warning => log::warn!("[{}] {}", event.source.component, event.title),
             EventSeverity::Error => log::error!("[{}] {}", event.source.component, event.title),
-            EventSeverity::Critical => log::error!("[CRITICAL] [{}] {}", event.source.component, event.title),
+            EventSeverity::Critical => {
+                log::error!("[CRITICAL] [{}] {}", event.source.component, event.title)
+            }
         }
     }
 
@@ -490,7 +502,8 @@ impl EventSystem {
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
                         .unwrap_or_default()
-                        .as_millis() as u64 - (config.auto_cleanup_hours * 3600 * 1000)
+                        .as_millis() as u64
+                        - (config.auto_cleanup_hours * 3600 * 1000)
                 };
 
                 let mut events = events.write().await;
@@ -524,7 +537,8 @@ impl EventSystem {
                 let one_hour_ago = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap_or_default()
-                    .as_millis() as u64 - 3600000;
+                    .as_millis() as u64
+                    - 3600000;
 
                 stats.recent_events = events
                     .iter()
@@ -702,9 +716,13 @@ pub async fn subscribe_to_events(
     realtime: Option<bool>,
 ) -> Result<String, String> {
     let subscription_id = event_system
-        .subscribe(filter, Some(window.label().to_string()), realtime.unwrap_or(true))
+        .subscribe(
+            filter,
+            Some(window.label().to_string()),
+            realtime.unwrap_or(true),
+        )
         .await;
-    
+
     Ok(subscription_id)
 }
 
@@ -719,17 +737,13 @@ pub async fn unsubscribe_from_events(
 
 /// Tauri command to get event statistics
 #[tauri::command]
-pub async fn get_event_stats(
-    event_system: State<'_, EventSystem>,
-) -> Result<EventStats, String> {
+pub async fn get_event_stats(event_system: State<'_, EventSystem>) -> Result<EventStats, String> {
     Ok(event_system.get_stats().await)
 }
 
 /// Tauri command to clear events
 #[tauri::command]
-pub async fn clear_events(
-    event_system: State<'_, EventSystem>,
-) -> Result<usize, String> {
+pub async fn clear_events(event_system: State<'_, EventSystem>) -> Result<usize, String> {
     Ok(event_system.clear_events().await)
 }
 

@@ -112,8 +112,15 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+      - '--web.external-url=http://localhost:50091'
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "65534:65534"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=50m
 
   grafana:
     image: grafana/grafana:latest
@@ -125,6 +132,9 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin_change_me}
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SECURITY_ALLOW_EMBEDDING=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -134,6 +144,11 @@ services:
       - prometheus
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "472:0"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=50m
 
   nginx:
     image: nginx:alpine

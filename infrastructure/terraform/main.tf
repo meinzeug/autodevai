@@ -45,6 +45,73 @@ resource "aws_vpc" "autodevai_vpc" {
   }
 }
 
+# VPC Flow Logs for security monitoring
+resource "aws_flow_log" "autodevai_vpc_flow_log" {
+  iam_role_arn    = aws_iam_role.flow_log_role.arn
+  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
+  traffic_type    = "ALL"
+  vpc_id          = aws_vpc.autodevai_vpc.id
+
+  tags = {
+    Name = "autodevai-vpc-flow-log-${var.environment}"
+  }
+}
+
+# CloudWatch Log Group for VPC Flow Logs
+resource "aws_cloudwatch_log_group" "vpc_flow_log" {
+  name              = "/aws/vpc/flowlogs-${var.environment}"
+  retention_in_days = 30
+  
+  tags = {
+    Name = "autodevai-vpc-flow-logs-${var.environment}"
+  }
+}
+
+# IAM role for VPC Flow Logs
+resource "aws_iam_role" "flow_log_role" {
+  name = "autodevai-flow-log-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "autodevai-flow-log-role-${var.environment}"
+  }
+}
+
+# IAM policy for VPC Flow Logs
+resource "aws_iam_role_policy" "flow_log_policy" {
+  name = "autodevai-flow-log-policy-${var.environment}"
+  role = aws_iam_role.flow_log_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # Internet Gateway
 resource "aws_internet_gateway" "autodevai_igw" {
   vpc_id = aws_vpc.autodevai_vpc.id
@@ -149,11 +216,13 @@ resource "aws_security_group" "eks_cluster_sg" {
   description = "Security group for EKS cluster"
   vpc_id      = aws_vpc.autodevai_vpc.id
   
+  # Restrict HTTPS access to specific IP ranges for better security
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_cidr_blocks
+    description = "HTTPS access from allowed CIDR blocks"
   }
   
   egress {
@@ -180,32 +249,40 @@ resource "aws_security_group" "eks_node_sg" {
     self      = true
   }
   
+  # SSH access only from within VPC
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
+    description = "SSH access from within VPC only"
   }
   
+  # HTTP access through ALB only
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+    description     = "HTTP access from ALB only"
   }
   
+  # HTTPS access through ALB only
   ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+    description     = "HTTPS access from ALB only"
   }
   
+  # Custom application port - restrict to ALB only
   ingress {
-    from_port   = 50060
-    to_port     = 50060
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 50060
+    to_port         = 50060
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+    description     = "Custom app port access from ALB only"
   }
   
   egress {
@@ -254,6 +331,16 @@ resource "aws_security_group" "elasticache_sg" {
     to_port         = 6379
     protocol        = "tcp"
     security_groups = [aws_security_group.eks_node_sg.id]
+    description     = "Redis access from EKS nodes only"
+  }
+  
+  # Explicit egress rule (default allows all, but explicit is better)
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.0.0.0/16"]
+    description = "Outbound to VPC only"
   }
   
   tags = {

@@ -4,16 +4,19 @@
 fn main() {
     // Standard Tauri build
     tauri_build::build();
-    
+
     // Add build metadata
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    
+
     println!("cargo:rustc-env=BUILD_TIMESTAMP={}", now);
-    println!("cargo:rustc-env=BUILD_PROFILE={}", std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string()));
-    
+    println!(
+        "cargo:rustc-env=BUILD_PROFILE={}",
+        std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string())
+    );
+
     // Git information (if available)
     if let Ok(output) = std::process::Command::new("git")
         .args(["rev-parse", "HEAD"])
@@ -24,7 +27,7 @@ fn main() {
             println!("cargo:rustc-env=GIT_HASH={}", git_hash);
         }
     }
-    
+
     if let Ok(output) = std::process::Command::new("git")
         .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()
@@ -34,10 +37,10 @@ fn main() {
             println!("cargo:rustc-env=GIT_BRANCH={}", git_branch);
         }
     }
-    
+
     // Check for required system dependencies
     check_system_dependencies();
-    
+
     // Generate build configuration
     generate_build_config();
 }
@@ -51,7 +54,7 @@ fn check_system_dependencies() {
     {
         println!("cargo:rustc-cfg=has_docker");
     }
-    
+
     // Check for Node.js
     if std::process::Command::new("node")
         .arg("--version")
@@ -60,7 +63,7 @@ fn check_system_dependencies() {
     {
         println!("cargo:rustc-cfg=has_nodejs");
     }
-    
+
     // Check for Git
     if std::process::Command::new("git")
         .arg("--version")
@@ -72,12 +75,13 @@ fn check_system_dependencies() {
 }
 
 fn generate_build_config() {
-    let config = format!(r#"{{
+    let config = format!(
+        r#"{{
         "build_timestamp": "{}",
         "version": "{}",
         "target_triple": "{}",
         "features": []
-    }}"#, 
+    }}"#,
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -85,9 +89,9 @@ fn generate_build_config() {
         env!("CARGO_PKG_VERSION"),
         std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string())
     );
-    
+
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let config_path = std::path::Path::new(&out_dir).join("build_config.json");
-    
+
     std::fs::write(config_path, config).expect("Failed to write build config");
 }

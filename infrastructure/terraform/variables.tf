@@ -111,3 +111,9 @@ variable "backup_retention_period" {
   type        = number
   default     = 7
 }
+
+variable "allowed_cidr_blocks" {
+  description = "CIDR blocks allowed to access the infrastructure"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]  # Default to all, should be restricted in production
+}

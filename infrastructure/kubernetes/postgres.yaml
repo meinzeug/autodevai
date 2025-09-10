@@ -24,6 +24,14 @@ spec:
       containers:
       - name: postgres
         image: postgres:15-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 999
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: false  # PostgreSQL needs write access to /var/lib/postgresql/data
         ports:
         - containerPort: 5432
           name: postgres
@@ -60,9 +68,11 @@ spec:
           requests:
             memory: "512Mi"
             cpu: "250m"
+            ephemeral-storage: "1Gi"
           limits:
             memory: "1Gi"
             cpu: "500m"
+            ephemeral-storage: "2Gi"
         livenessProbe:
           exec:
             command:

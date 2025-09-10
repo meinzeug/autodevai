@@ -23,15 +23,31 @@ runs:
   using: 'composite'
   steps:
     - name: Create issue for failure
-      uses: actions/github-script@v7
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const jobName = '${{ inputs.job-name }}';
-          const workflowName = '${{ inputs.workflow-name }}';
-          const errorMessage = `${{ inputs.error-message }}`;
-          const labels = '${{ inputs.labels }}'.split(',').map(l => l.trim());
+          // SECURITY FIX: Sanitize inputs to prevent script injection
+          const sanitize = (input, maxLength = 200) => {
+            if (!input) return '';
+            return input.toString()
+              .replace(/[`$(){}[\]|&;<>]/g, '') // Remove dangerous characters
+              .substring(0, maxLength) // Limit length
+              .trim();
+          };
+          
+          const jobName = sanitize('${{ inputs.job-name }}', 100);
+          const workflowName = sanitize('${{ inputs.workflow-name }}', 100);
+          const errorMessage = sanitize(`${{ inputs.error-message }}`, 1000);
+          const rawLabels = sanitize('${{ inputs.labels }}', 200);
+          const labels = rawLabels.split(',').map(l => l.trim()).filter(l => l);
           const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          
+          // Additional safety checks
+          if (!jobName || !workflowName) {
+            console.log('Missing required job name or workflow name');
+            return;
+          }
           
           // Check for existing open issue
           const issues = await github.rest.issues.listForRepo({
@@ -48,22 +64,24 @@ runs:
           
           if (existingIssue) {
             // Update existing issue
+            const updateBody = `🔄 **Another failure detected**
+            
+            - **Run**: [#${context.runNumber}](${runUrl})
+            - **Commit**: \`${context.sha.substring(0, 7)}\`
+            - **Time**: ${new Date().toISOString()}
+            
+            ${errorMessage ? `**Error Details:**\n\`\`\`\n${errorMessage}\n\`\`\`` : ''}`;
+            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: existingIssue.number,
-              body: `🔄 **Another failure detected**
-              
-              - **Run**: [#${context.runNumber}](${runUrl})
-              - **Commit**: \`${context.sha.substring(0, 7)}\`
-              - **Time**: ${new Date().toISOString()}
-              
-              ${errorMessage ? `**Error Details:**\n\`\`\`\n${errorMessage}\n\`\`\`` : ''}`
+              body: updateBody
             });
             
             console.log(`Updated existing issue #${existingIssue.number}`);
           } else {
-            // Create new issue
+            // Create new issue with sanitized data
             const issueTitle = `🚨 ${workflowName}: ${jobName} Failed`;
             const issueBody = `## Workflow Failure Report
             

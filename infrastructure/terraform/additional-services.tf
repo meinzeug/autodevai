@@ -39,11 +39,13 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   
+  # Custom application port - restrict to specific CIDR blocks
   ingress {
     from_port   = 50060
     to_port     = 50060
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allowed_cidr_blocks
+    description = "Custom app port access from allowed CIDR blocks"
   }
   
   egress {
@@ -64,6 +66,27 @@ resource "aws_s3_bucket" "alb_logs" {
   
   tags = {
     Name = "autodevai-alb-logs-${var.environment}"
+  }
+}
+
+# Block all public access to ALB logs bucket
+resource "aws_s3_bucket_public_access_block" "alb_logs_pab" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Enable server-side encryption for ALB logs bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs_encryption" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
 
@@ -98,6 +121,16 @@ resource "aws_s3_bucket" "autodevai_storage" {
   tags = {
     Name = "autodevai-storage-${var.environment}"
   }
+}
+
+# Block all public access to storage bucket
+resource "aws_s3_bucket_public_access_block" "autodevai_storage_pab" {
+  bucket = aws_s3_bucket.autodevai_storage.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_s3_bucket_versioning" "autodevai_storage_versioning" {
@@ -349,6 +382,124 @@ resource "aws_acm_certificate" "autodevai_cert" {
   
   tags = {
     Name = "autodevai-cert-${var.environment}"
+  }
+}
+
+# GuardDuty for threat detection
+resource "aws_guardduty_detector" "autodevai_guardduty" {
+  enable = true
+
+  datasources {
+    s3_logs {
+      enable = true
+    }
+    kubernetes {
+      audit_logs {
+        enable = true
+      }
+    }
+    malware_protection {
+      scan_ec2_instance_with_findings {
+        ebs_volumes {
+          enable = true
+        }
+      }
+    }
+  }
+
+  tags = {
+    Name = "autodevai-guardduty-${var.environment}"
+  }
+}
+
+# CloudTrail for API auditing
+resource "aws_cloudtrail" "autodevai_cloudtrail" {
+  name                          = "autodevai-cloudtrail-${var.environment}"
+  s3_bucket_name               = aws_s3_bucket.cloudtrail_logs.bucket
+  include_global_service_events = true
+  is_multi_region_trail        = true
+  enable_logging               = true
+
+  event_selector {
+    read_write_type                 = "All"
+    include_management_events       = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["${aws_s3_bucket.autodevai_storage.arn}/*"]
+    }
+  }
+
+  tags = {
+    Name = "autodevai-cloudtrail-${var.environment}"
+  }
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail_logs_policy]
+}
+
+# S3 Bucket for CloudTrail logs
+resource "aws_s3_bucket" "cloudtrail_logs" {
+  bucket = "autodevai-cloudtrail-logs-${var.environment}-${random_string.bucket_suffix.result}"
+  
+  tags = {
+    Name = "autodevai-cloudtrail-logs-${var.environment}"
+  }
+}
+
+# Block public access to CloudTrail logs bucket
+resource "aws_s3_bucket_public_access_block" "cloudtrail_logs_pab" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# CloudTrail S3 bucket policy
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket_policy" "cloudtrail_logs_policy" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.cloudtrail_logs.arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Enable server-side encryption for CloudTrail logs bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs_encryption" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
 

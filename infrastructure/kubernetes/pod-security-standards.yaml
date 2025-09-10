@@ -1,0 +1,281 @@
+# Pod Security Standards Configuration for AutoDev-AI Platform
+# Implements Pod Security Standards (PSS) replacing deprecated PodSecurityPolicies
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autodevai
+  labels:
+    # Pod Security Standards enforcement
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    # Version specification (optional)
+    pod-security.kubernetes.io/enforce-version: v1.28
+    pod-security.kubernetes.io/audit-version: v1.28
+    pod-security.kubernetes.io/warn-version: v1.28
+    # Additional labels
+    name: autodevai
+    app.kubernetes.io/name: autodevai
+    security.policy: restricted
+
+---
+# Security context constraints for development namespaces (more permissive)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autodevai-dev
+  labels:
+    # More permissive for development
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/enforce-version: v1.28
+    pod-security.kubernetes.io/audit-version: v1.28
+    pod-security.kubernetes.io/warn-version: v1.28
+    name: autodevai-dev
+    app.kubernetes.io/name: autodevai-dev
+    security.policy: baseline
+
+---
+# Staging namespace with balanced security
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autodev-staging
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/enforce-version: v1.28
+    name: autodev-staging
+    app.kubernetes.io/name: autodev-staging
+    security.policy: restricted
+
+---
+# Production namespace with maximum security
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: autodev-production
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/enforce-version: v1.28
+    name: autodev-production
+    app.kubernetes.io/name: autodev-production
+    security.policy: restricted
+
+---
+# RBAC Configuration for Service Accounts
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: autodevai-restricted
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: security
+automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: autodevai-sandbox
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai-sandbox
+    app.kubernetes.io/component: security
+automountServiceAccountToken: false
+
+---
+# Role for basic operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: autodevai
+  name: autodevai-pod-reader
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: rbac
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+  resourceNames: ["autodevai-config", "autodevai-secrets"]
+
+---
+# Bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: autodevai-pod-reader-binding
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: rbac
+subjects:
+- kind: ServiceAccount
+  name: autodevai-restricted
+  namespace: autodevai
+roleRef:
+  kind: Role
+  name: autodevai-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Security Context Template (for reference - to be applied to all deployments)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-context-template
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: security-config
+data:
+  recommended-security-context.yaml: |
+    # Recommended Security Context for All Pods
+    securityContext:
+      # Pod-level security context
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    
+    # Container-level security context (apply to each container)
+    containers:
+    - name: example
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Required volume mounts for read-only root filesystem
+      volumeMounts:
+      - name: tmp-volume
+        mountPath: /tmp
+      - name: var-run
+        mountPath: /var/run
+      - name: cache-volume
+        mountPath: /app/cache
+    
+    # Required volumes
+    volumes:
+    - name: tmp-volume
+      emptyDir:
+        sizeLimit: 100Mi
+    - name: var-run
+      emptyDir:
+        sizeLimit: 50Mi
+    - name: cache-volume
+      emptyDir:
+        sizeLimit: 500Mi
+
+---
+# Admission Controller Configuration (ValidatingAdmissionWebhook)
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionWebhook
+metadata:
+  name: autodevai-security-validator
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: admission-control
+webhooks:
+- name: security.autodevai.validate
+  clientConfig:
+    service:
+      name: autodevai-admission-webhook
+      namespace: autodevai
+      path: /validate-security
+  rules:
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: ["apps"]
+    apiVersions: ["v1"]
+    resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+  - operations: ["CREATE", "UPDATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  namespaceSelector:
+    matchLabels:
+      name: autodevai
+  admissionReviewVersions: ["v1", "v1beta1"]
+  sideEffects: None
+  failurePolicy: Fail
+
+---
+# Resource Quotas for Security
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: autodevai-security-quota
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: resource-management
+spec:
+  hard:
+    # Limit total resources to prevent resource exhaustion attacks
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    requests.ephemeral-storage: 50Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    limits.ephemeral-storage: 100Gi
+    # Limit number of pods to prevent pod proliferation attacks
+    pods: "50"
+    persistentvolumeclaims: "10"
+    services: "10"
+    secrets: "20"
+    configmaps: "20"
+
+---
+# Limit Ranges for fine-grained control
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: autodevai-limits
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: autodevai
+    app.kubernetes.io/component: resource-limits
+spec:
+  limits:
+  # Default limits for containers
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+      ephemeral-storage: "1Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+      ephemeral-storage: "100Mi"
+    max:
+      cpu: "2"
+      memory: "4Gi"
+      ephemeral-storage: "10Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+      ephemeral-storage: "50Mi"
+  # Limits for PVCs
+  - type: PersistentVolumeClaim
+    max:
+      storage: "50Gi"
+    min:
+      storage: "1Gi"

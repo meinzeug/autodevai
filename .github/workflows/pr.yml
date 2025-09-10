@@ -1,5 +1,11 @@
 name: PR Validation
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  actions: read
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -16,25 +22,28 @@ jobs:
     outputs:
       skip_ci: ${{ steps.check.outputs.skip_ci }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
       
       - name: Check for skip CI
         id: check
         run: |
-          if git log -1 --pretty=%B | grep -q "\[skip ci\]\|\[ci skip\]"; then
-            echo "skip_ci=true" >> $GITHUB_OUTPUT
+          # SECURITY: Safely check commit message without injection risks
+          COMMIT_MSG=$(git log -1 --pretty=format:'%B' | head -1)
+          if printf '%s' "${COMMIT_MSG}" | grep -qE '\[(skip ci|ci skip)\]'; then
+            echo "skip_ci=true" >> "$GITHUB_OUTPUT"
             echo "⏭️ Skipping CI as requested"
           else
-            echo "skip_ci=false" >> $GITHUB_OUTPUT
+            echo "skip_ci=false" >> "$GITHUB_OUTPUT"
           fi
       
       - name: Get changed files
         id: changed
         run: |
+          # SECURITY: Safe file listing without command injection
           echo "Changed files:"
-          git diff --name-only origin/main...HEAD || git diff --name-only HEAD~1
+          git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || echo "No changes detected"
 
   # Quick validation
   validate:
@@ -43,10 +52,10 @@ jobs:
     needs: analyze
     if: needs.analyze.outputs.skip_ci != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -77,10 +86,10 @@ jobs:
     needs: [analyze, validate]
     if: needs.analyze.outputs.skip_ci != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -108,10 +117,10 @@ jobs:
     needs: [analyze, validate]
     if: needs.analyze.outputs.skip_ci != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -145,7 +154,7 @@ jobs:
     if: always()
     steps:
       - name: PR validation summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         env:
           SKIP_CI: ${{ needs.analyze.outputs.skip_ci }}
           VALIDATE_RESULT: ${{ needs.validate.result }}

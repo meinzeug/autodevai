@@ -1867,19 +1867,19 @@ cd src-tauri && cargo clippy -- -W clippy::all && cd ..
 
 ## 3.3 Tauri Window Configuration (10 Schritte)
 
-- [ ] ### Schritt 166: Window State Plugin hinzufügen
+ - [x] ### Schritt 16&: Window State Plugin hinzufügen
 ```bash
 cd src-tauri && cargo add tauri-plugin-window-state --features tauri && cd ..
 ```
 **Erläuterung:** cargo add fügt Dependency zu Cargo.toml hinzu. --features aktiviert Plugin-spezifische Features. Window-State speichert Position/Größe zwischen Sessions. Plugin muss in main.rs registriert werden. Version wird automatisch aufgelöst.
 
-- [ ] ### Schritt 167: Main.rs mit Plugin erweitern
+ - [x] ### Schritt 16&: Main.rs mit Plugin erweitern
 ```bash
 sed -i '/.run(tauri::generate_context!())/i\        .plugin(tauri_plugin_window_state::Builder::default().build())' src-tauri/src/main.rs
 ```
 **Erläuterung:** sed -i editiert Datei in-place. /pattern/i fügt vor gefundener Zeile ein. Builder-Pattern für Plugin-Konfiguration. Backslash escaped Dots in Regex. Plugin-Registration vor run() Call.
 
-- [ ] ### Schritt 168: Dev Window Configuration
+ - [x] ### Schritt 16&: Dev Window Configuration
 ```bash
 cat > src-tauri/src/dev_window.rs << 'EOF'
 use tauri::{Manager, Window};
@@ -1894,7 +1894,7 @@ EOF
 ```
 **Erläuterung:** cfg(debug_assertions) nur in Debug-Builds aktiv. open_devtools() öffnet Browser-DevTools automatisch. Separate Funktion für Window-Setup. Window-Type von Tauri importiert. Conditional Compilation für Dev-Features.
 
-- [ ] ### Schritt 169: Window Menu erstellen
+ - [x] ### Schritt 16&: Window Menu erstellen
 ```bash
 cat > src-tauri/src/menu.rs << 'EOF'
 use tauri::{CustomMenuItem, Menu, MenuItem, Submenu};
@@ -1920,7 +1920,7 @@ EOF
 ```
 **Erläuterung:** CustomMenuItem für eigene Menu-Actions. Native Items nutzen OS-Standard-Funktionalität. Submenu gruppiert verwandte Items. to_string() konvertiert &str zu String. Menu-Builder-Pattern mit Chaining.
 
-- [ ] ### Schritt 170: System Tray Configuration
+ - [x] ### Schritt 17&: System Tray Configuration
 ```bash
 cat > src-tauri/src/tray.rs << 'EOF'
 use tauri::{AppHandle, CustomMenuItem, SystemTray, SystemTrayMenu, SystemTrayMenuItem};
@@ -1961,7 +1961,7 @@ EOF
 ```
 **Erläuterung:** SystemTray für Minimierung in System-Tray. Pattern-Matching auf event_id für Actions. get_window("main") findet Haupt-Window. let _ ignoriert Result für Error-Handling. Separator für visuelle Menu-Trennung.
 
-- [ ] ### Schritt 171: IPC Security Configuration
+ - [x] ### Schritt 17&: IPC Security Configuration
 ```bash
 cat > src-tauri/src/ipc_security.rs << 'EOF'
 use tauri::Runtime;
@@ -1986,7 +1986,7 @@ EOF
 ```
 **Erläuterung:** Generic Function mit Runtime Trait-Bound. Message-Size-Limit gegen DoS-Attacks. XSS-Pattern-Detection für Sicherheit. Unterstriche in Zahlen für Lesbarkeit. Bool-Return für einfache Integration.
 
-- [ ] ### Schritt 172: App Setup Hook implementieren
+ - [x] ### Schritt 17&: App Setup Hook implementieren
 ```bash
 cat > src-tauri/src/setup.rs << 'EOF'
 use tauri::{App, Manager};
@@ -2009,7 +2009,7 @@ EOF
 ```
 **Erläuterung:** Box<dyn Error> für flexible Error-Types. path_resolver() für Platform-spezifische Pfade. ok_or konvertiert Option zu Result. ? Operator für Error-Propagation. Setup läuft einmal bei App-Start.
 
-- [ ] ### Schritt 173: Update Handler implementieren
+ - [x] ### Schritt 17&: Update Handler implementieren
 ```bash
 cat > src-tauri/src/updater.rs << 'EOF'
 use tauri::Manager;
@@ -2026,7 +2026,7 @@ EOF
 ```
 **Erläuterung:** Async Function für Non-blocking Update-Check. package_info() gibt App-Metadata. Placeholder für spätere GitHub-Release-Integration. log Macros für strukturiertes Logging. Version aus Cargo.toml gelesen.
 
-- [ ] ### Schritt 174: Event System Setup
+ - [x] ### Schritt 17&: Event System Setup
 ```bash
 cat > src-tauri/src/events.rs << 'EOF'
 use serde::{Deserialize, Serialize};
@@ -2049,7 +2049,7 @@ EOF
 ```
 **Erläuterung:** Generic über Runtime für Tauri-Compatibility. Clone für Event-Broadcasting an multiple Listeners. f32 für Prozent-Progress (0.0-1.0). emit() sendet Events ans Frontend. Strukturierte Events mit Types.
 
-- [ ] ### Schritt 175: Alle Module in main.rs integrieren
+ - [x] ### Schritt 17&: Alle Module in main.rs integrieren
 ```bash
 cat >> src-tauri/src/main.rs << 'EOF'
 
@@ -2074,7 +2074,7 @@ EOF
 
 ## 3.4 Build Configuration (15 Schritte)
 
-- [ ] ### Schritt 176: Release Profile optimieren
+ - [x] ### Schritt 17&: Release Profile optimieren
 ```bash
 cat >> src-tauri/Cargo.toml << 'EOF'
 
@@ -2088,7 +2088,7 @@ EOF
 ```
 **Erläuterung:** LTO (Link Time Optimization) für kleinere Binaries. opt-level 3 maximale Optimierung. codegen-units 1 für bessere Optimierung vs Parallelität. strip entfernt Debug-Symbols. panic=abort für kleinere Binary ohne Unwind.
 
-- [ ] ### Schritt 177: Development Profile konfigurieren
+ - [x] ### Schritt 17&: Development Profile konfigurieren
 ```bash
 cat >> src-tauri/Cargo.toml << 'EOF'
 
@@ -2100,13 +2100,13 @@ EOF
 ```
 **Erläuterung:** opt-level 0 für schnelle Compilation. debug=true für Debugging-Information. split-debuginfo für schnelleres Linking. Unpacked für bessere Debugger-Integration. Dev-Profile für Entwicklungs-Builds.
 
-- [ ] ### Schritt 178: Cross-Compilation Targets hinzufügen
+ - [x] ### Schritt 17&: Cross-Compilation Targets hinzufügen
 ```bash
 rustup target add x86_64-pc-windows-gnu x86_64-apple-darwin
 ```
 **Erläuterung:** Windows-GNU Target für Cross-Compilation von Linux. Apple-Darwin für macOS (benötigt zusätzliche Tools). Targets werden zu Toolchain hinzugefügt. Ermöglicht Multi-Platform-Builds. Installation nur der Target-Definitions.
 
-- [ ] ### Schritt 179: Bundle Settings erweitern
+ - [x] ### Schritt 17&: Bundle Settings erweitern
 ```bash
 cat > src-tauri/bundle.json << 'EOF'
 {
@@ -2132,7 +2132,7 @@ EOF
 ```
 **Erläuterung:** Platform-spezifische Bundle-Konfigurationen. Debian depends für Runtime-Dependencies. AppImage mit Media-Framework für Compatibility. Windows Timestamp für Signatur-Validity. macOS Minimum-Version für API-Compatibility.
 
-- [ ] ### Schritt 180: Pre-Build Script erstellen
+ - [x] ### Schritt 18&: Pre-Build Script erstellen
 ```bash
 cat > src-tauri/before-build.sh << 'EOF'
 #!/bin/bash
@@ -2158,7 +2158,7 @@ chmod +x src-tauri/before-build.sh
 ```
 **Erläuterung:** set -e stoppt bei jedem Fehler. Icon-Check verhindert Build ohne Assets. cargo fmt --check prüft ohne Änderung. -D warnings macht Warnings zu Errors. chmod +x für Ausführbarkeit.
 
-- [ ] ### Schritt 181: Post-Build Script erstellen
+ - [x] ### Schritt 18&: Post-Build Script erstellen
 ```bash
 cat > src-tauri/after-build.sh << 'EOF'
 #!/bin/bash
@@ -2184,13 +2184,13 @@ chmod +x src-tauri/after-build.sh
 ```
 **Erläuterung:** CARGO_TARGET_DIR mit Fallback zu default. mkdir -p für rekursive Erstellung. cp -r für recursive Copy mit Subdirs. Conditional Copy nur wenn Bundle existiert. dist-bundles für finale Artefakte.
 
-- [ ] ### Schritt 182: Tauri Build Hook konfigurieren
+ - [x] ### Schritt 18&: Tauri Build Hook konfigurieren
 ```bash
 sed -i '/"beforeBuildCommand":/s/"npm run build"/"npm run build \&\& .\/src-tauri\/before-build.sh"/' src-tauri/tauri.conf.json
 ```
 **Erläuterung:** sed inline-Edit der JSON-Config. Escaped Ampersands für Shell-Command. Escaped Slashes in Path. && Chain für Sequential Execution. Hook läuft vor jedem Build.
 
-- [ ] ### Schritt 183: Environment File Template
+ - [x] ### Schritt 18&: Environment File Template
 ```bash
 cat > .env.example << 'EOF'
 # OpenRouter API Configuration
@@ -2209,7 +2209,7 @@ EOF
 ```
 **Erläuterung:** VITE_ Prefix für Frontend-Environment-Variables. Example-File für Documentation ohne Secrets. Feature-Flags für Conditional Features. Kommentar-Warnung gegen Secret-Commits. Template für Team-Mitglieder.
 
-- [ ] ### Schritt 184: Build-Varianten Script
+ - [x] ### Schritt 18&: Build-Varianten Script
 ```bash
 cat > scripts/build-all.sh << 'EOF'
 #!/bin/bash
@@ -2240,7 +2240,7 @@ chmod +x scripts/build-all.sh
 ```
 **Erläuterung:** OSTYPE Check für Platform-spezifische Builds. -- trennt npm von tauri-cli Arguments. --bundles für spezifische Output-Formate. Multiple Build-Varianten in einem Script. Conditional Builds basierend auf OS.
 
-- [ ] ### Schritt 185: Version Bump Script
+ - [x] ### Schritt 18&: Version Bump Script
 ```bash
 cat > scripts/version-bump.sh << 'EOF'
 #!/bin/bash

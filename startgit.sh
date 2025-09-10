@@ -1,0 +1,8 @@
+npx claude-flow@alpha hive-mind spawn "You are the lead queen. Read and execute code_github.md in current directory. Spawn parallel swarms for each roadmap task. Use ports 50000-50100. GitHub: meinzeug/autodevai. NO placeholders. Always spawn your swarms with the right agent type: Agent type 'analyst' not found. Available agents: general-purpose, statusline-setup, output-style-setup, reviewer, researcher, planner, tester, coder, Benchmark Suite, Performance Optimization, Resource Allocator, Topology Optimizer, Load Balancing Coordinator, Performance Monitor, Agents Directory, multi-repo-swarm, flow-nexus-swarm, release-swarm, code-review-swarm, issue-tracker, swarm-issue, project-board-sync, release-manager, workflow-automation, flow-nexus-app-store, repo-architect, flow-nexus-payments, github-modes, flow-nexus-user-tools, pr-manager, swarm-pr, flow-nexus-auth, sync-coordinator, flow-nexus-workflow, flow-nexus-challenges, flow-nexus-sandbox, flow-nexus-neural, security-manager, gossip-coordinator, quorum-manager, Consensus Builder, performance-benchmarker, byzantine-coordinator, crdt-synchronizer, raft-manager, migration-planner, task-orchestrator, memory-coordinator, sparc-coord, swarm-init, sparc-coder, smart-agent, perf-analyzer, cicd-engineer, ml-developer, base-template-generator, Migration Summary, backend-dev, mobile-dev, system-architect, api-docs, refinement, specification, pseudocode, architecture, tdd-london-swarm, code-analyzer, production-validator, Swarm Coordination, mesh-coordinator, hierarchical-coordinator, adaptive-coordinator" \
+  --agents 10 \
+  --topology hierarchical \
+  --strategy parallel \
+  --memory-namespace autodev \
+  --claude \
+  --auto-spawn \
+  --verbose

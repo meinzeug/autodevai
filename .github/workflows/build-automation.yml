@@ -1,0 +1,343 @@
+name: Build Automation
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+      build_variants:
+        description: 'Build all platform variants'
+        required: false
+        default: true
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  pre-build:
+    name: Pre-build Checks
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_build: ${{ steps.changes.outputs.should_build }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for changes
+        id: changes
+        env:
+          # SECURITY FIX: Use environment variables to prevent script injection
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          # SECURITY FIX: Get values from environment variables instead of direct interpolation
+          if [[ "${EVENT_NAME}" == "push" ]] && [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          elif git diff --quiet HEAD~1 HEAD -- 'src-tauri/**' '*.json' 'src/**' || [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get version
+        id: version
+        run: |
+          # SECURITY: Safe package.json version extraction
+          VERSION=$(node -pe "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version" 2>/dev/null || echo "unknown")
+          printf 'version=%s\n' "${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Run pre-build script
+        run: |
+          chmod +x src-tauri/before-build.sh
+          cd src-tauri && ./before-build.sh
+
+  build-matrix:
+    name: Build ${{ matrix.platform }}
+    needs: pre-build
+    if: needs.pre-build.outputs.should_build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--bundles dmg'
+          - platform: 'ubuntu-22.04'
+            args: '--bundles deb,appimage'
+          - platform: 'windows-latest'
+            args: '--bundles msi'
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+          key: ${{ matrix.platform }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.platform }}-cargo-
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri application
+        uses: tauri-apps/tauri-action@0e6ec9bb7e2aab7c2de1c93b88d2b8c6ccb9d4c4 # v0.5.12
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'AutoDevAI v__VERSION__'
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          args: ${{ matrix.args }}
+
+      - name: Run post-build script
+        run: |
+          chmod +x src-tauri/after-build.sh
+          cd src-tauri && ./after-build.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: build-${{ matrix.platform }}
+          path: |
+            dist-bundles/
+            src-tauri/target/release/bundle/
+          retention-days: 30
+
+  version-bump:
+    name: Version Bump
+    needs: [pre-build, build-matrix]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run version bump
+        env:
+          # SECURITY FIX: Use environment variables to prevent script injection
+          VERSION_TYPE: ${{ github.event.inputs.version_type || 'patch' }}
+        run: |
+          chmod +x scripts/version-bump.sh
+          # SECURITY FIX: Use environment variable instead of direct interpolation
+          ./scripts/version-bump.sh "${VERSION_TYPE}"
+
+      - name: Push changes
+        run: |
+          git push origin main
+          git push --tags
+
+  release:
+    name: Create Release
+    needs: [pre-build, build-matrix]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) -exec cp {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AutoDevAI ${{ github.ref_name }}
+          body: |
+            ## What's Changed
+            
+            This release includes the latest features and bug fixes.
+            
+            ### Downloads
+            
+            Choose the appropriate package for your operating system:
+            
+            - **Windows**: `.msi` installer
+            - **macOS**: `.dmg` installer
+            - **Linux**: `.deb` package or `.AppImage`
+            
+            ### Installation
+            
+            1. Download the appropriate package for your OS
+            2. Install using your system's package manager or run the installer
+            3. Launch AutoDevAI from your applications menu
+            
+            Full Changelog: https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.ref_name }}
+          files: |
+            release-assets/*
+            dist-bundles/*
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  post-build:
+    name: Post-build Tasks
+    needs: [pre-build, build-matrix]
+    if: always() && needs.pre-build.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Download all artifacts
+        if: success()
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        with:
+          path: all-artifacts
+
+      - name: Generate build report
+        run: |
+          echo "# Build Report" > build-report.md
+          echo "" >> build-report.md
+          echo "**Build Time:** $(date)" >> build-report.md
+          echo "**Commit:** ${{ github.sha }}" >> build-report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> build-report.md
+          echo "**Version:** ${{ needs.pre-build.outputs.version }}" >> build-report.md
+          echo "" >> build-report.md
+          
+          if [ -d "all-artifacts" ]; then
+            echo "## Build Artifacts" >> build-report.md
+            find all-artifacts -type f -name "*" | while read file; do
+              echo "- $(basename "$file") ($(du -h "$file" | cut -f1))" >> build-report.md
+            done
+          fi
+
+      - name: Upload build report
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: build-report
+          path: build-report.md
+          retention-days: 90
+
+  cleanup:
+    name: Cleanup
+    needs: [build-matrix, release]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Delete old artifacts
+        uses: geekyeggo/delete-artifact@24928e75e6e6590170563b8ddae9fac674508aa1 # v5.0.0
+        with:
+          name: |
+            build-ubuntu-22.04
+            build-macos-latest
+            build-windows-latest
+          failOnError: false

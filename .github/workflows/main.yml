@@ -1,5 +1,11 @@
 name: Main CI/CD Pipeline
 
+permissions:
+  contents: read
+  issues: write
+  actions: read
+  security-events: write
+
 on:
   push:
     branches: [main, develop]
@@ -16,10 +22,10 @@ jobs:
     name: Quick Validation
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -49,10 +55,10 @@ jobs:
     runs-on: ubuntu-22.04
     needs: validate
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -65,7 +71,7 @@ jobs:
       
       - name: Upload coverage
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: coverage-report
           path: coverage/
@@ -87,16 +93,16 @@ jobs:
     runs-on: ubuntu-22.04
     needs: validate
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
       
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
       
@@ -113,7 +119,7 @@ jobs:
             pkg-config
       
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: |
             ~/.cargo/registry
@@ -132,7 +138,7 @@ jobs:
         run: cargo build --release
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: build-artifacts
           path: |
@@ -157,10 +163,10 @@ jobs:
     needs: validate
     continue-on-error: true  # Don't block pipeline for security warnings
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -195,15 +201,16 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
         run: |
+          # SECURITY: Use environment variables to prevent injection
           echo "✅ Main pipeline completed"
-          echo "Validation: $VALIDATE_RESULT"
-          echo "Tests: $TEST_RESULT"
-          echo "Build: $BUILD_RESULT"
-          echo "Security: $SECURITY_RESULT"
+          printf 'Validation: %s\n' "${VALIDATE_RESULT}"
+          printf 'Tests: %s\n' "${TEST_RESULT}"
+          printf 'Build: %s\n' "${BUILD_RESULT}"
+          printf 'Security: %s\n' "${SECURITY_RESULT}"
           
-          if [[ "$VALIDATE_RESULT" == "failure" ]] || \
-             [[ "$TEST_RESULT" == "failure" ]] || \
-             [[ "$BUILD_RESULT" == "failure" ]]; then
+          if [[ "${VALIDATE_RESULT}" == "failure" ]] || \
+             [[ "${TEST_RESULT}" == "failure" ]] || \
+             [[ "${BUILD_RESULT}" == "failure" ]]; then
             echo "❌ Pipeline failed"
             exit 1
           else

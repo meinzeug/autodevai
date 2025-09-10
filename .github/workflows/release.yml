@@ -1,5 +1,12 @@
 name: Release Pipeline
 
+permissions:
+  contents: write
+  discussions: write
+  packages: write
+  issues: write
+  actions: read
+
 on:
   push:
     tags:
@@ -47,7 +54,7 @@ jobs:
       release_notes: ${{ steps.release_notes.outputs.notes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -55,23 +62,35 @@ jobs:
       - name: Extract version information
         id: version
         env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          # SECURITY FIX: Use environment variables to prevent script injection
           INPUT_VERSION: ${{ github.event.inputs.version }}
           INPUT_RELEASE_TYPE: ${{ github.event.inputs.release_type }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            # Sanitize inputs by removing any shell metacharacters
-            VERSION=$(printf '%s' "${INPUT_VERSION}" | tr -cd '[:alnum:].-')
-            RELEASE_TYPE=$(printf '%s' "${INPUT_RELEASE_TYPE}" | tr -cd '[:alnum:]')
+          # SECURITY FIX: Get values from environment variables instead of direct interpolation
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            # Sanitize inputs by removing any shell metacharacters and limiting length
+            RAW_VERSION="${INPUT_VERSION:-}"
+            RAW_RELEASE_TYPE="${INPUT_RELEASE_TYPE:-release}"
             
-            # Validate version format
+            # Remove dangerous characters and limit length
+            VERSION=$(printf '%.50s' "${RAW_VERSION}" | tr -cd '[:alnum:].-')
+            RELEASE_TYPE=$(printf '%.20s' "${RAW_RELEASE_TYPE}" | tr -cd '[:alnum:]')
+            
+            # Validate version format with strict regex
             if [[ ! "${VERSION}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
               echo "Error: Invalid version format: ${VERSION}"
               exit 1
             fi
+            
+            # Validate release type
+            if [[ ! "${RELEASE_TYPE}" =~ ^(release|prerelease|draft)$ ]]; then
+              echo "Error: Invalid release type: ${RELEASE_TYPE}"
+              exit 1
+            fi
           else
-            VERSION="${GITHUB_REF_NAME}"
+            VERSION="${REF_NAME}"
             if [[ "${VERSION}" == *"-"* ]]; then
               RELEASE_TYPE="prerelease"
             else
@@ -94,9 +113,8 @@ jobs:
 
       - name: Generate changelog
         id: changelog
-        env:
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
+          RELEASE_TAG="${{ steps.version.outputs.tag }}"
           # Get previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
@@ -120,11 +138,11 @@ jobs:
 
       - name: Generate release notes
         id: release_notes
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          RELEASE_VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_TAG="${{ steps.version.outputs.tag }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
+          
           cat > RELEASE_NOTES.md << 'EOF'
 # AutoDev-AI Neural Bridge Platform %RELEASE_VERSION%
 
@@ -246,9 +264,9 @@ EOF
           } >> $GITHUB_OUTPUT
 
       - name: Update version in files
-        env:
-          VERSION_NUM: ${{ steps.version.outputs.version_number }}
         run: |
+          VERSION_NUM="${{ steps.version.outputs.version_number }}"
+          
           # Update package.json
           npm version "${VERSION_NUM}" --no-git-tag-version --allow-same-version
 
@@ -261,16 +279,16 @@ EOF
           jq --arg version "${VERSION_NUM}" '.version = $version' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
 
       - name: Commit version updates
-        env:
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
+          RELEASE_VERSION="${{ steps.version.outputs.version }}"
+          
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
           git commit -m "chore: bump version to ${RELEASE_VERSION}" || exit 0
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: release-metadata
           path: |
@@ -308,18 +326,18 @@ EOF
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.platform.target }}
@@ -335,7 +353,7 @@ EOF
 
       - name: Create Tauri application
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@0e6ec9bb7e2aab7c2de1c93b88d2b8c6ccb9d4c4 # v0.5.12
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
@@ -355,10 +373,10 @@ EOF
           includeUpdaterJson: true
 
       - name: Generate checksums
-        env:
-          PLATFORM_NAME: ${{ matrix.platform.name }}
-          PLATFORM_TARGET: ${{ matrix.platform.target }}
         run: |
+          PLATFORM_NAME="${{ matrix.platform.name }}"
+          PLATFORM_TARGET="${{ matrix.platform.target }}"
+          
           cd "src-tauri/target/${PLATFORM_TARGET}/release/bundle"
           find . -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) \
             -exec sha256sum {} \; > "checksums-${PLATFORM_NAME}.txt"
@@ -368,7 +386,7 @@ EOF
           cat "checksums-${PLATFORM_NAME}.txt"
 
       - name: Upload platform artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: tauri-${{ matrix.platform.name }}
           path: |
@@ -390,16 +408,16 @@ EOF
         platform: [linux/amd64, linux/arm64]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -407,7 +425,7 @@ EOF
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: ghcr.io/${{ github.repository }}/autodev-ai-${{ matrix.service }}
           tags: |
@@ -416,7 +434,7 @@ EOF
             type=raw,value=beta,enable=${{ needs.prepare.outputs.is_prerelease == 'true' }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           context: .
           file: ./docker/Dockerfile.${{ matrix.service }}
@@ -438,14 +456,14 @@ EOF
     needs: [prepare, build-docker]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Generate Kubernetes manifests
-        env:
-          VERSION_NUMBER: ${{ needs.prepare.outputs.version_number }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
+          VERSION_NUMBER="${{ needs.prepare.outputs.version_number }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          
           mkdir -p k8s-release
 
           # Create namespace
@@ -541,7 +559,7 @@ EOF
           cat k8s-release/*.yaml > k8s-release/autodev-ai-${RELEASE_VERSION}.yaml
 
       - name: Upload Kubernetes manifests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: kubernetes-manifests
           path: k8s-release/
@@ -562,43 +580,48 @@ EOF
       upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           path: ./artifacts
 
       - name: Create release
         id: release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
-          release_name: 'AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }}'
+          name: 'AutoDev-AI Neural Bridge ${{ needs.prepare.outputs.version }}'
           body: ${{ needs.prepare.outputs.release_notes }}
           draft: ${{ github.event.inputs.release_type == 'draft' }}
           prerelease: ${{ needs.prepare.outputs.is_prerelease }}
 
       - name: Upload release assets
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPLOAD_URL: ${{ steps.release.outputs.upload_url }}
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
+          GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          UPLOAD_URL="${{ steps.release.outputs.upload_url }}"
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          
           # Upload Tauri binaries
           find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) | while read -r file; do
             filename=$(basename "$file")
             printf 'Uploading: %s\n' "${filename}"
             
-            # Use curl with proper error handling and safe URL construction
+            # SECURITY: Use curl with proper error handling and safe URL construction
             upload_url_clean="${UPLOAD_URL%\{*}"
-            curl -L \
-              -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              -H "Content-Type: application/octet-stream" \
-              "${upload_url_clean}?name=${filename}" \
-              --data-binary "@${file}" || printf 'Failed to upload %s\n' "${filename}"
+            # Validate filename before upload
+            if [[ "${filename}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+              curl -L \
+                -X POST \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                -H "Content-Type: application/octet-stream" \
+                "${upload_url_clean}?name=${filename}" \
+                --data-binary "@${file}" || printf 'Failed to upload %s\n' "${filename}"
+            else
+              printf 'Skipping invalid filename: %s\n' "${filename}"
+            fi
           done
 
           # Upload Kubernetes manifests
@@ -623,13 +646,13 @@ EOF
     if: always() && needs.create-release.result == 'success'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Update documentation
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          CHANGELOG_CONTENT: ${{ needs.prepare.outputs.changelog }}
         run: |
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          CHANGELOG_CONTENT="${{ needs.prepare.outputs.changelog }}"
+          
           # Update README with latest version
           sed -i "s/Version: [^)]*/Version: ${RELEASE_VERSION}/g" README.md
 
@@ -649,9 +672,9 @@ EOF
           fi
 
       - name: Commit documentation updates
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add README.md CHANGELOG.md
@@ -660,12 +683,12 @@ EOF
 
       - name: Trigger website deployment
         if: success()
-        env:
-          WEBHOOK_URL: ${{ secrets.WEBSITE_WEBHOOK_URL }}
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          WEBHOOK_URL="${{ secrets.WEBSITE_WEBHOOK_URL }}"
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          RELEASE_TAG="${{ needs.prepare.outputs.tag }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
+          
           if [[ -n "${WEBHOOK_URL}" ]]; then
             curl -X POST "${WEBHOOK_URL}" \
               -H "Content-Type: application/json" \
@@ -677,11 +700,11 @@ EOF
           fi
 
       - name: Announce release
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          RELEASE_VERSION="${{ needs.prepare.outputs.version }}"
+          RELEASE_TAG="${{ needs.prepare.outputs.tag }}"
+          GITHUB_REPOSITORY="${{ github.repository }}"
+          
           printf '🎉 AutoDev-AI Neural Bridge %s has been released!\n' "${RELEASE_VERSION}"
           printf '📦 Download: https://github.com/%s/releases/tag/%s\n' "${GITHUB_REPOSITORY}" "${RELEASE_TAG}"
           printf '🐳 Docker: docker pull ghcr.io/%s:%s\n' "${GITHUB_REPOSITORY}" "${RELEASE_VERSION}"
@@ -696,12 +719,15 @@ EOF
     steps:
       - name: Delete failed release
         env:
+          # SECURITY FIX: Use environment variables to prevent script injection
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
+          # SECURITY FIX: Get values from environment variables instead of direct interpolation
+          
           echo "Release creation failed, cleaning up..."
 
           # Delete the release if it was created

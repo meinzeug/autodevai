@@ -1,5 +1,5 @@
 //! Settings Manager
-//! 
+//!
 //! Provides persistent settings management with JSON storage
 
 use serde_json::Value;
@@ -19,7 +19,7 @@ impl Settings {
     /// Create a new settings manager
     pub fn new(config_dir: PathBuf) -> Self {
         let config_path = config_dir.join("settings.json");
-        
+
         Self {
             config_path,
             data: RwLock::new(HashMap::new()),
@@ -31,15 +31,15 @@ impl Settings {
         if self.config_path.exists() {
             let content = fs::read_to_string(&self.config_path).await?;
             let settings: HashMap<String, Value> = serde_json::from_str(&content)?;
-            
+
             let mut data = self.data.write().await;
             *data = settings;
-            
+
             log::info!("Loaded settings from {:?}", self.config_path);
         } else {
             log::info!("Settings file not found, using defaults");
         }
-        
+
         Ok(())
     }
 
@@ -52,7 +52,7 @@ impl Settings {
         let data = self.data.read().await;
         let content = serde_json::to_string_pretty(&*data)?;
         fs::write(&self.config_path, content).await?;
-        
+
         log::debug!("Saved settings to {:?}", self.config_path);
         Ok(())
     }
@@ -96,9 +96,9 @@ pub async fn setup_settings(app_handle: &AppHandle) -> Result<(), Box<dyn std::e
 
     let settings = Settings::new(config_dir);
     settings.load().await?;
-    
+
     app_handle.manage(settings);
-    
+
     log::info!("Settings manager initialized");
     Ok(())
 }
@@ -135,9 +135,7 @@ pub async fn get_all_settings(
 
 /// Tauri command to save settings
 #[tauri::command]
-pub async fn save_settings(
-    settings: tauri::State<'_, Settings>,
-) -> Result<(), String> {
+pub async fn save_settings(settings: tauri::State<'_, Settings>) -> Result<(), String> {
     settings
         .save()
         .await
@@ -146,9 +144,7 @@ pub async fn save_settings(
 
 /// Tauri command to reset settings
 #[tauri::command]
-pub async fn reset_settings(
-    settings: tauri::State<'_, Settings>,
-) -> Result<(), String> {
+pub async fn reset_settings(settings: tauri::State<'_, Settings>) -> Result<(), String> {
     settings
         .reset()
         .await
@@ -164,7 +160,7 @@ mod tests {
     async fn test_settings_creation() {
         let temp_dir = TempDir::new().unwrap();
         let settings = Settings::new(temp_dir.path().to_path_buf());
-        
+
         assert!(settings.config_path.ends_with("settings.json"));
     }
 
@@ -172,10 +168,10 @@ mod tests {
     async fn test_settings_set_get() {
         let temp_dir = TempDir::new().unwrap();
         let settings = Settings::new(temp_dir.path().to_path_buf());
-        
+
         let value = Value::String("test_value".to_string());
         settings.set("test_key", value.clone()).await.unwrap();
-        
+
         let retrieved = settings.get("test_key").await;
         assert_eq!(retrieved, Some(value));
     }
@@ -184,15 +180,15 @@ mod tests {
     async fn test_settings_save_load() {
         let temp_dir = TempDir::new().unwrap();
         let settings = Settings::new(temp_dir.path().to_path_buf());
-        
+
         let value = Value::String("persistent_value".to_string());
         settings.set("persistent_key", value.clone()).await.unwrap();
         settings.save().await.unwrap();
-        
+
         // Create new settings instance and load
         let new_settings = Settings::new(temp_dir.path().to_path_buf());
         new_settings.load().await.unwrap();
-        
+
         let retrieved = new_settings.get("persistent_key").await;
         assert_eq!(retrieved, Some(value));
     }

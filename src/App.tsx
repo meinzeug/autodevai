@@ -24,6 +24,7 @@ import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TauriService } from './services/tauri';
 import { cn } from './utils/cn';
+import { hiveCoordinator } from './utils/hive-coordination';
 import {
   ExecutionOutput,
   ClaudeFlowCommand,
@@ -76,6 +77,28 @@ function AppContent() {
     const initializeApp = async () => {
       try {
         await tauriService.initialize();
+        
+        // Initialize hive coordination
+        hiveCoordinator.subscribe('integration-coordinator', (message) => {
+          const output: ExecutionOutput = {
+            id: `hive-${Date.now()}`,
+            timestamp: new Date(),
+            type: message.type === 'error' ? 'error' : 'info',
+            content: `Hive Message from ${message.from}: ${JSON.stringify(message.payload)}`,
+            source: 'Hive Mind'
+          };
+          
+          setState(prev => ({
+            ...prev,
+            outputs: [...prev.outputs, output]
+          }));
+        });
+
+        // Update hive state based on app initialization
+        hiveCoordinator.updateState('window', {
+          state: 'active',
+          securityLevel: 'medium'
+        });
         
         // Set up execution output listener
         const unsubscribeOutput = tauriService.onExecutionOutput((output) => {

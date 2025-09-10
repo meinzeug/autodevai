@@ -35,18 +35,25 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production && npm cache clean --force
 
-# Install global dependencies
-RUN npm install -g \
-    pm2 \
-    nodemon \
-    @claudejs/claude-code
+# Install only essential production dependencies
+RUN npm install -g pm2 @claudejs/claude-code && \
+    # Clean up npm cache and temporary files
+    npm cache clean --force && \
+    rm -rf /tmp/* /root/.npm
 
 # Copy application source
 COPY --chown=autodev:autodev . .
 
-# Create necessary directories
-RUN mkdir -p logs temp uploads && \
-    chown -R autodev:autodev logs temp uploads
+# Create necessary directories with proper permissions
+RUN mkdir -p logs temp uploads cache && \
+    chown -R autodev:autodev logs temp uploads cache && \
+    chmod 755 logs temp uploads cache
+
+# Security hardening: remove unnecessary tools
+RUN apt-get remove -y wget vim && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
 
 # Create startup script
 RUN cat > /app/start-api.sh << 'EOF'

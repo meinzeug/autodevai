@@ -1,0 +1,78 @@
+# Build Configuration for AutoDev-AI Neural Bridge
+# This file contains platform-specific build settings
+
+[build]
+# Default build settings
+default_target = "x86_64-unknown-linux-gnu"
+parallel_jobs = 8
+incremental = true
+
+[docker]
+# Docker compatibility settings
+port_range_start = 50000
+port_range_end = 50100
+base_image = "rust:1.75-slim"
+network_mode = "bridge"
+
+[targets.linux]
+enabled = true
+profile = "release"
+strip_symbols = true
+optimization_level = 3
+
+[targets.windows]
+enabled = true
+target = "x86_64-pc-windows-gnu"
+profile = "release"
+cross_compile = true
+strip_symbols = true
+static_crt = true
+
+[targets.macos]
+enabled = true
+target = "x86_64-apple-darwin"
+profile = "release"
+cross_compile = true
+min_version = "10.15"
+hardened_runtime = true
+
+[targets.macos_arm]
+enabled = true  
+target = "aarch64-apple-darwin"
+profile = "release"
+cross_compile = true
+min_version = "11.0"
+
+[features]
+# Feature flags for different builds
+default = ["docker-support", "neural-bridge"]
+docker-support = []
+neural-bridge = []
+development = ["debug-symbols"]
+production = ["optimized", "lto"]
+
+[optimization]
+# Optimization settings per profile
+release_lto = "fat"
+release_codegen_units = 1
+release_panic = "abort"
+release_strip = true
+dev_opt_level = 0
+dev_debug = true
+dev_incremental = true
+
+[validation]
+# Pre-build validation settings
+check_formatting = true
+run_clippy = true
+clippy_deny_warnings = true
+require_icons = true
+validate_docker_ports = true
+performance_test = false  # Set to true for CI/CD
+
+[bundle]
+# Bundle-specific settings
+include_readme = true
+include_changelog = false
+compress_assets = true
+validate_signatures = false  # Set to true in CI with certificates

@@ -2686,6 +2686,7 @@ dependencies = [
  "directories",
  "env_logger",
  "futures-util",
+ "lazy_static",
  "log",
  "mockito",
  "pretty_assertions",

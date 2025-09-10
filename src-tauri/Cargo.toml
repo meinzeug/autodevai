@@ -29,6 +29,7 @@ clap = { version = "4.0", features = ["derive"] }
 directories = "5.0"
 tauri-plugin-window-state = "2.4.0"
 tauri-plugin-single-instance = "2.0"
+lazy_static = "1.4"
 # Additional plugins for complete system - using compatible versions
 # tauri-plugin-global-shortcut = "2.0"
 # tauri-plugin-notification = "2.0"
@@ -59,6 +60,7 @@ strip = true
 panic = "abort"
 rpath = false
 debug-assertions = false
+overflow-checks = false
 
 [profile.dev-fast]
 inherits = "dev"
@@ -83,3 +85,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 name = "performance"
 harness = false
 path = "benches/performance.rs"
+
+[[bin]]
+name = "window_state_test"
+path = "window_state_test.rs"

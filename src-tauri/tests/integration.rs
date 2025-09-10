@@ -12,7 +12,7 @@ fn test_app_initialization() {
     // Test app initialization process
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     env::set_var("AUTODEV_AI_HOME", temp_dir.path());
-    
+
     // Verify environment setup
     assert!(env::var("AUTODEV_AI_HOME").is_ok());
 }
@@ -36,7 +36,7 @@ fn test_configuration_loading() {
     // Test configuration loading
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     env::set_var("CONFIG_PATH", temp_dir.path());
-    
+
     // Test configuration validation
     assert!(env::var("CONFIG_PATH").is_ok());
 }
@@ -64,13 +64,13 @@ fn test_temp_directory_creation() {
 
 #[cfg(test)]
 mod integration_tests {
-    
+
     #[test]
     fn test_module_integration() {
         // Test inter-module communication
         assert!(true, "Module integration test");
     }
-    
+
     #[test]
     fn test_json_serialization() {
         // Test JSON handling capabilities

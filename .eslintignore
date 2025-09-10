@@ -1,0 +1,42 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+target/
+coverage/
+
+# Generated files
+src-tauri/target/
+src-tauri/gen/
+*.d.ts
+
+# Documentation files that use browser globals
+src-tauri/target/doc/**/*.js
+
+# Test outputs
+tests/reports/
+tests/performance/reports/
+tests/performance/baselines/
+
+# Configuration files that need different environments
+*.config.js
+*.config.ts
+
+# Temporary files
+.tmp/
+.cache/
+.swarm/
+
+# Generated heap snapshots
+*.heapsnapshot
+
+# Auto-generated scripts
+**/static.files/*.js
+**/sidebar-items.js
+**/search-index.js
+**/crates.js
+
+# Claude helper files that use Node.js globals
+.claude/helpers/*.js

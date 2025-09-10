@@ -1,5 +1,5 @@
 //! Settings Module
-//! 
+//!
 //! Contains settings management functionality
 
 pub mod manager;

@@ -43,26 +43,35 @@ RUN groupadd -r autodev && useradd -r -g autodev -s /bin/bash autodev
 RUN mkdir -p /home/autodev && chown -R autodev:autodev /home/autodev
 RUN chown -R autodev:autodev /app
 
+# Security hardening: remove unnecessary packages and clean up
+RUN apt-get remove -y wget vim nano && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
+
 # Copy application source
 COPY --chown=autodev:autodev . .
 
 # Build the React application
 RUN npm run build
 
-# Install global development tools
+# Install only essential production tools
 RUN npm install -g \
     @claudejs/claude-code \
-    create-react-app \
-    nodemon \
-    eslint \
-    prettier \
-    jest
+    serve && \
+    # Remove npm cache and temporary files for security
+    npm cache clean --force && \
+    rm -rf /tmp/* /root/.npm
 
-# Setup environment
+# Setup secure environment
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DISPLAY=:0
 ENV REACT_APP_API_URL=http://localhost:50052
+# Security environment variables
+ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV NPM_CONFIG_AUDIT=false
+ENV NPM_CONFIG_FUND=false
 
 # Create startup script
 RUN cat > /app/start-gui.sh << 'EOF'

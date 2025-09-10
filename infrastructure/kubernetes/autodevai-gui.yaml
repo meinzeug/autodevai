@@ -26,7 +26,7 @@ spec:
           runAsGroup: 1000
           capabilities:
             drop: ["ALL"]
-          readOnlyRootFilesystem: false
+          readOnlyRootFilesystem: true
         image: autodevai/gui:latest
         ports:
         - containerPort: 3000
@@ -68,9 +68,11 @@ spec:
           requests:
             memory: "512Mi"
             cpu: "250m"
+            ephemeral-storage: "1Gi"
           limits:
             memory: "1Gi"
             cpu: "500m"
+            ephemeral-storage: "2Gi"
         livenessProbe:
           httpGet:
             path: /health
@@ -86,10 +88,20 @@ spec:
         volumeMounts:
         - name: app-storage
           mountPath: /app/data
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: cache-volume
+          mountPath: /app/cache
       volumes:
       - name: app-storage
         persistentVolumeClaim:
           claimName: autodevai-gui-pvc
+      - name: tmp-volume
+        emptyDir:
+          sizeLimit: 100Mi
+      - name: cache-volume
+        emptyDir:
+          sizeLimit: 500Mi
 
 ---
 apiVersion: v1
