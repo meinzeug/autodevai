@@ -57,18 +57,18 @@ jobs:
               core.setFailed('Could not determine PR number');
               return;
             }
-            
+
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber
             });
-            
+
             core.setOutput('is_draft', pr.draft);
             core.setOutput('author', pr.user.login);
             core.setOutput('labels', pr.labels.map(label => label.name).join(','));
             core.setOutput('pr_number', prNumber);
-            
+
             console.log(`PR #${prNumber} by ${pr.user.login}`);
             console.log(`Draft: ${pr.draft}`);
             console.log(`Labels: ${pr.labels.map(label => label.name).join(', ')}`);
@@ -79,21 +79,21 @@ jobs:
           # Get the base branch for comparison
           BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          
+
           echo "Comparing $BASE_SHA...$HEAD_SHA"
-          
+
           # Get list of changed files
           CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
           echo "Changed files:"
           echo "$CHANGED_FILES"
-          
+
           # Detect change types
           HAS_FRONTEND=false
           HAS_BACKEND=false
           HAS_DOCKER=false
           HAS_DOCS=false
           HAS_CONFIG=false
-          
+
           while IFS= read -r file; do
             case "$file" in
               src/*.* | public/*.* | *.html | *.css | *.js | *.ts | *.tsx | *.jsx | package*.json | vite.config.* | tsconfig*.json)
@@ -113,13 +113,13 @@ jobs:
                 ;;
             esac
           done <<< "$CHANGED_FILES"
-          
+
           echo "has_frontend_changes=$HAS_FRONTEND" >> $GITHUB_OUTPUT
           echo "has_backend_changes=$HAS_BACKEND" >> $GITHUB_OUTPUT
           echo "has_docker_changes=$HAS_DOCKER" >> $GITHUB_OUTPUT
           echo "has_docs_changes=$HAS_DOCS" >> $GITHUB_OUTPUT
           echo "has_config_changes=$HAS_CONFIG" >> $GITHUB_OUTPUT
-          
+
           echo "Frontend changes: $HAS_FRONTEND"
           echo "Backend changes: $HAS_BACKEND"
           echo "Docker changes: $HAS_DOCKER"
@@ -131,14 +131,14 @@ jobs:
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          
+
           # Count changes
           LINES_ADDED=$(git diff --numstat $BASE_SHA...$HEAD_SHA | awk '{sum += $1} END {print sum}' || echo "0")
           LINES_REMOVED=$(git diff --numstat $BASE_SHA...$HEAD_SHA | awk '{sum += $2} END {print sum}' || echo "0")
           FILES_CHANGED=$(git diff --name-only $BASE_SHA...$HEAD_SHA | wc -l)
-          
+
           TOTAL_LINES=$((LINES_ADDED + LINES_REMOVED))
-          
+
           # Determine PR size
           if [[ $TOTAL_LINES -lt 100 && $FILES_CHANGED -lt 5 ]]; then
             PR_SIZE="small"
@@ -153,21 +153,21 @@ jobs:
             PR_SIZE="xlarge"
             COMPLEXITY_SCORE=4
           fi
-          
+
           # Check for breaking changes
           IS_BREAKING=false
           CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
-          
+
           # Look for breaking change indicators
           if echo "$CHANGED_FILES" | grep -E "(package\.json|Cargo\.toml|tauri\.conf\.json|docker|\.github/workflows)" || \
              git diff $BASE_SHA...$HEAD_SHA | grep -E "BREAKING|breaking|major:|feat!:|fix!:"; then
             IS_BREAKING=true
           fi
-          
+
           echo "pr_size=$PR_SIZE" >> $GITHUB_OUTPUT
           echo "complexity_score=$COMPLEXITY_SCORE" >> $GITHUB_OUTPUT
           echo "is_breaking=$IS_BREAKING" >> $GITHUB_OUTPUT
-          
+
           echo "Lines added: $LINES_ADDED"
           echo "Lines removed: $LINES_REMOVED"
           echo "Files changed: $FILES_CHANGED"
@@ -187,10 +187,10 @@ jobs:
           script: |
             const title = context.payload.pull_request?.title || '';
             const validPrefixes = ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'ci', 'build'];
-            
+
             // Check conventional commit format: type(scope): description
             const conventionalCommitRegex = /^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?: .{1,50}$/;
-            
+
             if (!conventionalCommitRegex.test(title)) {
               core.setFailed(`PR title "${title}" does not follow conventional commit format. 
                 Expected format: type(scope): description
@@ -205,23 +205,23 @@ jobs:
         with:
           script: |
             const body = context.payload.pull_request?.body || '';
-            
+
             if (!body || body.trim().length < 10) {
               core.setFailed('PR description is too short or missing. Please provide a meaningful description.');
               return;
             }
-            
+
             // Check for required sections
             const requiredSections = ['## Summary', '## Changes', '## Testing'];
             const missingSections = requiredSections.filter(section => !body.includes(section));
-            
+
             if (missingSections.length > 0) {
               core.setOutput('missing_sections', missingSections.join(', '));
               console.log(`⚠️ Missing recommended sections: ${missingSections.join(', ')}`);
             } else {
               console.log('✅ PR description includes all recommended sections');
             }
-            
+
             // Check for linked issues
             const issueRegex = /(closes?|fixes?|resolves?)\s+#\d+/i;
             if (issueRegex.test(body)) {
@@ -265,10 +265,10 @@ jobs:
         run: |
           echo "Running ESLint..."
           npm run lint -- --format json --output-file eslint-results.json || true
-          
+
           echo "Running Prettier check..."
           npm run format:check
-          
+
           echo "TypeScript type checking..."
           npm run typecheck
 
@@ -278,10 +278,10 @@ jobs:
         run: |
           echo "Running Rust formatting check..."
           cargo fmt -- --check
-          
+
           echo "Running Clippy..."
           cargo clippy --all-targets --all-features -- -D warnings
-          
+
           echo "Running cargo check..."
           cargo check --all-targets --all-features
 
@@ -354,7 +354,7 @@ jobs:
         run: |
           echo "Running unit tests with coverage..."
           npm run test:coverage -- --watchAll=false --ci --maxWorkers=2
-          
+
           echo "Running component tests..."
           npm run test:ui -- --run || echo "No UI tests available"
 
@@ -379,7 +379,7 @@ jobs:
         run: |
           echo "Running Rust unit tests..."
           cargo test --verbose --all-features
-          
+
           echo "Running integration tests..."
           cargo test --test '*' --verbose
 
@@ -439,7 +439,7 @@ jobs:
             echo "Building for development..."
             npm run build:dev || npm run build
           fi
-          
+
           # Verify build output
           ls -la dist/
           du -sh dist/
@@ -454,7 +454,7 @@ jobs:
             echo "Building Rust backend for development..."
             cargo build
           fi
-          
+
           # Verify build output
           find target -name "neural-bridge-platform*" -type f
 
@@ -509,26 +509,26 @@ jobs:
             sandbox) PORT=50022 ;;
             *) PORT=50020 ;;
           esac
-          
+
           echo "Testing ${{ matrix.service }} container on port $PORT"
-          
+
           # Start container
           docker run -d \
             --name pr-test-${{ matrix.service }} \
             -p $PORT:$PORT \
             -e PORT=$PORT \
             autodev-ai-${{ matrix.service }}:pr-test
-          
+
           # Wait for container to be ready
           timeout 60 bash -c "until docker logs pr-test-${{ matrix.service }} | grep -E '(ready|started|listening|server)'; do sleep 2; done" || true
-          
+
           # Test health endpoint if available
           timeout 30 bash -c "until curl -f http://localhost:$PORT/health 2>/dev/null; do sleep 1; done" || echo "Health endpoint not available"
-          
+
           # Show container logs
           echo "Container logs:"
           docker logs pr-test-${{ matrix.service }} || true
-          
+
           # Cleanup
           docker stop pr-test-${{ matrix.service }}
           docker rm pr-test-${{ matrix.service }}
@@ -552,13 +552,13 @@ jobs:
         run: |
           # Install TruffleHog
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-          
+
           # Scan only changed files
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
+
           CHANGED_FILES=$(git diff --name-only $BASE_SHA...$HEAD_SHA)
-          
+
           if [[ -n "$CHANGED_FILES" ]]; then
             echo "Scanning changed files for secrets..."
             echo "$CHANGED_FILES" | while read -r file; do
@@ -587,7 +587,7 @@ jobs:
               npm audit --audit-level=moderate --production || echo "NPM audit completed with findings"
             fi
           fi
-          
+
           if [[ "${{ needs.pr-analysis.outputs.has_backend_changes }}" == "true" ]]; then
             cd src-tauri
             if command -v cargo-audit &> /dev/null || cargo install cargo-audit --locked; then
@@ -620,7 +620,7 @@ jobs:
       - name: Bundle size analysis
         run: |
           echo "Analyzing bundle size..."
-          
+
           # Calculate bundle sizes
           if [[ -d dist ]]; then
             TOTAL_SIZE=$(du -sb dist | cut -f1)
@@ -666,7 +666,7 @@ jobs:
         run: |
           # Check for broken markdown links
           npm install -g markdown-link-check
-          
+
           find . -name "*.md" -not -path "./node_modules/*" | while read -r file; do
             echo "Checking $file..."
             markdown-link-check "$file" --config .github/markdown-link-check.json || echo "Link check completed for $file"
@@ -677,7 +677,7 @@ jobs:
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
+
           # Check if breaking changes are documented
           if ! git diff $BASE_SHA...$HEAD_SHA --name-only | grep -E "(CHANGELOG|README|docs/)" > /dev/null; then
             echo "::error::Breaking changes detected but no documentation updates found. Please update CHANGELOG.md and relevant documentation."
@@ -688,17 +688,18 @@ jobs:
   pr-summary:
     name: PR Validation Summary
     runs-on: ubuntu-24.04
-    needs: [
-      pr-analysis,
-      pr-format-validation,
-      code-quality,
-      test-validation,
-      build-validation,
-      docker-validation,
-      security-validation,
-      performance-validation,
-      docs-validation
-    ]
+    needs:
+      [
+        pr-analysis,
+        pr-format-validation,
+        code-quality,
+        test-validation,
+        build-validation,
+        docker-validation,
+        security-validation,
+        performance-validation,
+        docs-validation,
+      ]
     if: always()
     steps:
       - name: Generate PR validation report
@@ -706,13 +707,13 @@ jobs:
         with:
           script: |
             const needs = ${{ toJSON(needs) }};
-            
+
             let report = '# 🔍 PR Validation Summary\n\n';
             report += `**PR Size:** ${{ needs['pr-analysis'].outputs.pr_size }}\n`;
             report += `**Complexity Score:** ${{ needs['pr-analysis'].outputs.complexity_score }}/4\n`;
             report += `**Breaking Changes:** ${{ needs['pr-analysis'].outputs.is_breaking }}\n`;
             report += `**Author:** @${{ needs['pr-analysis'].outputs.author }}\n\n`;
-            
+
             // Change detection
             report += '## 📋 Change Detection\n\n';
             report += `- **Frontend:** ${{ needs['pr-analysis'].outputs.has_frontend_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
@@ -720,10 +721,10 @@ jobs:
             report += `- **Docker:** ${{ needs['pr-analysis'].outputs.has_docker_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
             report += `- **Documentation:** ${{ needs['pr-analysis'].outputs.has_docs_changes === 'true' ? '✅ Yes' : '❌ No' }}\n`;
             report += `- **Configuration:** ${{ needs['pr-analysis'].outputs.has_config_changes === 'true' ? '✅ Yes' : '❌ No' }}\n\n`;
-            
+
             // Validation results
             report += '## ✅ Validation Results\n\n';
-            
+
             const checks = [
               { name: 'Format Validation', key: 'pr-format-validation' },
               { name: 'Code Quality', key: 'code-quality' },
@@ -734,9 +735,9 @@ jobs:
               { name: 'Performance Validation', key: 'performance-validation' },
               { name: 'Documentation Validation', key: 'docs-validation' }
             ];
-            
+
             let allPassed = true;
-            
+
             for (const check of checks) {
               const result = needs[check.key];
               let status;
@@ -754,9 +755,9 @@ jobs:
               
               report += `- **${check.name}:** ${status}\n`;
             }
-            
+
             report += '\n';
-            
+
             // Recommendations
             if (allPassed) {
               report += '## 🎉 Recommendations\n\n';
@@ -773,23 +774,23 @@ jobs:
               }
               report += '\n';
             }
-            
+
             // Size recommendations
             const prSize = '${{ needs['pr-analysis'].outputs.pr_size }}';
             if (prSize === 'xlarge') {
               report += '💡 **Tip:** Consider breaking this large PR into smaller, focused PRs for easier review.\n\n';
             }
-            
+
             // Breaking change recommendations
             if ('${{ needs['pr-analysis'].outputs.is_breaking }}' === 'true') {
               report += '🔄 **Breaking Changes Detected:** Ensure all documentation is updated and consider semantic versioning implications.\n\n';
             }
-            
+
             report += '---\n';
             report += '*This report was automatically generated by the PR validation pipeline.*';
-            
+
             console.log(report);
-            
+
             // Comment on PR
             const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number }};
             if (prNumber) {
@@ -809,7 +810,7 @@ jobs:
         run: |
           # Check overall status
           FAILED_JOBS=$(echo '${{ toJSON(needs) }}' | jq -r '.[] | select(.result == "failure") | .result' | wc -l)
-          
+
           if [[ $FAILED_JOBS -gt 0 ]]; then
             echo "❌ PR validation failed with $FAILED_JOBS failed checks"
             echo "Please review the failed jobs and address the issues before merging."
@@ -826,10 +827,10 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request?.number;
             if (!prNumber) return;
-            
+
             // Auto-assign reviewers for complex or breaking PRs
             const reviewers = ['maintainer1', 'tech-lead']; // Replace with actual usernames
-            
+
             try {
               await github.rest.pulls.requestReviewers({
                 owner: context.repo.owner,

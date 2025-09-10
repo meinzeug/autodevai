@@ -2,8 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       environment:
@@ -12,8 +12,8 @@ on:
         default: 'staging'
         type: choice
         options:
-        - staging
-        - production
+          - staging
+          - production
       version:
         description: 'Version tag (optional)'
         required: false
@@ -107,7 +107,7 @@ jobs:
         run: |
           # Replace image in deployment manifest
           sed -i 's|IMAGE_TAG|${{ needs.build-docker.outputs.image-tag }}|g' k8s/staging/deployment.yaml
-          
+
           # Apply Kubernetes manifests
           kubectl apply -f k8s/staging/namespace.yaml
           kubectl apply -f k8s/staging/configmap.yaml
@@ -115,7 +115,7 @@ jobs:
           kubectl apply -f k8s/staging/deployment.yaml
           kubectl apply -f k8s/staging/service.yaml
           kubectl apply -f k8s/staging/ingress.yaml
-          
+
           # Wait for deployment
           kubectl rollout status deployment/autodev-ai -n autodev-staging --timeout=300s
 
@@ -123,11 +123,11 @@ jobs:
         run: |
           # Wait for service to be ready
           kubectl wait --for=condition=ready pod -l app=autodev-ai -n autodev-staging --timeout=300s
-          
+
           # Get service endpoint
           STAGING_URL=$(kubectl get ingress autodev-ai-ingress -n autodev-staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           echo "Staging URL: https://$STAGING_URL"
-          
+
           # Basic health check
           curl -f "https://$STAGING_URL/health" || exit 1
           curl -f "https://$STAGING_URL/api/v1/status" || exit 1
@@ -168,7 +168,7 @@ jobs:
         run: |
           # Replace image in deployment manifest
           sed -i 's|IMAGE_TAG|${{ needs.build-docker.outputs.image-tag }}|g' k8s/production/deployment.yaml
-          
+
           # Apply Kubernetes manifests with rolling update
           kubectl apply -f k8s/production/namespace.yaml
           kubectl apply -f k8s/production/configmap.yaml
@@ -177,7 +177,7 @@ jobs:
           kubectl apply -f k8s/production/service.yaml
           kubectl apply -f k8s/production/ingress.yaml
           kubectl apply -f k8s/production/hpa.yaml
-          
+
           # Wait for deployment
           kubectl rollout status deployment/autodev-ai -n autodev-production --timeout=600s
 
@@ -185,11 +185,11 @@ jobs:
         run: |
           # Wait for all pods to be ready
           kubectl wait --for=condition=ready pod -l app=autodev-ai -n autodev-production --timeout=300s
-          
+
           # Get production endpoint
           PROD_URL=$(kubectl get ingress autodev-ai-ingress -n autodev-production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           echo "Production URL: https://$PROD_URL"
-          
+
           # Comprehensive health checks
           curl -f "https://$PROD_URL/health" || exit 1
           curl -f "https://$PROD_URL/api/v1/status" || exit 1
@@ -270,7 +270,7 @@ jobs:
       - name: Cleanup old replica sets
         run: |
           aws eks update-kubeconfig --region us-west-2 --name autodev-production-cluster
-          
+
           # Keep only the latest 3 replica sets
           kubectl get rs -n autodev-production -o json | \
             jq -r '.items | sort_by(.metadata.creationTimestamp) | reverse | .[3:] | .[] | .metadata.name' | \

@@ -32,7 +32,10 @@
     // 1. Local node_modules
     async () => {
       try {
-        const localPath = resolve(process.cwd(), 'node_modules/.bin/claude-flow');
+        const localPath = resolve(
+          process.cwd(),
+          'node_modules/.bin/claude-flow'
+        );
         const { existsSync } = await import('fs');
         if (existsSync(localPath)) {
           return spawn(localPath, process.argv.slice(2), { stdio: 'inherit' });
@@ -43,7 +46,10 @@
     // 2. Parent node_modules (monorepo)
     async () => {
       try {
-        const parentPath = resolve(process.cwd(), '../node_modules/.bin/claude-flow');
+        const parentPath = resolve(
+          process.cwd(),
+          '../node_modules/.bin/claude-flow'
+        );
         const { existsSync } = await import('fs');
         if (existsSync(parentPath)) {
           return spawn(parentPath, process.argv.slice(2), { stdio: 'inherit' });
@@ -64,8 +70,8 @@
     try {
       const child = await strategy();
       if (child) {
-        child.on('exit', (code) => process.exit(code || 0));
-        child.on('error', (err) => {
+        child.on('exit', code => process.exit(code || 0));
+        child.on('error', err => {
           if (err.code !== 'ENOENT') {
             console.error('Error:', err);
             process.exit(1);
@@ -76,6 +82,8 @@
     } catch {}
   }
 
-  console.error('Could not find claude-flow. Please install it with: npm install claude-flow');
+  console.error(
+    'Could not find claude-flow. Please install it with: npm install claude-flow'
+  );
   process.exit(1);
 })();

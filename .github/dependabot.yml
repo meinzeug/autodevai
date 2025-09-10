@@ -1,131 +1,131 @@
 version: 2
 updates:
   # NPM dependencies
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
     open-pull-requests-limit: 5
     reviewers:
-      - "@autodev-ai/core-team"
+      - '@autodev-ai/core-team'
     assignees:
-      - "@autodev-ai/maintainers"
+      - '@autodev-ai/maintainers'
     commit-message:
-      prefix: "npm"
-      prefix-development: "npm(dev)"
-      include: "scope"
+      prefix: 'npm'
+      prefix-development: 'npm(dev)'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "javascript"
+      - 'dependencies'
+      - 'javascript'
     ignore:
       # Ignore major version updates for critical dependencies
-      - dependency-name: "react"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react-dom"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major']
     groups:
       react:
         patterns:
-          - "react*"
-          - "@types/react*"
+          - 'react*'
+          - '@types/react*'
       testing:
         patterns:
-          - "*jest*"
-          - "@testing-library/*"
-          - "playwright*"
+          - '*jest*'
+          - '@testing-library/*'
+          - 'playwright*'
       build-tools:
         patterns:
-          - "vite*"
-          - "@vitejs/*"
-          - "rollup*"
-          - "esbuild*"
+          - 'vite*'
+          - '@vitejs/*'
+          - 'rollup*'
+          - 'esbuild*'
       linting:
         patterns:
-          - "eslint*"
-          - "@typescript-eslint/*"
-          - "prettier*"
+          - 'eslint*'
+          - '@typescript-eslint/*'
+          - 'prettier*'
 
   # Cargo dependencies
-  - package-ecosystem: "cargo"
-    directory: "/src-tauri"
+  - package-ecosystem: 'cargo'
+    directory: '/src-tauri'
     schedule:
-      interval: "weekly"
-      day: "tuesday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'tuesday'
+      time: '09:00'
     open-pull-requests-limit: 5
     reviewers:
-      - "@autodev-ai/rust-team"
+      - '@autodev-ai/rust-team'
     assignees:
-      - "@autodev-ai/maintainers"
+      - '@autodev-ai/maintainers'
     commit-message:
-      prefix: "cargo"
-      include: "scope"
+      prefix: 'cargo'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "rust"
+      - 'dependencies'
+      - 'rust'
     ignore:
       # Ignore major version updates for Tauri
-      - dependency-name: "tauri"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "tauri-build"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'tauri'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'tauri-build'
+        update-types: ['version-update:semver-major']
     groups:
       tauri:
         patterns:
-          - "tauri*"
+          - 'tauri*'
       serde:
         patterns:
-          - "serde*"
+          - 'serde*'
       async:
         patterns:
-          - "tokio*"
-          - "async-*"
-          - "futures*"
+          - 'tokio*'
+          - 'async-*'
+          - 'futures*'
 
   # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/.github/workflows"
+  - package-ecosystem: 'github-actions'
+    directory: '/.github/workflows'
     schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'wednesday'
+      time: '09:00'
     open-pull-requests-limit: 3
     reviewers:
-      - "@autodev-ai/devops-team"
+      - '@autodev-ai/devops-team'
     assignees:
-      - "@autodev-ai/maintainers"
+      - '@autodev-ai/maintainers'
     commit-message:
-      prefix: "ci"
-      include: "scope"
+      prefix: 'ci'
+      include: 'scope'
     labels:
-      - "dependencies"
-      - "github-actions"
+      - 'dependencies'
+      - 'github-actions'
     groups:
       setup-actions:
         patterns:
-          - "actions/setup-*"
+          - 'actions/setup-*'
       cache-actions:
         patterns:
-          - "actions/cache*"
+          - 'actions/cache*'
       security-actions:
         patterns:
-          - "github/codeql-action*"
-          - "ossf/scorecard-action*"
+          - 'github/codeql-action*'
+          - 'ossf/scorecard-action*'
 
   # Docker
-  - package-ecosystem: "docker"
-    directory: "/docker"
+  - package-ecosystem: 'docker'
+    directory: '/docker'
     schedule:
-      interval: "weekly"
-      day: "thursday"
-      time: "09:00"
+      interval: 'weekly'
+      day: 'thursday'
+      time: '09:00'
     open-pull-requests-limit: 2
     reviewers:
-      - "@autodev-ai/devops-team"
+      - '@autodev-ai/devops-team'
     commit-message:
-      prefix: "docker"
+      prefix: 'docker'
     labels:
-      - "dependencies"
-      - "docker"
+      - 'dependencies'
+      - 'docker'

@@ -22,12 +22,7 @@
     "sourceType": "module",
     "project": "./tsconfig.json"
   },
-  "plugins": [
-    "react",
-    "react-hooks",
-    "@typescript-eslint",
-    "security"
-  ],
+  "plugins": ["react", "react-hooks", "@typescript-eslint", "security"],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
@@ -54,10 +49,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.test.{js,jsx,ts,tsx}",
-        "**/*.spec.{js,jsx,ts,tsx}"
-      ],
+      "files": ["**/*.test.{js,jsx,ts,tsx}", "**/*.spec.{js,jsx,ts,tsx}"],
       "env": {
         "jest": true
       },

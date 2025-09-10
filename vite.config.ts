@@ -15,6 +15,13 @@ export default defineConfig({
     target: 'esnext',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+    rollupOptions: {
+      output: {
+        globals: {
+          '__TAURI_INTERNALS__': '__TAURI_INTERNALS__'
+        }
+      }
+    }
   },
   resolve: {
     alias: {

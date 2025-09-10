@@ -2,9 +2,9 @@ name: Performance Monitoring
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
     - cron: '0 */6 * * *' # Every 6 hours
   workflow_dispatch:
@@ -15,11 +15,11 @@ on:
         default: 'all'
         type: choice
         options:
-        - all
-        - frontend
-        - backend
-        - e2e
-        - load
+          - all
+          - frontend
+          - backend
+          - e2e
+          - load
 
 env:
   NODE_VERSION: '18'
@@ -65,12 +65,12 @@ jobs:
       - name: Bundle size analysis
         run: |
           npm run analyze:bundle || echo "Bundle analysis tool not found"
-          
+
           # Create bundle size report
           echo "# Bundle Size Report" > bundle-report.md
           echo "Generated: $(date)" >> bundle-report.md
           echo "" >> bundle-report.md
-          
+
           # Analyze dist folder
           if [ -d "dist" ]; then
             echo "## Build Output" >> bundle-report.md
@@ -87,9 +87,9 @@ jobs:
           # Check if critical files exceed size limits
           MAX_JS_SIZE=500000  # 500KB
           MAX_CSS_SIZE=100000 # 100KB
-          
+
           echo "Checking performance budgets..."
-          
+
           for js_file in dist/assets/*.js; do
             if [ -f "$js_file" ]; then
               size=$(stat -c%s "$js_file")
@@ -98,7 +98,7 @@ jobs:
               fi
             fi
           done
-          
+
           for css_file in dist/assets/*.css; do
             if [ -f "$css_file" ]; then
               size=$(stat -c%s "$css_file")
@@ -157,15 +157,15 @@ jobs:
           cd src-tauri && ./target/release/autodev-ai &
           BACKEND_PID=$!
           sleep 10
-          
+
           # Basic API performance tests
           echo "Running API performance tests..."
-          
+
           # Test health endpoint
           hyperfine --warmup 3 --runs 10 \
             "curl -s http://localhost:50003/health" \
             --export-json api-perf.json || echo "API tests skipped"
-          
+
           # Cleanup
           kill $BACKEND_PID || true
 
@@ -176,11 +176,11 @@ jobs:
           echo "# Memory & Size Analysis" > memory-report.md
           echo "Generated: $(date)" >> memory-report.md
           echo "" >> memory-report.md
-          
+
           echo "## Binary Size" >> memory-report.md
           ls -lh target/release/autodev-ai >> memory-report.md
           echo "" >> memory-report.md
-          
+
           # Static analysis
           echo "## Dependencies Analysis" >> memory-report.md
           cargo tree --depth 1 >> memory-report.md
@@ -228,12 +228,12 @@ jobs:
           cd src-tauri && ./target/release/autodev-ai &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
-          
+
           # Start frontend
           npm run preview -- --port ${{ env.PERFORMANCE_PORT }} &
           FRONTEND_PID=$!
           echo "FRONTEND_PID=$FRONTEND_PID" >> $GITHUB_ENV
-          
+
           sleep 30
 
       - name: Run E2E performance tests
@@ -247,7 +247,7 @@ jobs:
           echo "# E2E Performance Report" > e2e-report.md
           echo "Generated: $(date)" >> e2e-report.md
           echo "" >> e2e-report.md
-          
+
           # Extract performance metrics from Playwright results
           if [ -f e2e-results.json ]; then
             echo "## Test Results" >> e2e-report.md
@@ -297,16 +297,16 @@ jobs:
         run: |
           npm run build
           cd src-tauri && cargo build --release
-          
+
           # Start services
           cd src-tauri && ./target/release/autodev-ai &
           BACKEND_PID=$!
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
-          
+
           npm run preview -- --port ${{ env.PERFORMANCE_PORT }} &
           FRONTEND_PID=$!
           echo "FRONTEND_PID=$FRONTEND_PID" >> $GITHUB_ENV
-          
+
           sleep 30
 
       - name: Create load testing configuration
@@ -345,12 +345,12 @@ jobs:
       - name: Generate load test report
         run: |
           artillery report load-results.json --output load-report.html || echo "Report generation failed"
-          
+
           # Create summary report
           echo "# Load Testing Report" > load-summary.md
           echo "Generated: $(date)" >> load-summary.md
           echo "" >> load-summary.md
-          
+
           if [ -f load-results.json ]; then
             echo "## Summary Statistics" >> load-summary.md
             jq -r '.aggregate | 
@@ -365,7 +365,7 @@ jobs:
           echo "" >> load-summary.md
           echo "## Apache Bench Results" >> load-summary.md
           ab -n 1000 -c 10 http://localhost:${{ env.PERFORMANCE_PORT }}/ > ab-results.txt 2>&1 || true
-          
+
           # Extract key metrics
           if [ -f ab-results.txt ]; then
             grep -E "(Requests per second|Time per request|Transfer rate)" ab-results.txt >> load-summary.md || echo "Apache Bench results not available" >> load-summary.md
@@ -406,7 +406,7 @@ jobs:
           curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -L "https://api.github.com/repos/${{ github.repository }}/actions/artifacts" \
             -o artifacts.json
-          
+
           # Extract latest performance artifacts from main branch
           # This is a simplified example - in practice, you'd want more robust artifact retrieval
 
@@ -415,7 +415,7 @@ jobs:
           echo "# Performance Regression Analysis" > regression-report.md
           echo "Generated: $(date)" >> regression-report.md
           echo "" >> regression-report.md
-          
+
           # Compare Lighthouse scores
           if [ -f lighthouse-reports/.lighthouseci/lighthouseci-results.json ]; then
             echo "## Lighthouse Score Changes" >> regression-report.md
@@ -434,7 +434,7 @@ jobs:
               echo "::warning::Performance score below threshold (0.9): $CURRENT_PERF"
             fi
           fi
-          
+
           echo "" >> regression-report.md
           echo "## Bundle Size Changes" >> regression-report.md
           if [ -f lighthouse-reports/bundle-report.md ]; then
@@ -469,7 +469,7 @@ jobs:
         run: |
           ALERT_NEEDED=false
           ALERT_MESSAGE=""
-          
+
           # Check Lighthouse performance score
           if [ -f lighthouse-reports/.lighthouseci/lighthouseci-results.json ]; then
             PERF_SCORE=$(jq -r '.results[0].lhr.categories.performance.score // 0' lighthouse-reports/.lighthouseci/lighthouseci-results.json)
@@ -478,7 +478,7 @@ jobs:
               ALERT_MESSAGE="🚨 Performance score dropped to $PERF_SCORE"
             fi
           fi
-          
+
           # Check for large bundle sizes
           if [ -d "dist" ]; then
             TOTAL_SIZE=$(du -sb dist | cut -f1)
@@ -488,7 +488,7 @@ jobs:
               ALERT_MESSAGE="$ALERT_MESSAGE\n📦 Bundle size exceeded 5MB: $(echo $TOTAL_SIZE | numfmt --to=iec)"
             fi
           fi
-          
+
           echo "ALERT_NEEDED=$ALERT_NEEDED" >> $GITHUB_ENV
           echo "ALERT_MESSAGE<<EOF" >> $GITHUB_ENV
           echo -e "$ALERT_MESSAGE" >> $GITHUB_ENV
@@ -503,10 +503,10 @@ jobs:
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           text: |
             ⚠️ Performance Alert - AutoDev-AI
-            
+
             ${{ env.ALERT_MESSAGE }}
-            
+
             Commit: ${{ github.sha }}
             Branch: ${{ github.ref_name }}
-            
+
             Please review the performance metrics and take corrective action.

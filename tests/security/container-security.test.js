@@ -11,7 +11,7 @@ const config = require('./security-config');
 
 describe('Container Security Testing Suite', () => {
   let dockerImages = [];
-  let scanResults = {};
+  const scanResults = {};
 
   beforeAll(async () => {
     // Build all Docker images for testing

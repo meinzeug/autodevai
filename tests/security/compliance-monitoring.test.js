@@ -11,8 +11,8 @@ const { expect } = require('@jest/globals');
 const config = require('./security-config');
 
 describe('Security Compliance Monitoring Suite', () => {
-  let complianceResults = {};
-  let auditTrail = [];
+  const complianceResults = {};
+  const auditTrail = [];
 
   beforeAll(async () => {
     // Initialize compliance monitoring

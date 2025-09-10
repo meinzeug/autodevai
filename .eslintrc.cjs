@@ -20,4 +20,4 @@ module.exports = {
     'no-var': 'error',
     'react-hooks/exhaustive-deps': 'warn',
   },
-}
+};

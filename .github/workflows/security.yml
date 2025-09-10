@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+    - cron: '0 6 * * *' # Daily at 6 AM UTC
   workflow_dispatch:
     inputs:
       scan_type:
@@ -53,7 +53,7 @@ jobs:
         run: |
           SCAN_TYPE="${{ github.event.inputs.scan_type || 'comprehensive' }}"
           SEVERITY="${{ github.event.inputs.severity_threshold || 'medium' }}"
-          
+
           case "$SCAN_TYPE" in
             comprehensive)
               echo "scan_code=true" >> $GITHUB_OUTPUT
@@ -86,7 +86,7 @@ jobs:
               echo "scan_secrets=true" >> $GITHUB_OUTPUT
               ;;
           esac
-          
+
           echo "severity_threshold=$SEVERITY" >> $GITHUB_OUTPUT
           echo "Configured scan type: $SCAN_TYPE with severity threshold: $SEVERITY"
 
@@ -133,7 +133,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: '/language:${{ matrix.language }}'
           upload: true
 
   # Semgrep static analysis
@@ -159,7 +159,7 @@ jobs:
             p/javascript
             p/typescript
             p/rust
-          generateSarif: "1"
+          generateSarif: '1'
           severity: ${{ needs.scan-config.outputs.severity_threshold }}
 
       - name: Upload Semgrep results to GitHub
@@ -191,7 +191,7 @@ jobs:
             --json \
             --no-update \
             > trufflehog-results.json || true
-          
+
           # Check if any secrets were found
           if [[ -s trufflehog-results.json ]]; then
             echo "⚠️ Potential secrets detected!"
@@ -221,7 +221,7 @@ jobs:
             --report-format json \
             --report-path gitleaks-report.json \
             --verbose || true
-          
+
           if [[ -s gitleaks-report.json ]]; then
             echo "⚠️ GitLeaks detected potential secrets!"
             cat gitleaks-report.json
@@ -283,11 +283,11 @@ jobs:
           echo "Running npm audit..."
           npm audit --audit-level=${{ needs.scan-config.outputs.severity_threshold }} \
             --json > npm-audit.json || true
-          
+
           # Check if vulnerabilities were found
           VULNERABILITIES=$(jq '.metadata.vulnerabilities.total' npm-audit.json 2>/dev/null || echo "0")
           echo "Total npm vulnerabilities found: $VULNERABILITIES"
-          
+
           if [[ $VULNERABILITIES -gt 0 ]]; then
             echo "::warning::Found $VULNERABILITIES npm vulnerabilities"
             jq '.vulnerabilities' npm-audit.json || true
@@ -312,7 +312,7 @@ jobs:
         run: |
           echo "Running cargo audit..."
           cargo audit --json > ../cargo-audit.json || true
-          
+
           # Check results
           if [[ -s ../cargo-audit.json ]]; then
             VULNERABILITIES=$(jq '.vulnerabilities.found | length' ../cargo-audit.json 2>/dev/null || echo "0")
@@ -339,7 +339,7 @@ jobs:
             --lockfile package-lock.json \
             --lockfile src-tauri/Cargo.lock \
             . || true
-          
+
           if [[ -s osv-results.json ]]; then
             VULNERABILITIES=$(jq '.results | length' osv-results.json 2>/dev/null || echo "0")
             echo "Total OSV vulnerabilities found: $VULNERABILITIES"
@@ -352,19 +352,19 @@ jobs:
           echo "**Scan Type:** ${{ matrix.scan-type }}" >> dependency-summary.md
           echo "**Severity Threshold:** ${{ needs.scan-config.outputs.severity_threshold }}" >> dependency-summary.md
           echo "" >> dependency-summary.md
-          
+
           # NPM results
           if [[ -f npm-audit.json ]]; then
             NPM_VULNS=$(jq '.metadata.vulnerabilities.total' npm-audit.json 2>/dev/null || echo "0")
             echo "- **NPM Vulnerabilities:** $NPM_VULNS" >> dependency-summary.md
           fi
-          
+
           # Rust results
           if [[ -f cargo-audit.json ]]; then
             RUST_VULNS=$(jq '.vulnerabilities.found | length' cargo-audit.json 2>/dev/null || echo "0")
             echo "- **Rust Vulnerabilities:** $RUST_VULNS" >> dependency-summary.md
           fi
-          
+
           # OSV results
           if [[ -f osv-results.json ]]; then
             OSV_VULNS=$(jq '.results | length' osv-results.json 2>/dev/null || echo "0")
@@ -468,12 +468,12 @@ jobs:
           echo "**Service:** ${{ matrix.service }}" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
           echo "**Scanner:** ${{ matrix.scanner }}" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
           echo "" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
-          
+
           if [[ "${{ matrix.scanner }}" == "trivy" && -f "trivy-${{ matrix.service }}.sarif" ]]; then
             TRIVY_ISSUES=$(jq '.runs[0].results | length' trivy-${{ matrix.service }}.sarif 2>/dev/null || echo "0")
             echo "- **Trivy Issues:** $TRIVY_ISSUES" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
           fi
-          
+
           if [[ "${{ matrix.scanner }}" == "grype" && -f "grype-${{ matrix.service }}.json" ]]; then
             GRYPE_ISSUES=$(jq '.matches | length' grype-${{ matrix.service }}.json 2>/dev/null || echo "0")
             echo "- **Grype Issues:** $GRYPE_ISSUES" >> container-summary-${{ matrix.service }}-${{ matrix.scanner }}.md
@@ -594,7 +594,17 @@ jobs:
   security-summary:
     name: Security Scan Summary
     runs-on: ubuntu-24.04
-    needs: [scan-config, codeql-analysis, semgrep-analysis, secret-scan, dependency-scan, container-scan, iac-scan, custom-security-tests]
+    needs:
+      [
+        scan-config,
+        codeql-analysis,
+        semgrep-analysis,
+        secret-scan,
+        dependency-scan,
+        container-scan,
+        iac-scan,
+        custom-security-tests,
+      ]
     if: always()
     steps:
       - name: Download all scan results
@@ -610,7 +620,7 @@ jobs:
           echo "**Commit:** ${{ github.sha }}" >> security-report.md
           echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
           echo "" >> security-report.md
-          
+
           echo "## Scan Configuration" >> security-report.md
           echo "- **Code Analysis:** ${{ needs.scan-config.outputs.scan_code }}" >> security-report.md
           echo "- **Dependency Scan:** ${{ needs.scan-config.outputs.scan_dependencies }}" >> security-report.md
@@ -618,27 +628,27 @@ jobs:
           echo "- **Secret Scan:** ${{ needs.scan-config.outputs.scan_secrets }}" >> security-report.md
           echo "- **Severity Threshold:** ${{ needs.scan-config.outputs.severity_threshold }}" >> security-report.md
           echo "" >> security-report.md
-          
+
           echo "## Scan Results Summary" >> security-report.md
           echo "" >> security-report.md
-          
+
           # Count total issues from all scans
           TOTAL_ISSUES=0
-          
+
           # CodeQL results
           if [[ -f "scan-results"/*/*.sarif ]]; then
             CODEQL_ISSUES=$(find scan-results -name "*.sarif" -exec jq '.runs[].results | length' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
             echo "- **Static Analysis Issues:** $CODEQL_ISSUES" >> security-report.md
             TOTAL_ISSUES=$((TOTAL_ISSUES + CODEQL_ISSUES))
           fi
-          
+
           # Secret scan results
           if [[ -f "scan-results"/*secrets*/trufflehog-results.json ]]; then
             SECRET_ISSUES=$(find scan-results -name "trufflehog-results.json" -exec jq 'length' {} \; 2>/dev/null | paste -sd+ | bc || echo "0")
             echo "- **Potential Secrets:** $SECRET_ISSUES" >> security-report.md
             TOTAL_ISSUES=$((TOTAL_ISSUES + SECRET_ISSUES))
           fi
-          
+
           # Dependency scan results
           DEPENDENCY_ISSUES=0
           if find scan-results -name "npm-audit.json" -exec test -s {} \; 2>/dev/null; then
@@ -651,11 +661,11 @@ jobs:
           fi
           echo "- **Dependency Vulnerabilities:** $DEPENDENCY_ISSUES" >> security-report.md
           TOTAL_ISSUES=$((TOTAL_ISSUES + DEPENDENCY_ISSUES))
-          
+
           echo "" >> security-report.md
           echo "**Total Security Issues Found:** $TOTAL_ISSUES" >> security-report.md
           echo "" >> security-report.md
-          
+
           # Recommendations
           echo "## Recommendations" >> security-report.md
           echo "" >> security-report.md
@@ -670,7 +680,7 @@ jobs:
             echo "4. Fix any static analysis violations" >> security-report.md
             echo "5. Run security scans regularly in CI/CD pipeline" >> security-report.md
           fi
-          
+
           echo "" >> security-report.md
           echo "## Detailed Results" >> security-report.md
           echo "" >> security-report.md
@@ -690,7 +700,7 @@ jobs:
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('security-report.md', 'utf8');
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -702,12 +712,12 @@ jobs:
         run: |
           # Check if any critical issues were found
           CRITICAL_ISSUES=0
-          
+
           # Check for critical issues in various scan results
           if find scan-results -name "*.json" -exec grep -l "CRITICAL\|critical" {} \; 2>/dev/null | head -1; then
             CRITICAL_ISSUES=1
           fi
-          
+
           if [[ $CRITICAL_ISSUES -eq 1 ]]; then
             echo "❌ Critical security issues detected!"
             echo "Please review the security scan results and address critical findings."

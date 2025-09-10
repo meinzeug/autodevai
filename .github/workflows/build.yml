@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
   workflow_dispatch:
   schedule:
-    - cron: '0 4 * * *'  # Daily build at 4 AM
+    - cron: '0 4 * * *' # Daily build at 4 AM
 
 env:
   CARGO_TERM_COLOR: always
@@ -483,7 +483,16 @@ jobs:
   deploy-check:
     name: Deployment Readiness
     runs-on: ubuntu-24.04
-    needs: [test-frontend, test-backend, build, tauri-build, docker-build, performance, security-scan]
+    needs:
+      [
+        test-frontend,
+        test-backend,
+        build,
+        tauri-build,
+        docker-build,
+        performance,
+        security-scan,
+      ]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
       - name: Checkout repository
@@ -502,26 +511,26 @@ jobs:
         run: |
           cat > deployment-summary.md << EOF
           # Deployment Summary
-          
+
           ## Build Information
           - **Commit**: ${{ github.sha }}
           - **Branch**: ${{ github.ref_name }}
           - **Node.js**: ${{ env.NODE_VERSION }}
           - **Rust**: ${{ env.RUST_VERSION }}
           - **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          
+
           ## Test Results
           - Frontend Tests: ✅ Passed
           - Backend Tests: ✅ Passed
           - Performance Tests: ✅ Passed
           - Security Scan: ✅ Passed
-          
+
           ## Artifacts
           - Frontend Build: Available
           - Backend Binary: Available
           - Docker Images: Built
           - Tauri Bundle: Available
-          
+
           ## Port Configuration
           - GUI Service: 50020
           - API Service: 50021

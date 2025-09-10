@@ -2,9 +2,9 @@ name: Security Scanning
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
     - cron: '0 2 * * 1' # Weekly Monday 2 AM UTC
   workflow_dispatch:
@@ -251,7 +251,8 @@ jobs:
   compliance-report:
     name: Generate Compliance Report
     runs-on: ubuntu-latest
-    needs: [dependency-scan, code-security-scan, secrets-scan, license-compliance]
+    needs:
+      [dependency-scan, code-security-scan, secrets-scan, license-compliance]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -265,20 +266,20 @@ jobs:
           echo "# Security Compliance Report" > reports/compliance-report.md
           echo "Generated: $(date)" >> reports/compliance-report.md
           echo "" >> reports/compliance-report.md
-          
+
           echo "## Dependency Scan Results" >> reports/compliance-report.md
           if [ -f security-reports/npm-audit.json ]; then
             echo "✅ NPM Audit completed" >> reports/compliance-report.md
           fi
-          
+
           if [ -f security-reports/cargo-audit.json ]; then
             echo "✅ Cargo Audit completed" >> reports/compliance-report.md
           fi
-          
+
           echo "" >> reports/compliance-report.md
           echo "## Code Security Analysis" >> reports/compliance-report.md
           echo "✅ CodeQL analysis completed" >> reports/compliance-report.md
-          
+
           echo "" >> reports/compliance-report.md
           echo "## Secrets Detection" >> reports/compliance-report.md
           echo "✅ TruffleHog scan completed" >> reports/compliance-report.md

@@ -66,15 +66,15 @@ jobs:
               RELEASE_TYPE="release"
             fi
           fi
-          
+
           VERSION_NUM=${VERSION#v}
           IS_PRERELEASE=$([[ "$RELEASE_TYPE" == "prerelease" || "$VERSION" == *"-"* ]] && echo "true" || echo "false")
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "version_number=${VERSION_NUM}" >> $GITHUB_OUTPUT
           echo "tag=${VERSION}" >> $GITHUB_OUTPUT
           echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
-          
+
           echo "Release version: ${VERSION}"
           echo "Version number: ${VERSION_NUM}"
           echo "Is prerelease: ${IS_PRERELEASE}"
@@ -84,7 +84,7 @@ jobs:
         run: |
           # Get previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
+
           if [[ -n "$PREV_TAG" ]]; then
             echo "Generating changelog from $PREV_TAG to ${{ steps.version.outputs.tag }}"
             CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges $PREV_TAG..${{ steps.version.outputs.tag }} | head -20)
@@ -94,11 +94,11 @@ jobs:
             CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges | head -20)
             FULL_CHANGELOG=$(git log --pretty=format:"- %s (%h) by %an" --no-merges)
           fi
-          
+
           # Save to files
           echo "$CHANGELOG" > CHANGELOG_BRIEF.md
           echo "$FULL_CHANGELOG" > CHANGELOG_FULL.md
-          
+
           # Save to output (escaped for GitHub Actions)
           {
             echo "changelog<<EOF"
@@ -111,33 +111,33 @@ jobs:
         run: |
           cat > RELEASE_NOTES.md << EOF
           # AutoDev-AI Neural Bridge Platform ${{ steps.version.outputs.version }}
-          
+
           ## 🚀 What's New
-          
+
           ${{ steps.changelog.outputs.changelog }}
-          
+
           ## 📦 Installation
-          
+
           ### Desktop Applications
           **Windows:**
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64-setup.exe\` - Windows 64-bit installer
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64-setup.exe\` - Windows ARM64 installer
-          
+
           **macOS:**
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_universal.dmg\` - Universal binary (Intel + Apple Silicon)
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_x64.dmg\` - Intel Macs only
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_aarch64.dmg\` - Apple Silicon only
-          
+
           **Linux:**
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_amd64.AppImage\` - x64 AppImage
           - \`AutoDev-AI_${{ steps.version.outputs.version }}_arm64.AppImage\` - ARM64 AppImage
           - \`autodev-ai_${{ steps.version.outputs.version }}_amd64.deb\` - Debian/Ubuntu package
-          
+
           ### Docker Images
           \`\`\`bash
           # Pull the latest image
           docker pull ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
-          
+
           # Run with port mapping
           docker run -d \\
             --name autodev-ai \\
@@ -146,15 +146,15 @@ jobs:
             -p 50022:50022 \\
             ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}
           \`\`\`
-          
+
           ### Kubernetes Deployment
           \`\`\`bash
           # Apply Kubernetes manifests
           kubectl apply -f https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/k8s-deployment.yaml
           \`\`\`
-          
+
           ## ⚙️ Configuration
-          
+
           - **Port Range**: 50000-50100 (configurable)
           - **Default Ports**:
             - GUI Service: 50020
@@ -162,52 +162,52 @@ jobs:
             - Sandbox Service: 50022
           - **Claude-Flow Integration**: Built-in multi-agent orchestration
           - **Neural Bridge**: WebAssembly-accelerated neural processing
-          
+
           ## 🔧 System Requirements
-          
+
           - **Node.js**: 18.0+ (for development)
           - **Rust**: 1.70+ (for building from source)
           - **Docker**: 20.10+ (for containerized deployment)
           - **Memory**: 4GB+ RAM recommended
           - **Storage**: 2GB+ free space
-          
+
           ## 🆕 Features in This Release
-          
+
           - Enhanced neural bridge performance
           - Improved Docker container orchestration
           - Updated Tauri desktop application framework
           - Advanced security scanning and monitoring
           - Streamlined CI/CD pipeline
           - Multi-architecture support (x64, ARM64)
-          
+
           ## 🐛 Bug Fixes and Improvements
-          
+
           - Fixed memory leaks in long-running processes
           - Improved error handling and logging
           - Enhanced security configurations
           - Updated dependencies to latest versions
           - Performance optimizations across all components
-          
+
           ## 📚 Documentation
-          
+
           - [Installation Guide](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/installation.md)
           - [Configuration Reference](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/configuration.md)
           - [API Documentation](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/api.md)
           - [Troubleshooting](https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/docs/troubleshooting.md)
-          
+
           ## 🤝 Contributing
-          
+
           We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-          
+
           ## 📄 License
-          
+
           This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-          
+
           ---
-          
+
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/\${PREV_TAG}...${{ steps.version.outputs.tag }}
           EOF
-          
+
           # Save release notes to output
           {
             echo "notes<<EOF"
@@ -218,15 +218,15 @@ jobs:
       - name: Update version in files
         run: |
           VERSION_NUM="${{ steps.version.outputs.version_number }}"
-          
+
           # Update package.json
           npm version $VERSION_NUM --no-git-tag-version --allow-same-version
-          
+
           # Update Cargo.toml
           cd src-tauri
           sed -i "s/^version = .*/version = \"$VERSION_NUM\"/" Cargo.toml
           cd ..
-          
+
           # Update tauri.conf.json
           jq --arg version "$VERSION_NUM" '.version = $version' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
 
@@ -262,7 +262,7 @@ jobs:
             cmd: |
               sudo apt-get update
               sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libayatana-appindicator3-dev
-          
+
           - name: linux-arm64
             os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
@@ -273,25 +273,25 @@ jobs:
               sudo apt-get install -y gcc-aarch64-linux-gnu
               echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
               echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          
+
           - name: windows-x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
             arch: x64
             cmd: echo "Windows setup complete"
-          
+
           - name: windows-arm64
             os: windows-latest
             target: aarch64-pc-windows-msvc
             arch: arm64
             cmd: echo "Windows ARM64 setup complete"
-          
+
           - name: macos-x64
             os: macos-latest
             target: x86_64-apple-darwin
             arch: x64
             cmd: echo "macOS Intel setup complete"
-          
+
           - name: macos-arm64
             os: macos-latest
             target: aarch64-apple-darwin
@@ -351,7 +351,7 @@ jobs:
           cd src-tauri/target/${{ matrix.platform.target }}/release/bundle
           find . -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) \
             -exec sha256sum {} \; > checksums-${{ matrix.platform.name }}.txt
-          
+
           # Display checksums
           echo "=== Checksums for ${{ matrix.platform.name }} ==="
           cat checksums-${{ matrix.platform.name }}.txt
@@ -381,11 +381,11 @@ jobs:
       - name: Create universal binary
         run: |
           mkdir -p universal
-          
+
           # Find the binaries
           X64_BINARY=$(find artifacts -path "*/x86_64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
           ARM64_BINARY=$(find artifacts -path "*/aarch64-apple-darwin/release/bundle/macos/AutoDev-AI.app/Contents/MacOS/AutoDev-AI" | head -1)
-          
+
           if [[ -n "$X64_BINARY" && -n "$ARM64_BINARY" ]]; then
             echo "Creating universal binary from:"
             echo "  x64: $X64_BINARY"
@@ -404,11 +404,11 @@ jobs:
           # Create app bundle
           mkdir -p "AutoDev-AI.app/Contents/MacOS"
           mkdir -p "AutoDev-AI.app/Contents/Resources"
-          
+
           # Copy universal binary
           cp universal/AutoDev-AI "AutoDev-AI.app/Contents/MacOS/"
           chmod +x "AutoDev-AI.app/Contents/MacOS/AutoDev-AI"
-          
+
           # Create Info.plist
           cat > "AutoDev-AI.app/Contents/Info.plist" << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -430,7 +430,7 @@ jobs:
           </dict>
           </plist>
           EOF
-          
+
           # Create DMG
           hdiutil create -volname "AutoDev-AI ${{ needs.prepare.outputs.version }}" \
             -srcfolder "AutoDev-AI.app" \
@@ -512,7 +512,7 @@ jobs:
       - name: Generate Kubernetes manifests
         run: |
           mkdir -p k8s-release
-          
+
           # Create namespace
           cat > k8s-release/namespace.yaml << EOF
           apiVersion: v1
@@ -523,7 +523,7 @@ jobs:
               app.kubernetes.io/name: autodev-ai
               app.kubernetes.io/version: "${{ needs.prepare.outputs.version_number }}"
           EOF
-          
+
           # Create deployment for each service
           for service in gui api sandbox; do
             port=$((50020 + $(echo "gui api sandbox" | tr ' ' '\n' | grep -n $service | cut -d: -f1) - 1))
@@ -601,7 +601,7 @@ jobs:
               app.kubernetes.io/component: ${service}
           EOF
           done
-          
+
           # Create combined deployment file
           cat k8s-release/*.yaml > k8s-release/autodev-ai-${{ needs.prepare.outputs.version }}.yaml
 
@@ -616,7 +616,8 @@ jobs:
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-24.04
-    needs: [prepare, build-tauri, build-universal-macos, build-docker, build-k8s]
+    needs:
+      [prepare, build-tauri, build-universal-macos, build-docker, build-k8s]
     if: always() && (needs.build-tauri.result == 'success' || needs.build-docker.result == 'success')
     permissions:
       contents: write
@@ -656,7 +657,7 @@ jobs:
               "${{ steps.release.outputs.upload_url }}?name=$(basename "$file")" \
               --data-binary "@$file" || echo "Failed to upload $(basename "$file")"
           done
-          
+
           # Upload Kubernetes manifests
           if [[ -f artifacts/kubernetes-manifests/autodev-ai-${{ needs.prepare.outputs.version }}.yaml ]]; then
             curl -L \
@@ -683,7 +684,7 @@ jobs:
         run: |
           # Update README with latest version
           sed -i "s/Version: [^)]*/Version: ${{ needs.prepare.outputs.version }}/g" README.md
-          
+
           # Update CHANGELOG
           if [[ -f CHANGELOG.md ]]; then
             cp CHANGELOG.md CHANGELOG.md.bak
@@ -733,7 +734,7 @@ jobs:
       - name: Delete failed release
         run: |
           echo "Release creation failed, cleaning up..."
-          
+
           # Delete the release if it was created
           curl -L \
             -X DELETE \
@@ -742,7 +743,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ needs.prepare.outputs.tag }}" \
             || echo "Release may not have been created"
-          
+
           # Delete the tag if it was created via workflow_dispatch
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             curl -L \
@@ -753,5 +754,5 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/${{ needs.prepare.outputs.tag }}" \
               || echo "Tag deletion failed or tag doesn't exist"
           fi
-          
+
           echo "❌ Release ${{ needs.prepare.outputs.version }} rollback completed"

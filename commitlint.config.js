@@ -20,7 +20,11 @@ export default {
         'hive',
       ],
     ],
-    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case']],
+    'subject-case': [
+      2,
+      'never',
+      ['sentence-case', 'start-case', 'pascal-case'],
+    ],
     'subject-max-length': [2, 'always', 100],
     'body-max-line-length': [2, 'always', 100],
   },

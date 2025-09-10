@@ -1,11 +1,11 @@
-name: "AutoDev-AI CodeQL Configuration"
+name: 'AutoDev-AI CodeQL Configuration'
 
 disable-default-queries: false
 
 queries:
   - name: security-and-quality
     uses: security-and-quality
-  - name: security-extended  
+  - name: security-extended
     uses: security-extended
 
 query-filters:
@@ -24,10 +24,10 @@ paths-ignore:
   - dist
   - build
   - target
-  - "**/*.test.js"
-  - "**/*.test.ts"
-  - "**/*.spec.js"
-  - "**/*.spec.ts"
+  - '**/*.test.js'
+  - '**/*.test.ts'
+  - '**/*.spec.js'
+  - '**/*.spec.ts'
   - tests/fixtures
-  - "**/*.min.js"
-  - "**/*.min.css"
+  - '**/*.min.js'
+  - '**/*.min.css'
