@@ -3,14 +3,9 @@ name: Create Issue on Workflow Failure
 on:
   workflow_run:
     workflows:
-      - "CI/CD Pipeline"
-      - "CI Pipeline"
-      - "AutoDev-AI Build & Test Pipeline"
-      - "Security Scanning"
-      - "Performance Monitoring"
-      - "Comprehensive Test Pipeline"
-      - "Build and Release"
-      - "Deploy to Production"
+      - "Main CI/CD Pipeline"
+      - "PR Validation"
+      - "Release Pipeline"
     types:
       - completed
 
