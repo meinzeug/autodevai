@@ -22,7 +22,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   DOCKER_PORT_RANGE: '50000-50100'
 
 jobs:
@@ -134,7 +134,7 @@ jobs:
 
       - name: Run integration tests
         run: |
-          npm ci
+          npm install
           npm run test:integration:staging
         env:
           STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
@@ -197,7 +197,7 @@ jobs:
 
       - name: Run production smoke tests
         run: |
-          npm ci
+          npm install
           npm run test:smoke:production
         env:
           PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}

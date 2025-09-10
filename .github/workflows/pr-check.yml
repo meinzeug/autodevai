@@ -19,7 +19,7 @@ on:
         type: boolean
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   RUST_VERSION: '1.75.0'
   CARGO_TERM_COLOR: always
 
@@ -258,7 +258,7 @@ jobs:
 
       - name: Install frontend dependencies
         if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Frontend linting
         if: needs.pr-analysis.outputs.has_frontend_changes == 'true'
@@ -347,7 +347,7 @@ jobs:
 
       - name: Install frontend dependencies
         if: matrix.test-type == 'frontend'
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Run frontend tests
         if: matrix.test-type == 'frontend' && (needs.pr-analysis.outputs.has_frontend_changes == 'true' || github.event.inputs.force_full_validation == 'true')
@@ -428,7 +428,7 @@ jobs:
             patchelf
 
       - name: Install frontend dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Build frontend
         run: |
@@ -612,7 +612,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Build for performance testing
         run: npm run build

@@ -22,7 +22,7 @@ on:
           - load
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
   PERFORMANCE_PORT: '50001'
   METRICS_PORT: '50002'
 
@@ -40,7 +40,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build for performance testing
         run: npm run build
@@ -210,7 +210,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright
         run: npx playwright install chromium
@@ -286,7 +286,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install load testing tools
         run: |

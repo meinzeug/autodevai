@@ -28,7 +28,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   RUST_VERSION: '1.75.0'
   TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
   TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
@@ -165,7 +165,7 @@ jobs:
 
           ## 🔧 System Requirements
 
-          - **Node.js**: 18.0+ (for development)
+          - **Node.js**: 22.0+ (for development)
           - **Rust**: 1.70+ (for building from source)
           - **Docker**: 20.10+ (for containerized deployment)
           - **Memory**: 4GB+ RAM recommended
@@ -320,7 +320,7 @@ jobs:
         run: ${{ matrix.platform.cmd }}
 
       - name: Install frontend dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Build frontend
         run: npm run build

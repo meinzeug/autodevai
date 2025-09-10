@@ -32,7 +32,7 @@ on:
           - 'critical'
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   RUST_VERSION: '1.75.0'
   CARGO_TERM_COLOR: always
 
@@ -123,7 +123,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Build application
         run: |
@@ -275,7 +275,7 @@ jobs:
 
       - name: Install Node.js dependencies
         if: matrix.scan-type == 'npm' || matrix.scan-type == 'mixed'
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Run npm audit
         if: matrix.scan-type == 'npm' || matrix.scan-type == 'mixed'
@@ -558,7 +558,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: npm install --prefer-offline
 
       - name: Run custom security tests
         run: |
