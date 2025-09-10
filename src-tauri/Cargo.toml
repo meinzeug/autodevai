@@ -16,7 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 reqwest = { version = "0.11", features = ["json"] }
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
 anyhow = "1.0"
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
@@ -32,14 +32,20 @@ tauri-plugin-single-instance = "2.0"
 lazy_static = "1.4"
 # Additional plugins for complete system - using compatible versions
 # tauri-plugin-global-shortcut = "2.0"
-# tauri-plugin-notification = "2.0"
+tauri-plugin-notification = "2.0"
 # tauri-plugin-fs = "2.0"
 # tauri-plugin-shell = "2.0"
-# tauri-plugin-dialog = "2.0"
-# tauri-plugin-updater = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-updater = "2.0"
 # tauri-plugin-log = "2.0"
 log = "0.4"
 env_logger = "0.10"
+# Additional security dependencies
+regex = "1.10"
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+url = "2.4"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

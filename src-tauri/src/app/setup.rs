@@ -154,13 +154,14 @@ impl SetupManager {
         Ok(())
     }
 
-    /// Setup security features
+    /// Setup security features with enhanced protection
     async fn setup_security(&self, app: &App) -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize IPC security
-        let security = IpcSecurity::default();
+        // Initialize enhanced IPC security
+        let mut security = IpcSecurity::new_enhanced().await;
+        security.enable_enhanced_security();
         app.manage(security);
 
-        log::info!("Security setup completed");
+        log::info!("Enhanced security setup completed");
         Ok(())
     }
 

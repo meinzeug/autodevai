@@ -117,6 +117,18 @@ impl Default for IpcSecurity {
             },
         );
 
+        // Initialize with basic configuration for backward compatibility
+        let rt = tokio::runtime::Handle::try_current()
+            .unwrap_or_else(|_| tokio::runtime::Runtime::new().unwrap().handle().clone());
+        
+        let (audit_logger, enhanced_rate_limiter, session_manager) = rt.block_on(async {
+            (
+                Arc::new(RwLock::new(SecurityAuditLogger::new().await)),
+                Arc::new(RwLock::new(EnhancedRateLimiter::new())),
+                Arc::new(RwLock::new(SecureSessionManager::new())),
+            )
+        });
+
         Self {
             allowed_commands,
             blocked_commands,
@@ -126,6 +138,12 @@ impl Default for IpcSecurity {
                 requests: HashMap::new(),
             })),
             sessions: Arc::new(Mutex::new(HashMap::new())),
+            input_sanitizer: InputSanitizer::default(),
+            command_validator: CommandWhitelist::default(),
+            audit_logger,
+            enhanced_rate_limiter,
+            session_manager,
+            security_enabled: false, // Disabled by default for compatibility
         }
     }
 }

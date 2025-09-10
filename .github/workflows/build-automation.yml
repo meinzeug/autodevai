@@ -59,7 +59,8 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4.2.4
+        # Updated 2025-09-10 to fix deprecation
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -140,7 +141,8 @@ jobs:
         uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4.2.4
+        # Updated 2025-09-10 to fix deprecation
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/

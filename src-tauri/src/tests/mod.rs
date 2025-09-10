@@ -17,6 +17,12 @@ mod tray_tests;
 #[cfg(test)]
 mod integration_tests;
 
+#[cfg(test)]
+mod updater_tests;
+
+#[cfg(test)]
+mod security_integration_test;
+
 // Re-export test utilities for use in other test modules
 #[cfg(test)]
 pub mod test_utils {

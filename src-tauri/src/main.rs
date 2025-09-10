@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 
 // Module declarations
 mod app;
@@ -72,6 +72,18 @@ fn main() {
                 // Initialize window state management first (needed by other components)
                 if let Err(e) = window_state::setup_window_state(&app_handle).await {
                     warn!("Failed to setup window state management: {}", e);
+                } else {
+                    // Restore window states for existing windows
+                    for window in app.webview_windows().values() {
+                        let label = window.label();
+                        if let Some(manager) = app_handle.try_state::<window_state::WindowStateManager>() {
+                            if let Err(e) = manager.restore_window_state(label, window).await {
+                                warn!("Failed to restore state for window '{}': {}", label, e);
+                            } else {
+                                info!("Successfully restored state for window '{}'", label);
+                            }
+                        }
+                    }
                 }
 
                 // Initialize settings manager
@@ -109,10 +121,17 @@ fn main() {
         .on_menu_event(|app, event| {
             menu::handle_menu_event(app, event);
         })
-        // Window event handler
+        // Window event handler with comprehensive state management
         .on_window_event(|window, event| {
             let app = window.app_handle();
             let window_label = window.label();
+
+            // Handle window state management events
+            if let Err(e) = tauri::async_runtime::block_on(
+                window_state::handle_window_event(&app, event, window_label)
+            ) {
+                warn!("Failed to handle window state event: {}", e);
+            }
 
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -131,27 +150,33 @@ fn main() {
                         info!("Window '{}' gained focus", window_label);
                     }
                 }
+                tauri::WindowEvent::Moved(_) => {
+                    debug!("Window '{}' moved", window_label);
+                }
+                tauri::WindowEvent::Resized(_) => {
+                    debug!("Window '{}' resized", window_label);
+                }
                 _ => {}
             }
         })
-        // Comprehensive command handlers - 25+ commands for production security
+        // Essential command handlers for window state management
         .invoke_handler(tauri::generate_handler![
             // Core application commands
             greet,
             get_system_info,
             emergency_shutdown,
             
-            // Development window commands (4 commands)
+            // Development window commands
             dev_window::dev_toggle_devtools,
             dev_window::dev_window_info,
             dev_window::get_dev_window_config,
             dev_window::update_dev_window_config,
             
-            // Menu management commands (2 commands)
+            // Menu management commands
             menu::toggle_menu_visibility,
             menu::get_menu_info,
             
-            // System tray commands (6 commands)
+            // System tray commands
             tray::show_from_tray,
             tray::hide_to_tray,
             tray::toggle_tray_visibility,
@@ -160,19 +185,19 @@ fn main() {
             tray::get_tray_state,
             tray::update_tray_config,
             
-            // Settings management commands (5 commands)
+            // Settings management commands
             settings::manager::get_setting,
             settings::manager::set_setting,
             settings::manager::get_all_settings,
             settings::manager::save_settings,
             settings::manager::reset_settings,
             
-            // Enhanced security commands (3 commands)
+            // Enhanced security commands
             security::ipc_security::create_security_session,
             security::ipc_security::validate_ipc_command,
             security::ipc_security::get_security_stats,
             
-            // App setup and window state commands (6 commands)
+            // App setup and window state commands
             app::setup::get_setup_config,
             app::setup::update_setup_config,
             app::setup::save_window_state,
@@ -180,7 +205,7 @@ fn main() {
             app::setup::restore_window_state,
             app::setup::set_auto_save_enabled,
             
-            // Enhanced updater commands (7 commands)
+            // Enhanced updater commands
             app::updater::check_for_updates,
             app::updater::install_update,
             app::updater::get_update_status,
@@ -189,7 +214,7 @@ fn main() {
             app::updater::clear_pending_update,
             app::updater::restart_app,
             
-            // Comprehensive event system commands (6 commands)
+            // Event system commands
             events::emit_event,
             events::get_events,
             events::subscribe_to_events,
@@ -197,9 +222,13 @@ fn main() {
             events::get_event_stats,
             events::clear_events,
             
-            // Window state management commands (2 commands)
+            // Enhanced window state management commands
             window_state::save_current_window_state,
-            window_state::get_window_states
+            window_state::get_window_states,
+            window_state::get_window_state_stats,
+            window_state::restore_window_state_command,
+            window_state::get_last_focused_window,
+            window_state::cleanup_window_focus_tracker
         ])
         .run(tauri::generate_context!())
         .expect("error while running AutoDev-AI Neural Bridge Platform");

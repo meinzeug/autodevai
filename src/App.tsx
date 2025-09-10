@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Download
 } from 'lucide-react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OrchestrationPanel } from './components/OrchestrationPanel';
@@ -20,6 +21,7 @@ import { OutputDisplay } from './components/OutputDisplay';
 import { StatusBar } from './components/StatusBar';
 import { ProgressTracker } from './components/ProgressTracker';
 import { ConfigurationPanel } from './components/ConfigurationPanel';
+import { UpdateManager } from './components/UpdateManager';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TauriService } from './services/tauri';
@@ -41,6 +43,7 @@ interface AppState {
   isFullscreen: boolean;
   showSettings: boolean;
   showOutput: boolean;
+  showUpdater: boolean;
   activeTab: 'orchestration' | 'monitoring' | 'terminal';
 }
 
@@ -66,6 +69,7 @@ function AppContent() {
     isFullscreen: false,
     showSettings: false,
     showOutput: true,
+    showUpdater: false,
     activeTab: 'orchestration'
   });
   
@@ -211,6 +215,10 @@ function AppContent() {
     setState(prev => ({ ...prev, showSettings: !prev.showSettings }));
   }, []);
 
+  const toggleUpdater = useCallback(() => {
+    setState(prev => ({ ...prev, showUpdater: !prev.showUpdater }));
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -228,6 +236,10 @@ function AppContent() {
             event.preventDefault();
             toggleSettings();
             break;
+          case 'u':
+            event.preventDefault();
+            toggleUpdater();
+            break;
           case '`':
             event.preventDefault();
             setState(prev => ({ ...prev, showOutput: !prev.showOutput }));
@@ -236,7 +248,7 @@ function AppContent() {
       }
       
       if (event.key === 'Escape') {
-        setState(prev => ({ ...prev, showSettings: false }));
+        setState(prev => ({ ...prev, showSettings: false, showUpdater: false }));
       }
     };
 
@@ -345,6 +357,19 @@ function AppContent() {
                 </button>
                 
                 <button
+                  onClick={toggleUpdater}
+                  className={cn(
+                    "p-2 rounded-lg transition-colors",
+                    state.showUpdater
+                      ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                  )}
+                  title="Update Manager (Ctrl+U)"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                
+                <button
                   onClick={toggleSettings}
                   className={cn(
                     "p-2 rounded-lg transition-colors",
@@ -396,6 +421,22 @@ function AppContent() {
               onChange={setConfig}
               onClose={() => setState(prev => ({ ...prev, showSettings: false }))}
             />
+          </div>
+        )}
+        
+        {/* Update Manager Sidebar */}
+        {state.showUpdater && (
+          <div className={cn(
+            "w-96 border-r transition-all duration-300 overflow-y-auto",
+            theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          )}>
+            <div className="p-6">
+              <ErrorBoundary>
+                <UpdateManager 
+                  onClose={() => setState(prev => ({ ...prev, showUpdater: false }))}
+                />
+              </ErrorBoundary>
+            </div>
           </div>
         )}
         
