@@ -26,18 +26,17 @@ Never echo or commit secrets.
 </credentials>
 
 
-## GitHub-First Security Workflow
+## GitHub-First Security & Issue Resolution Workflow
 
-<github_security_health_check> BEFORE any roadmap task execution:
+<github_security_issue_resolution> BEFORE any roadmap task execution:
 
 1. **Complete GitHub Status Analysis**
    ```bash
    # Parallel comprehensive GitHub status checks
-   gh run list --limit 10 --json status,conclusion,workflowName
-   gh issue list --state=open --json number,title,labels,author
-   gh pr list --state=open --json number,title,author,mergeable
    gh api repos/meinzeug/autodevai/code-scanning/alerts --jq '[.[] | select(.state=="open")] | length'
    gh api repos/meinzeug/autodevai/dependabot/alerts --jq 'length' 2>/dev/null || echo "0"
+   gh issue list --state=open --json number,title,body,labels,author,comments
+   gh pr list --state=open --json number,title,author,mergeable
    ```
 
 2. **Security Alerts Analysis**
@@ -48,66 +47,104 @@ Never echo or commit secrets.
    
    if [ "$SECURITY_ALERTS" -gt 0 ] || [ "$CRITICAL_ALERTS" -gt 0 ]; then
      echo "🚨 Security alerts detected: $SECURITY_ALERTS total, $CRITICAL_ALERTS critical"
-     echo "⚠️ Security resolution required before roadmap execution"
+     echo "⚠️ Security resolution required before issue and roadmap execution"
      exit 1
    fi
    ```
 
-3. **CI/CD & PR Clean State Verification**
+3. **Issues Analysis & Resolution (PRIORITY AFTER SECURITY)**
    ```bash
-   # Comprehensive clean state check
+   # Get all open issues with complete details including comments
+   OPEN_ISSUES=$(gh issue list --state=open --json number | jq '. | length')
+   
+   if [ "$OPEN_ISSUES" -gt 0 ]; then
+     echo "📋 Found $OPEN_ISSUES open issues - analyzing with comments"
+     # Get detailed issue information including all comments
+     gh issue list --state=open --json number,title,body,labels,author,assignees,createdAt,updatedAt --jq '.[] | {number, title, body, labels: [.labels[].name], author: .author.login, assignees: [.assignees[].login], created: .createdAt, updated: .updatedAt}'
+     
+     # For each issue, get comments
+     for issue_number in $(gh issue list --state=open --json number --jq '.[].number'); do
+       echo "📝 Getting comments for issue #$issue_number"
+       gh issue view $issue_number --json number,title,body,comments --jq '{number, title, body, comments: [.comments[] | {author: .author.login, body: .body, createdAt: .createdAt}]}'
+     done
+   fi
+   ```
+
+4. **GitHub Clean State Verification (AFTER Issues Fixed)**
+   ```bash
+   # Comprehensive clean state check - now includes issues
    while true; do
-     RUNNING_JOBS=$(gh run list --status=in_progress,queued --json databaseId | jq '. | length')
+     SECURITY_ALERTS=$(gh api repos/meinzeug/autodevai/code-scanning/alerts --jq '[.[] | select(.state=="open")] | length' 2>/dev/null || echo "0")
+     OPEN_ISSUES=$(gh issue list --state=open --json number | jq '. | length')
      OPEN_PRS=$(gh pr list --state=open --json number | jq '. | length')
      FAILED_RUNS=$(gh run list --status=failure --limit 10 --json databaseId | jq '. | length')
      
-     if [ "$RUNNING_JOBS" -eq 0 ] && [ "$OPEN_PRS" -eq 0 ] && [ "$FAILED_RUNS" -eq 0 ]; then
-       echo "✅ GitHub is clean - ready for roadmap execution"
+     if [ "$SECURITY_ALERTS" -eq 0 ] && [ "$OPEN_ISSUES" -eq 0 ] && [ "$OPEN_PRS" -eq 0 ] && [ "$FAILED_RUNS" -eq 0 ]; then
+       echo "✅ GitHub is completely clean - ready for roadmap execution"
        break
      fi
      
-     echo "⏳ GitHub not clean: Running:$RUNNING_JOBS PRs:$OPEN_PRS Failed:$FAILED_RUNS"
-     sleep 30
+     echo "⏳ GitHub not clean: Security:$SECURITY_ALERTS Issues:$OPEN_ISSUES PRs:$OPEN_PRS Failed:$FAILED_RUNS"
+     echo "⚠️ Continuing issue resolution..."
+     break  # Don't loop - continue with issue fixing
    done
    ```
-</github_security_health_check>
+</github_security_issue_resolution>
 
 ## Pre-Roadmap Security & Issue Resolution
 
-<security_resolution_phase> Execute ONLY when GitHub security issues exist:
+<security_issue_resolution_phase> Execute in STRICT ORDER: Security → Issues → Roadmap
 
-Message 1: [BatchTool - Security Analysis]
+Message 1: [BatchTool - Security & Issues Analysis]
 ```
 - Bash("gh api repos/meinzeug/autodevai/code-scanning/alerts --jq '[.[] | select(.state==\"open\")]'")
-- Bash("gh issue list --state=open --json number,title,body,labels")
+- Bash("gh issue list --state=open --json number,title,body,labels,author,assignees,createdAt,updatedAt")
+- For each open issue: Bash("gh issue view ISSUE_NUMBER --json number,title,body,comments")
 - Bash("gh pr list --state=open --json number,title,author,mergeable") 
-- Bash("gh run list --status=failure --limit 50 --json databaseId,workflowName,conclusion")
-- Read("docs/github-security-analysis.md") || Write("docs/github-security-analysis.md", "# GitHub Security Analysis\n")
-- Analyze ALL security alerts, issues, PRs, and failed workflows
-- Prioritize by criticality: Security Errors > PRs > Failed Workflows > Issues
+- Write("docs/github-issues-analysis.md", "# GitHub Issues & Security Analysis\n")
+- Analyze ALL security alerts FIRST, then issues with their comments
+- Prioritize by criticality: Security Errors > Critical Issues > High Priority Issues > Normal Issues
 ```
 
-Message 2: [BatchTool - Security Resolution]
+Message 2: [BatchTool - Security Resolution] - EXECUTE FIRST IF SECURITY ALERTS EXIST
 ```
-# Spawn specialized security and issue resolution agents
+# Spawn specialized security agents - HIGHEST PRIORITY
 Task("Security Alert Resolver: Fix all critical security vulnerabilities first", "security-manager")
-Task("GitHub Script Injection Fixer: Fix pr.yml security issue immediately", "github-modes") 
-Task("PR Cleanup Agent: Close or merge all open pull requests", "pr-manager")
-Task("Pipeline Recovery Agent: Fix all failed CI/CD workflows", "cicd-engineer")
-Task("Code Quality Agent: Fix lint/type/format issues", "code-analyzer")
+Task("GitHub Script Injection Fixer: Fix workflow security issues immediately", "github-modes") 
 Task("Terraform Security Agent: Fix AWS/K8s security misconfigurations", "security-manager")
+Task("Container Security Agent: Fix Docker/K8s security contexts", "security-manager")
+Task("Code Quality Agent: Fix lint/type/format security issues", "code-analyzer")
 ```
 
-Message 3: [BatchTool - Complete Clean State Verification]
+Message 3: [BatchTool - Issues Resolution] - EXECUTE AFTER SECURITY CLEAN
+```
+# Issues created by workflow actions contain error details - fix these BEFORE roadmap
+# For each open issue, analyze issue title, body, and ALL comments to understand the problem
+# Create specialized agents based on issue types found:
+
+# Example issue-based agent spawning (adapt based on actual issues):
+Task("Build Error Resolver: Fix compilation/build failures from CI/CD", "cicd-engineer")
+Task("Test Failure Agent: Fix failing unit/integration tests", "tester") 
+Task("Dependency Issue Resolver: Fix package/dependency conflicts", "coder")
+Task("Documentation Fixer: Fix documentation build/link issues", "researcher")
+Task("Performance Issue Resolver: Fix performance regression issues", "perf-analyzer")
+Task("API Error Fixer: Fix API endpoint failures", "backend-dev")
+Task("Frontend Bug Fixer: Fix UI/UX issues reported", "coder")
+
+# IMPORTANT: Each agent must read the specific issue details and comments to understand context
+# Agents should close issues after successful resolution
+```
+
+Message 4: [BatchTool - Complete Clean State Verification]
 ```
 - Bash("gh api repos/meinzeug/autodevai/code-scanning/alerts --jq '[.[] | select(.state==\"open\")] | length'") # Must be 0
+- Bash("gh issue list --state=open --json number | jq '. | length'") # Must be 0 - ALL ISSUES RESOLVED
 - Bash("gh pr list --state=open --json number | jq '. | length'") # Must be 0  
-- Bash("gh issue list --state=open --json number | jq '. | length'") # Should be 0
 - Bash("gh run list --status=failure,in_progress,queued --limit 10 --json databaseId | jq '. | length'") # Must be 0
 - Bash("npm run lint && npm run typecheck && npm test") # All must pass
 - Bash("git status") # Should be clean or only staged changes ready for commit
 ```
-</security_resolution_phase>
+</security_issue_resolution_phase>
 
 ## Enhanced Documentation Swarm
 
@@ -360,27 +397,33 @@ Initialize GitHub-first security workflow NOW:
    - Fix infrastructure security issues (wenn vorhanden)
    - Resolve detected misconfigurations (alle gefundenen)
 
-2. **GitHub Cleanup** (AFTER security clean)
-   - Close/merge all open PRs (aktuelle Anzahl wird geprüft)
+2. **GitHub Issues Resolution** (AFTER security clean, BEFORE roadmap)
+   - Analyze ALL open issues with complete context (title, body, comments)
+   - Issues are created by workflow actions when errors occur
+   - Fix each issue based on the specific error details in comments
+   - Close issues after successful resolution
+   - Verify no new issues created during fixes
+
+3. **GitHub State Cleanup** (AFTER issues resolved)
+   - Close/merge all remaining open PRs (aktuelle Anzahl wird geprüft)
    - Check CI/CD status (Echtzeit-Status)
-   - Analyze open issues (dynamisch ermittelt)
    - Wait for running jobs (automatische Wartezeit)
 
-3. **Documentation Load** (ONLY after complete cleanup)
+4. **Documentation Load** (ONLY after complete cleanup)
    - Load all docs in parallel (konzept.md, roadmap.md, changelog.md if available)
    - Find next roadmap task from available documentation
    
-4. **Smart Execution** (Continuous security monitoring active)
+5. **Smart Execution** (Continuous security monitoring active)
    - Continuous GitHub security monitoring
    - Execute roadmap tasks with verification
    - Deploy with GitHub re-verification
 
-5. **Loop Until Complete**
+6. **Loop Until Complete**
    - Continue until all roadmap tasks [x]
    - Maintain GitHub security throughout
    - Document all resolutions
 
-**CRITICAL RULE: NO ROADMAP TASK EXECUTION UNTIL GITHUB IS 100% SECURE & CLEAN**
+**CRITICAL RULE: NO ROADMAP TASK EXECUTION UNTIL GITHUB IS 100% SECURE, ISSUES-FREE & CLEAN**
 
 GitHub Status Requirements for Roadmap Execution:
 🔒 **SECURITY FIRST (MANDATORY)**:
@@ -389,7 +432,13 @@ GitHub Status Requirements for Roadmap Execution:
 ✅ Zero Dependabot alerts
 ✅ All GitHub Actions free from injection vulnerabilities
 
-🧹 **CLEAN STATE (MANDATORY)**:
+📋 **ISSUES RESOLUTION (MANDATORY AFTER SECURITY)**:
+✅ Zero open issues (ALL issues from workflow errors must be fixed)
+✅ All CI/CD error issues resolved
+✅ Build/test/lint issues from automation fixed
+✅ Dependencies/configuration issues resolved
+
+🧹 **CLEAN STATE (MANDATORY AFTER ISSUES)**:
 ✅ Zero open pull requests
 ✅ Zero failed workflow runs
 ✅ Zero in-progress/queued workflow runs
