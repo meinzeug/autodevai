@@ -78,7 +78,7 @@ RUN cd src-tauri && \
     strip target/release/autodev-ai
 
 # Stage 3: Production Runtime
-FROM alpine:3.18 AS runtime
+FROM alpine:3.22 AS runtime
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S autodev && \
