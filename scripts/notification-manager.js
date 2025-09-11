@@ -8,7 +8,6 @@
 const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
-const http = require('http');
 
 class NotificationManager {
     constructor(options = {}) {
@@ -49,7 +48,7 @@ class NotificationManager {
         try {
             const data = await fs.readFile(templatesPath, 'utf8');
             this.config.templates = JSON.parse(data);
-        } catch (error) {
+        } catch {
             console.log('Templates file not found, using defaults');
             await this.createDefaultTemplates();
         }

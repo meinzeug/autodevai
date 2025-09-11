@@ -6,10 +6,10 @@ import type {
   OrchestrationMode,
   Tool,
   CodexMode,
-  ClaudeFlowCommandType,
+  ClaudeFlowCommand,
   PrerequisiteStatus,
   SystemInfo,
-} from '../types';
+} from '@/types';
 
 interface AppState {
   // Tasks
@@ -19,28 +19,29 @@ interface AppState {
   updateTask: (id: string, updates: Partial<Task>) => void;
   removeTask: (id: string) => void;
   setCurrentTask: (task: Task | null) => void;
-  
+
   // Settings
   settings: Settings;
   updateSettings: (settings: Partial<Settings>) => void;
-  
+
   // UI State
   mode: OrchestrationMode;
   selectedTool: Tool;
   codexMode: CodexMode;
-  claudeFlowCommand: ClaudeFlowCommandType;
+  claudeFlowCommand: ClaudeFlowCommand;
   claudeFlowArgs: string;
   isExecuting: boolean;
   output: string;
+
   setMode: (mode: OrchestrationMode) => void;
   setSelectedTool: (tool: Tool) => void;
   setCodexMode: (mode: CodexMode) => void;
-  setClaudeFlowCommand: (command: ClaudeFlowCommandType) => void;
+  setClaudeFlowCommand: (command: ClaudeFlowCommand) => void;
   setClaudeFlowArgs: (args: string) => void;
   setIsExecuting: (executing: boolean) => void;
   setOutput: (output: string) => void;
   appendOutput: (output: string) => void;
-  
+
   // System
   prerequisites: PrerequisiteStatus | null;
   systemInfo: SystemInfo | null;
@@ -55,7 +56,7 @@ export const useStore = create<AppState>()(
         // Tasks
         tasks: [],
         currentTask: null,
-        addTask: (task: Omit<Task, 'id' | 'created_at' | 'status'>) =>
+        addTask: (task) =>
           set((state) => ({
             tasks: [
               ...state.tasks,
@@ -63,22 +64,22 @@ export const useStore = create<AppState>()(
                 ...task,
                 id: crypto.randomUUID(),
                 created_at: new Date().toISOString(),
-                status: 'pending' as const,
+                status: 'pending',
               },
             ],
           })),
-        updateTask: (id: string, updates: Partial<Task>) =>
+        updateTask: (id, updates) =>
           set((state) => ({
             tasks: state.tasks.map((task) =>
               task.id === id ? { ...task, ...updates } : task
             ),
           })),
-        removeTask: (id: string) =>
+        removeTask: (id) =>
           set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== id),
           })),
-        setCurrentTask: (task: Task | null) => set({ currentTask: task }),
-        
+        setCurrentTask: (task) => set({ currentTask: task }),
+
         // Settings
         settings: {
           default_mode: 'single',
@@ -86,11 +87,11 @@ export const useStore = create<AppState>()(
           docker_enabled: true,
           auto_quality_check: true,
         },
-        updateSettings: (updates: Partial<Settings>) =>
+        updateSettings: (updates) =>
           set((state) => ({
             settings: { ...state.settings, ...updates },
           })),
-        
+
         // UI State
         mode: 'single',
         selectedTool: 'claude-flow',
@@ -99,21 +100,22 @@ export const useStore = create<AppState>()(
         claudeFlowArgs: '',
         isExecuting: false,
         output: '',
-        setMode: (mode: OrchestrationMode) => set({ mode }),
-        setSelectedTool: (tool: Tool) => set({ selectedTool: tool }),
-        setCodexMode: (mode: CodexMode) => set({ codexMode: mode }),
-        setClaudeFlowCommand: (command: ClaudeFlowCommandType) => set({ claudeFlowCommand: command }),
-        setClaudeFlowArgs: (args: string) => set({ claudeFlowArgs: args }),
-        setIsExecuting: (executing: boolean) => set({ isExecuting: executing }),
-        setOutput: (output: string) => set({ output }),
-        appendOutput: (output: string) =>
+
+        setMode: (mode) => set({ mode }),
+        setSelectedTool: (tool) => set({ selectedTool: tool }),
+        setCodexMode: (mode) => set({ codexMode: mode }),
+        setClaudeFlowCommand: (command) => set({ claudeFlowCommand: command }),
+        setClaudeFlowArgs: (args) => set({ claudeFlowArgs: args }),
+        setIsExecuting: (executing) => set({ isExecuting: executing }),
+        setOutput: (output) => set({ output }),
+        appendOutput: (output) =>
           set((state) => ({ output: state.output + '\n' + output })),
-        
+
         // System
         prerequisites: null,
         systemInfo: null,
-        setPrerequisites: (status: PrerequisiteStatus) => set({ prerequisites: status }),
-        setSystemInfo: (info: SystemInfo) => set({ systemInfo: info }),
+        setPrerequisites: (status) => set({ prerequisites: status }),
+        setSystemInfo: (info) => set({ systemInfo: info }),
       }),
       {
         name: 'autodev-ai-storage',

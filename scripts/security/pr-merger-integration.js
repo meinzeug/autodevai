@@ -11,8 +11,6 @@
  */
 
 const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 class PRMergerIntegration {
   constructor() {
@@ -173,7 +171,7 @@ class PRMergerIntegration {
   /**
    * 🔒 Run pre-merge security checks
    */
-  async runPreMergeSecurityChecks(prNumber) {
+  async runPreMergeSecurityChecks(_prNumber) {
     console.log('🔒 Running pre-merge security checks...');
     
     const checks = [
@@ -544,7 +542,7 @@ class PRMergerIntegration {
   /**
    * 👤 Assess author risk
    */
-  assessAuthorRisk(user) {
+  assessAuthorRisk(_user) {
     // Simplified author risk assessment
     // In real implementation, this would check:
     // - Author's contribution history
@@ -630,12 +628,12 @@ Security review completed and approved for merge.`;
     // Implementation for merge integrity validation
   }
 
-  async handleMergeFailure(prNumber, error) {
+  async handleMergeFailure(prNumber, _error) {
     console.log(`🚨 Handling merge failure for PR #${prNumber}...`);
     // Implementation for merge failure handling
   }
 
-  generateRiskRecommendation(riskLevel, factors) {
+  generateRiskRecommendation(riskLevel, _factors) {
     const recommendations = {
       low: 'Safe for automatic merge with standard security checks.',
       medium: 'Requires approval before merge. Consider additional testing.',
@@ -662,11 +660,11 @@ Security review completed and approved for merge.`;
     return { passed: true, reason: 'Rollback plan ready' };
   }
 
-  async requestManualReview(prNumber, assessment) {
+  async requestManualReview(prNumber, _assessment) {
     console.log(`📋 Requesting manual review for PR #${prNumber}...`);
   }
 
-  async requestApproval(prNumber, assessment) {
+  async requestApproval(prNumber, _assessment) {
     console.log(`✋ Requesting approval for PR #${prNumber}...`);
   }
 
@@ -674,15 +672,15 @@ Security review completed and approved for merge.`;
     console.log(`📊 Enabling post-merge monitoring for PR #${prNumber}...`);
   }
 
-  async sendMergeNotifications(prNumber, assessment) {
+  async sendMergeNotifications(prNumber, _assessment) {
     console.log(`📧 Sending merge notifications for PR #${prNumber}...`);
   }
 
-  async collectMergeMetrics(prNumber, assessment) {
+  async collectMergeMetrics(prNumber, _assessment) {
     console.log(`📈 Collecting merge metrics for PR #${prNumber}...`);
   }
 
-  async updateSecurityAuditTrail(prNumber, assessment) {
+  async updateSecurityAuditTrail(prNumber, _assessment) {
     console.log(`📋 Updating security audit trail for PR #${prNumber}...`);
   }
 

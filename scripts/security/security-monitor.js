@@ -565,22 +565,22 @@ ${secrets.findings.map(f => `- **${f.type}** in ${f.file}:${f.line}`).join('\n')
     return !scanResults.npm.details.hasOwnProperty(packageName);
   }
 
-  async sendGitHubNotification(notification) {
+  async sendGitHubNotification(_notification) {
     // Implementation for GitHub notifications
     console.log('📱 GitHub notification sent');
   }
 
-  async sendSlackNotification(notification) {
+  async sendSlackNotification(_notification) {
     // Implementation for Slack notifications
     console.log('📱 Slack notification sent');
   }
 
-  async sendEmailNotification(notification) {
+  async sendEmailNotification(_notification) {
     // Implementation for email notifications
     console.log('📧 Email notification sent');
   }
 
-  async sendEmergencyNotification(notification) {
+  async sendEmergencyNotification(_notification) {
     // Implementation for emergency notifications
     console.log('🚨 Emergency notification sent');
   }

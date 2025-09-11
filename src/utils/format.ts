@@ -20,15 +20,6 @@ export function formatDate(date: string | Date): string {
   return d.toLocaleString();
 }
 
-export function formatPercentage(value: number, decimals: number = 1): string {
-  return `${(value * 100).toFixed(decimals)}%`;
-}
-
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat().format(num);
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
+export function truncate(str: string, length: number): string {
+  return str.length > length ? str.substring(0, length - 3) + '...' : str;
 }

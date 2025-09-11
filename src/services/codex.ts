@@ -105,7 +105,7 @@ class CodexIntegration {
       const endTime = Date.now();
       const responseTime = endTime - startTime;
 
-      const result = this.parseCodeResponse(response.choices[0].message.content);
+      const result = this.parseCodeResponse(response.choices[0]?.message?.content || '');
       const costEstimate = await this.openRouterClient.estimateCost(
         model,
         response.usage?.prompt_tokens || 0,
@@ -228,14 +228,14 @@ class CodexIntegration {
     // Extract explanation (text before "Suggestions:" or similar)
     const explanationMatch = response.match(/explanation[:\s]*([\s\S]*?)(?:suggestions?[:\s]|$)/i);
     if (explanationMatch) {
-      sections.explanation = explanationMatch[1].trim();
+      sections.explanation = explanationMatch[1]?.trim() || '';
     }
 
     // Extract suggestions
     const suggestionsMatch = response.match(/suggestions?[:\s]*([\s\S]*)/i);
     if (suggestionsMatch) {
       const suggestionText = suggestionsMatch[1];
-      sections.suggestions = suggestionText
+      sections.suggestions = (suggestionText || '')
         .split(/\n/)
         .filter(line => line.trim().length > 0)
         .map(line => line.replace(/^[-\s*]+/, '').trim())
@@ -294,7 +294,7 @@ Provide detailed analysis with specific line numbers where applicable.`;
       complexity: { computational: 0.7, logical: 0.8, creative: 0.3, domain_specific: 0.9 }
     });
 
-    return this.parseAnalysisResponse(response.choices[0].message.content);
+    return this.parseAnalysisResponse(response.choices[0]?.message?.content || '');
   }
 
   private parseAnalysisResponse(response: string): CodeAnalysis {
@@ -302,7 +302,7 @@ Provide detailed analysis with specific line numbers where applicable.`;
     const extractScore = (metric: string): number => {
       const regex = new RegExp(`${metric}[:\\s]+([0-9.]+)`, 'i');
       const match = response.match(regex);
-      return match ? parseFloat(match[1]) : 5.0;
+      return match ? parseFloat(match[1] || '5.0') : 5.0;
     };
 
     const complexity_score = extractScore('complexity');
@@ -323,7 +323,7 @@ Provide detailed analysis with specific line numbers where applicable.`;
       for (const match of matches) {
         issues.push({
           type: ['error', 'warning', 'suggestion'][index] as 'error' | 'warning' | 'suggestion',
-          message: match[1].trim(),
+          message: match[1]?.trim() || '',
           severity: index + 1
         });
       }
@@ -332,7 +332,7 @@ Provide detailed analysis with specific line numbers where applicable.`;
     // Extract recommendations
     const recMatch = response.match(/recommendations?[:\s]*([\s\S]*)/i);
     const recommendations = recMatch 
-      ? recMatch[1].split('\n').filter(r => r.trim().length > 0).map(r => r.trim())
+      ? recMatch[1]?.split('\n').filter(r => r.trim().length > 0).map(r => r.trim()) || []
       : [];
 
     return {
@@ -374,7 +374,7 @@ Provide:
       complexity: { computational: 0.8, logical: 0.7, creative: 0.6, domain_specific: 0.9 }
     });
 
-    return this.parseOptimizationResponse(response.choices[0].message.content, code);
+    return this.parseOptimizationResponse(response.choices[0]?.message?.content || '', code);
   }
 
   private parseOptimizationResponse(response: string, originalCode: string): CodeOptimization {
@@ -400,7 +400,7 @@ Provide:
       for (const match of matches) {
         improvements.push({
           type: improvementTypes[index] as 'performance' | 'readability' | 'security' | 'memory',
-          description: match[1].trim(),
+          description: match[1]?.trim() || '',
           impact: Math.random() * 5 + 1 // Placeholder - in reality would be calculated
         });
       }
@@ -408,7 +408,7 @@ Provide:
 
     // Extract performance gain
     const gainMatch = response.match(/(?:gain|improvement)[:\s]*([0-9.]+)%?/i);
-    const performance_gain = gainMatch ? parseFloat(gainMatch[1]) : 10;
+    const performance_gain = gainMatch ? parseFloat(gainMatch[1] || '10') : 10;
 
     return {
       original_code: originalCode,
@@ -434,7 +434,7 @@ Provide:
       prompt: debugPrompt,
       language,
       task_type: 'debugging',
-      context: error_message,
+      context: error_message || '',
       temperature: 0.2 // Lower temperature for debugging
     });
   }
@@ -452,7 +452,7 @@ Continue the code naturally, maintaining style and patterns.`;
       prompt: completionPrompt,
       language,
       task_type: 'completion',
-      context: intent,
+      context: intent || '',
       temperature: 0.4,
       max_tokens: 1000
     });

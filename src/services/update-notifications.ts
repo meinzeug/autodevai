@@ -39,9 +39,9 @@ export class UpdateNotificationManager {
     notificationPosition: 'top-right'
   };
 
-  private checkTimer?: NodeJS.Timeout;
+  private checkTimer?: NodeJS.Timeout | undefined;
   private isChecking = false;
-  private lastCheckedVersion?: string;
+  private lastCheckedVersion?: string | undefined;
 
   constructor(config?: Partial<UpdateNotificationConfig>) {
     if (config) {

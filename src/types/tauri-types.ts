@@ -950,11 +950,11 @@ export interface TauriCommands {
     returns: string;
   };
   get_system_info: {
-    args: {};
+    args: Record<string, never>;
     returns: SystemInfo;
   };
   emergency_shutdown: {
-    args: {};
+    args: Record<string, never>;
     returns: void;
   };
 
@@ -989,7 +989,7 @@ export interface TauriCommands {
     returns: string;
   };
   get_memory_state: {
-    args: {};
+    args: Record<string, never>;
     returns: MemoryState;
   };
   execute_ai_orchestrated_dual_mode: {
@@ -1005,11 +1005,11 @@ export interface TauriCommands {
     returns: SwarmMetrics;
   };
   ai_orchestration_health_check: {
-    args: {};
+    args: Record<string, never>;
     returns: any; // JSON value
   };
   get_ai_orchestration_info: {
-    args: {};
+    args: Record<string, never>;
     returns: any; // JSON value
   };
   execute_comprehensive_ai_workflow: {
@@ -1037,11 +1037,11 @@ export interface TauriCommands {
     returns: WorkflowResult;
   };
   get_enhanced_system_status: {
-    args: {};
+    args: Record<string, never>;
     returns: EnhancedSystemStatus;
   };
   get_optimization_recommendations: {
-    args: {};
+    args: Record<string, never>;
     returns: OptimizationRecommendation[];
   };
   execute_with_smart_routing: {
@@ -1049,7 +1049,7 @@ export interface TauriCommands {
     returns: SmartRoutingResponse;
   };
   get_performance_metrics: {
-    args: {};
+    args: Record<string, never>;
     returns: PerformanceMetrics;
   };
   configure_enhanced_orchestration: {
@@ -1057,15 +1057,15 @@ export interface TauriCommands {
     returns: void;
   };
   get_enhanced_capabilities: {
-    args: {};
+    args: Record<string, never>;
     returns: EnhancedCapabilities;
   };
   get_openrouter_models: {
-    args: {};
+    args: Record<string, never>;
     returns: OpenRouterModel[];
   };
   test_enhanced_orchestration: {
-    args: {};
+    args: Record<string, never>;
     returns: TestResult;
   };
 
@@ -1079,7 +1079,7 @@ export interface TauriCommands {
     returns: boolean;
   };
   get_security_stats: {
-    args: {};
+    args: Record<string, never>;
     returns: SecurityStats;
   };
   validate_ipc_command_enhanced: {
@@ -1095,15 +1095,15 @@ export interface TauriCommands {
     returns: string;
   };
   get_enhanced_security_stats: {
-    args: {};
+    args: Record<string, never>;
     returns: EnhancedSecurityStats;
   };
   flush_security_logs: {
-    args: {};
+    args: Record<string, never>;
     returns: void;
   };
   cleanup_security_data: {
-    args: {};
+    args: Record<string, never>;
     returns: void;
   };
 }

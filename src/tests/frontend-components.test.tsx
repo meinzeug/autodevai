@@ -34,13 +34,18 @@ describe('OutputDisplay Component', () => {
     type: ExecutionOutput['type'] = 'stdout',
     content: string = 'Test output',
     source?: string
-  ): ExecutionOutput => ({
-    id: `output-${Date.now()}-${Math.random()}`,
-    type,
-    content,
-    timestamp: new Date(),
-    source
-  });
+  ): ExecutionOutput => {
+    const output: ExecutionOutput = {
+      id: `output-${Date.now()}-${Math.random()}`,
+      type,
+      content,
+      timestamp: new Date()
+    };
+    if (source !== undefined) {
+      output.source = source;
+    }
+    return output;
+  };
 
   const mockOnClear = vi.fn();
 

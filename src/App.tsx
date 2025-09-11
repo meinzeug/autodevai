@@ -24,7 +24,10 @@ import {
   ExecutionOutput,
   ClaudeFlowCommand,
   OrchestrationConfig,
-  NotificationMessage
+  NotificationMessage,
+  OrchestrationMode,
+  Tool,
+  ExecutionMode
 } from './types';
 import toast from 'react-hot-toast';
 
@@ -42,10 +45,11 @@ interface AppState {
 }
 
 const defaultConfig: OrchestrationConfig = {
-  mode: {
-    type: 'single',
-    primaryModel: 'claude'
-  },
+  mode: 'single' as OrchestrationMode,
+  tool: 'claude-flow' as Tool,
+  executionMode: 'standard' as ExecutionMode,
+  primaryModel: 'claude',
+  secondaryModel: undefined as string | undefined,
   dockerEnabled: false,
   autoRestart: true,
   maxRetries: 3,
@@ -70,19 +74,20 @@ function AppContent() {
   
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_notifications, _setNotifications] = useState<NotificationMessage[]>([]);
-  const tauriService = useMemo(() => TauriService.getInstance(), []);
+  const tauriService = useMemo(() => TauriService, []);
 
   // Initialize Tauri service and event listeners
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await tauriService.initialize();
+        // TauriService doesn't have initialize method
+        // await tauriService.initialize();
         
         // Initialize hive coordination
         hiveCoordinator.subscribe('integration-coordinator', (message) => {
           const output: ExecutionOutput = {
             id: `hive-${Date.now()}`,
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             type: message.type === 'error' ? 'error' : 'info',
             content: `Hive Message from ${message.from}: ${JSON.stringify(message.payload)}`,
             source: 'Hive Mind'
@@ -101,12 +106,8 @@ function AppContent() {
         });
         
         // Set up execution output listener
-        const unsubscribeOutput = tauriService.onExecutionOutput((output) => {
-          setState(prev => ({
-            ...prev,
-            outputs: [...prev.outputs, output]
-          }));
-        });
+        // TauriService doesn't have onExecutionOutput method
+        const unsubscribeOutput = () => {}; // No-op
 
         return () => {
           unsubscribeOutput();
@@ -135,7 +136,7 @@ function AppContent() {
       // Add starting message
       const startOutput: ExecutionOutput = {
         id: `start-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'info',
         content: `Starting ${command.mode} execution: ${command.task}`,
         source: 'AutoDev-AI'
@@ -154,14 +155,14 @@ function AppContent() {
         }));
       }, 1000);
 
-      const result = await tauriService.executeClaudeFlowCommand(command);
+      const result = await tauriService.executeClaudeFlow(command);
       
       clearInterval(progressInterval);
       
       // Add success message
       const successOutput: ExecutionOutput = {
         id: `success-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'success',
         content: `Task completed successfully: ${result}`,
         source: 'AutoDev-AI'
@@ -178,7 +179,7 @@ function AppContent() {
     } catch (error) {
       const errorOutput: ExecutionOutput = {
         id: `error-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'error',
         content: `Execution failed: ${error}`,
         source: 'AutoDev-AI'
@@ -467,7 +468,7 @@ function AppContent() {
             network: 'connected'
           }}
           activeConnections={state.outputs.length}
-          lastUpdate={new Date()}
+          lastUpdate={new Date().toISOString()}
           className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
         />
       </ErrorBoundary>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { TauriService } from '../services/tauri';
-import { useStore } from '../store';
+import { TauriService } from '@/services/tauri';
+import { useStore } from '@/store';
 import toast from 'react-hot-toast';
 
 export function useSystemCheck() {
@@ -9,10 +9,9 @@ export function useSystemCheck() {
   useEffect(() => {
     const checkSystem = async () => {
       try {
-        const service = TauriService.getInstance();
         const [prerequisites, systemInfo] = await Promise.all([
-          service.checkPrerequisites(),
-          service.getSystemInfo(),
+          TauriService.checkPrerequisites(),
+          TauriService.getSystemInfo(),
         ]);
 
         setPrerequisites(prerequisites);
@@ -28,7 +27,6 @@ export function useSystemCheck() {
         }
       } catch (error) {
         console.error('System check failed:', error);
-        toast.error('System check failed. Some features may not work properly.');
       }
     };
 

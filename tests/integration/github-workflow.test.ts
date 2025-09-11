@@ -8,7 +8,7 @@
  * - Roadmap execution gates
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { spawn } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';

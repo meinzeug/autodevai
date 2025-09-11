@@ -3,7 +3,7 @@
  * Tests workflow triggers, automation, and roadmap execution gates
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { MockGitHubAPI } from '../mocks/github-api';
 import { MockWebhookServer } from '../mocks/webhook-server';
 import { TestRepository } from '../utils/test-repository';

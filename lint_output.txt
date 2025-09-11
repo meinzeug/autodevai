@@ -1,0 +1,206 @@
+
+> autodevai-neural-bridge-platform@1.0.0 lint
+> eslint . --ext ts,tsx,js,jsx --report-unused-disable-directives --max-warnings 0
+
+
+/home/dennis/autodevai/src/components/UpdateManager.tsx
+  102:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/components/ui/badge.tsx
+  35:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/dennis/autodevai/src/components/ui/button.tsx
+  55:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/dennis/autodevai/src/hooks/useAccessibility.ts
+  200:8  warning  React Hook useCallback has unnecessary dependencies: 'accessibilityConfig.enableKeyboardNavigation' and 'announce'. Either exclude them or remove the dependency array. Outer scope values like 'accessibilityConfig.enableKeyboardNavigation' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+  228:8  warning  React Hook useCallback has an unnecessary dependency: 'accessibilityConfig.enableKeyboardNavigation'. Either exclude it or remove the dependency array. Outer scope values like 'accessibilityConfig.enableKeyboardNavigation' aren't valid dependencies because mutating them doesn't re-render the component                  react-hooks/exhaustive-deps
+
+/home/dennis/autodevai/src/hooks/useMediaQuery.ts
+  168:91  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/hooks/useTauri.ts
+  13:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/hooks/useTheme.tsx
+  111:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  122:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  144:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  163:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/dennis/autodevai/src/services/ai-orchestration.ts
+  68:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/services/claude-flow.ts
+   38:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   40:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  287:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  301:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  333:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  357:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  383:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  401:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  401:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  472:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  488:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  548:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  553:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/services/codex.ts
+   57:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  153:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  248:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  461:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  471:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/services/openrouter.ts
+   52:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  120:83  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:94  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  197:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  248:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  295:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/services/update-notifications.ts
+  164:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  211:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/tests/frontend-components.test.tsx
+  260:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  360:91  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  458:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/types/ai-orchestration.ts
+   55:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  182:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  247:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/types/index.ts
+   51:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  243:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  278:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  326:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  357:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  460:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  461:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  466:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  467:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  472:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  478:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  481:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  484:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/types/tauri-types.ts
+    34:10  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+    99:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   114:29  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   181:28  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   197:28  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   232:33  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   243:30  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   261:11  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   481:29  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   542:29  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   745:12  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+   953:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+   957:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+   992:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1008:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1009:14  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  1012:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1013:14  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  1023:14  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  1040:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1044:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1052:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1060:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1064:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1068:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1078:38  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  1082:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1088:15  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  1098:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1102:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1106:11  error    The `{}` ("empty object") type allows any non-nullish value, including literals like `0` and `""`.
+- If that's what you want, disable this lint rule with an inline comment or configure the 'allowObjectTypes' rule option.
+- If you want a type meaning "any object", you probably want `object` instead.
+- If you want a type meaning "any value", you probably want `unknown` instead  @typescript-eslint/no-empty-object-type
+  1138:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/types/tauri.d.ts
+   3:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   3:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:70  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/utils/hive-coordination.ts
+   11:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:93  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  252:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/dennis/autodevai/src/utils/menu-integration.ts
+  128:67  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  300:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 116 problems (15 errors, 101 warnings)
+
