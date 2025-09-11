@@ -1,4 +1,4 @@
-# AutoDev-AI 🧠⚡
+# <h1 align="center" style="font-size: 3em;">AutoDev-AI 🧠⚡</h1>
 
 <div align="center">
 
@@ -8,19 +8,24 @@
 [![Rust](https://img.shields.io/badge/rust-%E2%9C%93-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Tauri](https://img.shields.io/badge/tauri-%E2%9C%93-blue.svg?style=flat-square)](https://tauri.app)
 
-**The Intelligent AI Development Orchestrator - Bridging Multiple AI Coding Tools into One Unified Platform**
+### <h3 align="center">The Intelligent AI Development Orchestrator - Bridging Multiple AI Coding Tools into One Unified Platform</h3>
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+### [Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## 🎯 Overview
+<div style="font-size: 1.1em;">
 
-AutoDev-AI is a revolutionary AI-powered software development platform that orchestrates multiple AI coding tools seamlessly. It solves the fragmentation problem in AI-assisted development by creating an intelligent coordination layer that manages Claude-Flow, OpenAI Codex, OpenRouter, and other AI tools without complex configuration.
+## <h2 style="font-size: 2em;">🎯 Overview</h2>
 
-### 🚀 Why AutoDev-AI?
+**AutoDev-AI is a revolutionary AI-powered software development platform that orchestrates multiple AI coding tools seamlessly. It solves the fragmentation problem in AI-assisted development by creating an intelligent coordination layer that manages Claude-Flow, OpenAI Codex, OpenRouter, and other AI tools without complex configuration.**
+
+![AutoDev-AI Interface](docs/images/autodevai_screen_1.png)
+***AutoDev-AI Neural Bridge Platform - Unified AI Development Interface***
+
+### <h3 style="font-size: 1.5em;">🚀 Why AutoDev-AI?</h3>
 
 - **Zero-Configuration AI Orchestration**: Automatically coordinates multiple AI tools without complex authentication
 - **Intelligent Task Routing**: Dynamically selects the best AI tool for each specific task
@@ -28,9 +33,9 @@ AutoDev-AI is a revolutionary AI-powered software development platform that orch
 - **Lightning Fast**: Built with Rust and Tauri for native performance (50-100 MB RAM, 2-5 MB binary)
 - **Secure by Design**: Sandboxed execution with Docker isolation and explicit permissions
 
-## ✨ Features
+## <h2 style="font-size: 2em;">✨ Features</h2>
 
-### 🧠 Core Capabilities
+### <h3 style="font-size: 1.5em;">🧠 Core Capabilities</h3>
 
 - **Multi-AI Orchestration**: Seamlessly integrates Claude-Flow, OpenAI Codex, OpenRouter, and more
 - **Swarm Intelligence**: Leverages 87+ specialized AI tools working in coordination
@@ -38,7 +43,7 @@ AutoDev-AI is a revolutionary AI-powered software development platform that orch
 - **Real-time Collaboration**: AI agents discuss and solve problems together
 - **Zero-Friction Onboarding**: Start developing immediately without complex setup
 
-### ⚡ Performance & Architecture
+### <h3 style="font-size: 1.5em;">⚡ Performance & Architecture</h3>
 
 - **Native Performance**: Rust-based backend with minimal overhead
 - **Asynchronous Execution**: Non-blocking operations for maximum efficiency
@@ -46,7 +51,7 @@ AutoDev-AI is a revolutionary AI-powered software development platform that orch
 - **Comprehensive Monitoring**: Real-time progress tracking and observability
 - **Token Optimization**: Intelligent context management up to 192k tokens
 
-### 🛠️ Development Features
+### <h3 style="font-size: 1.5em;">🛠️ Development Features</h3>
 
 - **Automated Code Generation**: Full-stack applications from natural language
 - **Intelligent Refactoring**: AI-driven code improvements and optimizations
@@ -54,16 +59,16 @@ AutoDev-AI is a revolutionary AI-powered software development platform that orch
 - **Documentation Creation**: Automatic API docs and code comments
 - **Bug Detection**: Proactive issue identification and resolution
 
-## 📦 Installation
+## <h2 style="font-size: 2em;">📦 Installation</h2>
 
-### Prerequisites
+### <h3 style="font-size: 1.5em;">Prerequisites</h3>
 
 - **Operating System**: Windows 10+, macOS 11+, or Linux
 - **Memory**: 4GB RAM minimum (8GB recommended)
 - **Docker**: For sandboxed execution (optional but recommended)
 - **Node.js**: Version 18+ (for development)
 
-### Quick Install
+### <h3 style="font-size: 1.5em;">Quick Install</h3>
 
 ```bash
 # Clone the repository
@@ -80,7 +85,7 @@ npm run build
 npm run tauri dev
 ```
 
-### Production Build
+### <h3 style="font-size: 1.5em;">Production Build</h3>
 
 ```bash
 # Create optimized production build
@@ -89,7 +94,7 @@ npm run tauri build
 # The installer will be in src-tauri/target/release/bundle/
 ```
 
-## 🚀 Quick Start
+## <h2 style="font-size: 2em;">🚀 Quick Start</h2>
 
 ### 1. Initial Setup
 
@@ -129,7 +134,7 @@ autodevai --team-mode
 # - Ensure best practices
 ```
 
-## 🏗️ Architecture
+## <h2 style="font-size: 2em;">🏗️ Architecture</h2>
 
 ### System Components
 
@@ -160,7 +165,7 @@ graph TB
 | **State Management**   | Redux + Zustand | Reactive UI state handling               |
 | **Communication**      | WebSockets      | Real-time bidirectional updates          |
 
-## 🔧 Configuration
+## <h2 style="font-size: 2em;">🔧 Configuration</h2>
 
 ### Basic Configuration
 
@@ -211,7 +216,7 @@ autodevai.registerTool({
 });
 ```
 
-## 📊 Performance Benchmarks
+## <h2 style="font-size: 2em;">📊 Performance Benchmarks</h2>
 
 | Metric              | AutoDev-AI  | Traditional Tools | Improvement |
 | ------------------- | ----------- | ----------------- | ----------- |
@@ -221,7 +226,7 @@ autodevai.registerTool({
 | **Task Completion** | 2.8x faster | Baseline          | 180% ⬆️     |
 | **Binary Size**     | 2-5 MB      | 50-200 MB         | 10-40x ⬇️   |
 
-## 🎯 Use Cases
+## <h2 style="font-size: 2em;">🎯 Use Cases</h2>
 
 ### Full-Stack Development
 
@@ -247,7 +252,7 @@ autodevai.registerTool({
 - Performance optimization
 - Technical debt reduction
 
-## 🗺️ Roadmap
+## <h2 style="font-size: 2em;">🗺️ Roadmap</h2>
 
 ### Phase 1: Foundation (Current)
 
@@ -277,7 +282,7 @@ autodevai.registerTool({
 - 📋 Self-improving AI models
 - 📋 Code quality learning
 
-## 🤝 Contributing
+## <h2 style="font-size: 2em;">🤝 Contributing</h2>
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
@@ -305,7 +310,7 @@ npm test
 - 🐛 Bug fixes
 - 🚀 Performance optimizations
 
-## 📚 Documentation
+## <h2 style="font-size: 2em;">📚 Documentation</h2>
 
 - [Getting Started Guide](docs/getting-started.md)
 - [Architecture Overview](docs/architecture.md)
@@ -313,7 +318,7 @@ npm test
 - [Configuration Guide](docs/configuration.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
-## 🔒 Security
+## <h2 style="font-size: 2em;">🔒 Security</h2>
 
 AutoDev-AI prioritizes security:
 
@@ -322,25 +327,25 @@ AutoDev-AI prioritizes security:
 - **No Credential Storage**: Zero-knowledge architecture for API keys
 - **Encrypted Communication**: TLS for all external connections
 
-## 📄 License
+## <h2 style="font-size: 2em;">📄 License</h2>
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## <h2 style="font-size: 2em;">🙏 Acknowledgments</h2>
 
 - [Tauri](https://tauri.app) - For the amazing Rust framework
 - [Claude-Flow](https://github.com/ruvnet/claude-flow) - For swarm intelligence capabilities
 - [OpenAI](https://openai.com) - For Codex and GPT models
 - [Docker](https://docker.com) - For containerization technology
 
-## 💬 Support & Community
+## <h2 style="font-size: 2em;">💬 Support & Community</h2>
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/meinzeug/autodevai/issues)
 - **Discussions**: [Join the conversation](https://github.com/meinzeug/autodevai/discussions)
 - **Discord**: [Community chat](https://discord.gg/autodevai) (Coming soon)
 - **Twitter**: [@autodevai](https://twitter.com/autodevai) (Coming soon)
 
-## 🌟 Star History
+## <h2 style="font-size: 2em;">🌟 Star History</h2>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=meinzeug/autodevai&type=Date)](https://star-history.com/#meinzeug/autodevai&Date)
 
@@ -351,5 +356,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Built with ❤️ by the AutoDev-AI Team**
 
 [Website](https://autodevai.com) • [Documentation](https://docs.autodevai.com) • [Blog](https://blog.autodevai.com)
+
+</div>
 
 </div>
