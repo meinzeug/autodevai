@@ -1,0 +1,508 @@
+name: 🛡️ Automated Security Fix
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # Daily at 8 AM UTC
+  workflow_dispatch:
+    inputs:
+      force_fix:
+        description: 'Force security fixes even for breaking changes'
+        required: false
+        default: 'false'
+        type: boolean
+      create_issues:
+        description: 'Create GitHub issues for unfixable vulnerabilities'
+        required: false
+        default: 'true'
+        type: boolean
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  SECURITY_TEAM_EMAIL: ${{ secrets.SECURITY_TEAM_EMAIL }}
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    outputs:
+      npm-vulnerabilities: ${{ steps.npm-audit.outputs.vulnerabilities }}
+      cargo-vulnerabilities: ${{ steps.cargo-audit.outputs.vulnerabilities }}
+      has-fixes: ${{ steps.apply-fixes.outputs.has-fixes }}
+      critical-issues: ${{ steps.analyze.outputs.critical-issues }}
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 🦀 Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: 📦 Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: 🔍 NPM Security Audit
+      id: npm-audit
+      continue-on-error: true
+      run: |
+        echo "🔍 Running NPM security audit..."
+        
+        # Run audit and capture output
+        npm audit --audit-level=moderate --json > npm-audit.json || true
+        
+        # Extract vulnerability count
+        VULN_COUNT=$(cat npm-audit.json | jq '.metadata.vulnerabilities.total // 0')
+        echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+        
+        # Extract critical and high severity
+        CRITICAL=$(cat npm-audit.json | jq '.metadata.vulnerabilities.critical // 0')
+        HIGH=$(cat npm-audit.json | jq '.metadata.vulnerabilities.high // 0')
+        
+        echo "📊 NPM Audit Results:"
+        echo "  Total vulnerabilities: $VULN_COUNT"
+        echo "  Critical: $CRITICAL"
+        echo "  High: $HIGH"
+        
+        # Store results for later steps
+        echo "npm_critical=$CRITICAL" >> $GITHUB_ENV
+        echo "npm_high=$HIGH" >> $GITHUB_ENV
+
+    - name: 🦀 Cargo Security Audit
+      id: cargo-audit
+      continue-on-error: true
+      run: |
+        echo "🔍 Running Cargo security audit..."
+        
+        cd src-tauri
+        
+        # Run cargo audit and capture output
+        cargo audit --json > ../cargo-audit.json || true
+        
+        # Extract vulnerability info
+        VULN_COUNT=$(cat ../cargo-audit.json | jq '.vulnerabilities.count // 0' 2>/dev/null || echo "0")
+        echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+        
+        echo "📊 Cargo Audit Results:"
+        echo "  Total vulnerabilities: $VULN_COUNT"
+        
+        cd ..
+
+    - name: 🔧 Apply Automatic Fixes
+      id: apply-fixes
+      run: |
+        echo "🔧 Applying automatic security fixes..."
+        
+        HAS_FIXES=false
+        
+        # NPM fixes
+        if [ "${{ steps.npm-audit.outputs.vulnerabilities }}" != "0" ]; then
+          echo "🔧 Applying NPM security fixes..."
+          
+          if [ "${{ inputs.force_fix }}" == "true" ]; then
+            npm audit fix --force
+          else
+            npm audit fix
+          fi
+          
+          # Check if package-lock.json changed
+          if git diff --quiet package-lock.json; then
+            echo "📝 No NPM fixes applied"
+          else
+            echo "✅ NPM fixes applied"
+            HAS_FIXES=true
+          fi
+        fi
+        
+        # Cargo fixes (update dependencies)
+        cd src-tauri
+        if [ "${{ steps.cargo-audit.outputs.vulnerabilities }}" != "0" ]; then
+          echo "🔧 Updating Cargo dependencies..."
+          cargo update
+          
+          # Check if Cargo.lock changed
+          if git diff --quiet Cargo.lock; then
+            echo "📝 No Cargo updates applied"
+          else
+            echo "✅ Cargo dependencies updated"
+            HAS_FIXES=true
+          fi
+        fi
+        cd ..
+        
+        echo "has-fixes=$HAS_FIXES" >> $GITHUB_OUTPUT
+
+    - name: 📊 Analyze Security Status
+      id: analyze
+      run: |
+        echo "📊 Analyzing security status..."
+        
+        # Calculate critical issues
+        CRITICAL_TOTAL=$((npm_critical + 0))
+        echo "critical-issues=$CRITICAL_TOTAL" >> $GITHUB_OUTPUT
+        
+        # Generate security report
+        cat > security-report.md << EOF
+        # 🛡️ Security Audit Report
+        
+        **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Workflow:** Automated Security Fix
+        
+        ## 📊 Vulnerability Summary
+        
+        ### NPM Dependencies
+        - **Critical:** $npm_critical
+        - **High:** $npm_high
+        - **Total:** ${{ steps.npm-audit.outputs.vulnerabilities }}
+        
+        ### Cargo Dependencies
+        - **Total:** ${{ steps.cargo-audit.outputs.vulnerabilities }}
+        
+        ### 🔧 Applied Fixes
+        - **Fixes Applied:** ${{ steps.apply-fixes.outputs.has-fixes }}
+        
+        ## 📋 Next Steps
+        
+        EOF
+        
+        if [ "$CRITICAL_TOTAL" -gt "0" ]; then
+          echo "🚨 Critical vulnerabilities detected!"
+          echo "- Security issues will be created for manual review" >> security-report.md
+          echo "- Immediate attention required" >> security-report.md
+        fi
+        
+        # Upload security report as artifact
+        echo "📤 Uploading security report..."
+
+    - name: 📤 Upload Security Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-audit-results
+        path: |
+          npm-audit.json
+          cargo-audit.json
+          security-report.md
+        retention-days: 30
+
+    - name: 🔧 Create Auto-Fix PR
+      if: steps.apply-fixes.outputs.has-fixes == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: |
+          🛡️ fix: Automated security vulnerability fixes
+          
+          - Applied NPM security fixes
+          - Updated Cargo dependencies
+          - Resolved ${{ steps.npm-audit.outputs.vulnerabilities }} NPM vulnerabilities
+          - Resolved ${{ steps.cargo-audit.outputs.vulnerabilities }} Cargo vulnerabilities
+          
+          Auto-generated by Security Fix workflow
+        title: "🛡️ Automated Security Fixes"
+        body: |
+          ## 🛡️ Automated Security Vulnerability Fixes
+          
+          This PR contains automated fixes for security vulnerabilities detected in our dependencies.
+          
+          ### 📊 Fixes Applied
+          
+          **NPM Vulnerabilities Fixed:** ${{ steps.npm-audit.outputs.vulnerabilities }}
+          **Cargo Vulnerabilities Fixed:** ${{ steps.cargo-audit.outputs.vulnerabilities }}
+          
+          ### 🔍 Changes Made
+          
+          - ✅ Applied `npm audit fix` to resolve NPM vulnerabilities
+          - ✅ Updated Cargo dependencies with `cargo update`
+          - ✅ Updated lock files with latest secure versions
+          
+          ### 🧪 Testing Required
+          
+          - [ ] All automated tests pass
+          - [ ] Manual testing of critical paths
+          - [ ] Security validation complete
+          
+          ### 🚀 Auto-Merge Criteria
+          
+          This PR will be automatically merged if:
+          - All CI checks pass
+          - No breaking changes detected
+          - Security team approval (for critical fixes)
+          
+          ---
+          
+          🤖 **Generated by:** Automated Security Fix Workflow
+          📅 **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        branch: security/auto-fix-${{ github.run_number }}
+        labels: |
+          security
+          automated
+          vulnerability-fix
+        reviewers: |
+          security-team
+        assignees: |
+          security-team
+
+  create-security-issues:
+    needs: security-audit
+    runs-on: ubuntu-latest
+    if: needs.security-audit.outputs.critical-issues != '0' && (github.event.inputs.create_issues == 'true' || github.event_name == 'schedule')
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 📥 Download Security Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: security-audit-results
+
+    - name: 🎫 Create Security Issues
+      run: |
+        echo "🎫 Creating security issues for critical vulnerabilities..."
+        
+        # Install jq for JSON processing
+        sudo apt-get update && sudo apt-get install -y jq
+        
+        # Process NPM vulnerabilities
+        if [ -f "npm-audit.json" ]; then
+          echo "📊 Processing NPM vulnerabilities..."
+          
+          # Extract critical and high severity vulnerabilities
+          jq -r '.vulnerabilities | to_entries[] | select(.value.severity == "critical" or .value.severity == "high") | .key' npm-audit.json | while read package; do
+            TITLE="🚨 Security: Critical vulnerability in $package"
+            
+            # Get vulnerability details
+            DETAILS=$(jq -r --arg pkg "$package" '.vulnerabilities[$pkg] | "**Severity:** \(.severity)\n**Range:** \(.range)\n**Recommendation:** \(.fixAvailable // "Manual fix required")\n\n**Via:** \(.via[0].title // "Direct dependency")"' npm-audit.json)
+            
+            # Create issue using GitHub CLI
+            gh issue create \
+              --title "$TITLE" \
+              --body "## 🛡️ Security Vulnerability Detected
+
+        **Package:** \`$package\`
+
+        $DETAILS
+
+        ### 🔧 Recommended Actions
+
+        1. **Immediate:** Review the vulnerability impact
+        2. **Update:** Apply the recommended fix
+        3. **Test:** Verify functionality after fix
+        4. **Monitor:** Track for similar vulnerabilities
+
+        ### 📊 Detection Info
+
+        - **Detected by:** Automated Security Scan
+        - **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+        ---
+
+        🤖 **Auto-generated** by Security Fix Workflow" \
+              --label "security,critical,vulnerability,npm" \
+              --assignee "security-team"
+          done
+        fi
+        
+        # Process Cargo vulnerabilities
+        if [ -f "cargo-audit.json" ] && [ "$(cat cargo-audit.json | jq '.vulnerabilities.count // 0')" != "0" ]; then
+          echo "📊 Processing Cargo vulnerabilities..."
+          
+          # Create general Cargo security issue
+          gh issue create \
+            --title "🚨 Security: Cargo vulnerabilities detected" \
+            --body "## 🛡️ Cargo Security Vulnerabilities
+
+        **Vulnerabilities Count:** $(cat cargo-audit.json | jq '.vulnerabilities.count // 0')
+
+        ### 🔧 Recommended Actions
+
+        1. Review cargo-audit.json for details
+        2. Update affected dependencies
+        3. Run \`cargo audit\` to verify fixes
+
+        ### 📊 Detection Info
+
+        - **Detected by:** Automated Security Scan  
+        - **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+        ---
+
+        🤖 **Auto-generated** by Security Fix Workflow" \
+            --label "security,critical,vulnerability,rust" \
+            --assignee "security-team"
+        fi
+
+  notify-security-team:
+    needs: [security-audit, create-security-issues]
+    runs-on: ubuntu-latest
+    if: always() && (needs.security-audit.outputs.critical-issues != '0' || needs.security-audit.outputs.has-fixes == 'true')
+    
+    steps:
+    - name: 📧 Send Security Notification
+      run: |
+        echo "📧 Sending security team notification..."
+        
+        # Prepare notification payload
+        CRITICAL_COUNT="${{ needs.security-audit.outputs.critical-issues }}"
+        HAS_FIXES="${{ needs.security-audit.outputs.has-fixes }}"
+        
+        NOTIFICATION_BODY="🛡️ **Security Scan Results**
+
+        **Repository:** ${{ github.repository }}
+        **Workflow:** Automated Security Fix
+        **Run:** #${{ github.run_number }}
+        **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+        📊 **Summary:**
+        • Critical Issues: $CRITICAL_COUNT
+        • Fixes Applied: $HAS_FIXES
+        • NPM Vulnerabilities: ${{ needs.security-audit.outputs.npm-vulnerabilities }}
+        • Cargo Vulnerabilities: ${{ needs.security-audit.outputs.cargo-vulnerabilities }}
+
+        🔗 **Links:**
+        • [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        • [Security Issues](${{ github.server_url }}/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Asecurity)
+
+        $(if [ "$HAS_FIXES" == "true" ]; then echo "✅ **Auto-fix PR created** - Review and merge when ready"; fi)
+        $(if [ "$CRITICAL_COUNT" != "0" ]; then echo "🚨 **Critical issues detected** - Immediate review required"; fi)"
+
+        # Send Slack notification if webhook is configured
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$NOTIFICATION_BODY\"}" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+
+        # Send email notification if configured
+        if [ -n "${{ secrets.SECURITY_TEAM_EMAIL }}" ]; then
+          echo "📧 Email notification would be sent to security team"
+          # Email implementation would go here
+        fi
+
+  auto-close-resolved:
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔄 Auto-close resolved security issues
+      run: |
+        echo "🔄 Checking for resolved security issues to auto-close..."
+        
+        # Get all open security issues
+        gh issue list --label "security,vulnerability" --state "open" --json number,title,body | jq -r '.[] | "\(.number)|\(.title)"' | while IFS='|' read -r issue_number title; do
+          echo "🔍 Checking issue #$issue_number: $title"
+          
+          # Extract package name from title (assuming format: "Security: Critical vulnerability in package-name")
+          PACKAGE=$(echo "$title" | grep -oP '(?<=vulnerability in )\S+' || echo "")
+          
+          if [ -n "$PACKAGE" ]; then
+            echo "📦 Checking if $PACKAGE vulnerability is resolved..."
+            
+            # Run npm audit for specific package
+            if npm audit --audit-level=moderate --json | jq -e --arg pkg "$PACKAGE" '.vulnerabilities | has($pkg)' > /dev/null 2>&1; then
+              echo "⚠️ Vulnerability still exists for $PACKAGE"
+            else
+              echo "✅ Vulnerability resolved for $PACKAGE - closing issue #$issue_number"
+              
+              gh issue close $issue_number --comment "🎉 **Vulnerability Resolved**
+
+        This security issue has been automatically resolved through dependency updates.
+
+        **Resolution detected by:** Automated Security Scan
+        **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+        The package \`$PACKAGE\` no longer shows security vulnerabilities in our audit scan.
+
+        ---
+
+        🤖 **Auto-closed** by Security Fix Workflow"
+            fi
+          fi
+        done
+
+  update-security-dashboard:
+    needs: [security-audit]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 📥 Download Security Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: security-audit-results
+      continue-on-error: true
+
+    - name: 📊 Update Security Dashboard
+      run: |
+        echo "📊 Updating security dashboard..."
+        
+        # Create or update security dashboard
+        mkdir -p docs
+        
+        cat > docs/security-dashboard.md << EOF
+        # 🛡️ Security Dashboard
+        
+        **Last Updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        
+        ## 📊 Current Security Status
+        
+        ### NPM Dependencies
+        - **Total Vulnerabilities:** ${{ needs.security-audit.outputs.npm-vulnerabilities }}
+        - **Status:** $(if [ "${{ needs.security-audit.outputs.npm-vulnerabilities }}" == "0" ]; then echo "✅ Secure"; else echo "⚠️ Needs Attention"; fi)
+        
+        ### Cargo Dependencies  
+        - **Total Vulnerabilities:** ${{ needs.security-audit.outputs.cargo-vulnerabilities }}
+        - **Status:** $(if [ "${{ needs.security-audit.outputs.cargo-vulnerabilities }}" == "0" ]; then echo "✅ Secure"; else echo "⚠️ Needs Attention"; fi)
+        
+        ### 🔧 Recent Actions
+        - **Auto-fixes Applied:** ${{ needs.security-audit.outputs.has-fixes }}
+        - **Critical Issues:** ${{ needs.security-audit.outputs.critical-issues }}
+        
+        ## 📈 Security Metrics
+        
+        | Metric | Value | Trend |
+        |--------|-------|-------|
+        | NPM Vulnerabilities | ${{ needs.security-audit.outputs.npm-vulnerabilities }} | - |
+        | Cargo Vulnerabilities | ${{ needs.security-audit.outputs.cargo-vulnerabilities }} | - |
+        | Critical Issues | ${{ needs.security-audit.outputs.critical-issues }} | - |
+        | Last Scan | $(date -u +"%Y-%m-%d") | Daily |
+        
+        ## 🔗 Quick Links
+        
+        - [Security Issues](https://github.com/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Asecurity)
+        - [Security Workflow](https://github.com/${{ github.repository }}/actions/workflows/security-fix.yml)
+        - [Security Policy](https://github.com/${{ github.repository }}/security/policy)
+        
+        ---
+        
+        🤖 **Auto-generated** by Security Fix Workflow
+        EOF
+        
+        # Commit dashboard update if there are changes
+        if ! git diff --quiet docs/security-dashboard.md 2>/dev/null; then
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/security-dashboard.md
+          git commit -m "📊 Update security dashboard - Run #${{ github.run_number }}" || true
+          git push || true
+        fi

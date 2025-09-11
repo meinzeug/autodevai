@@ -1,0 +1,371 @@
+name: Dependabot Metrics Dashboard
+
+on:
+  schedule:
+    # Run daily at 11:00 AM (after Dependabot runs)
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  generate-metrics:
+    name: Generate Dependabot Metrics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Generate Dependabot metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Get all Dependabot PRs from last 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              sort: 'created',
+              direction: 'desc',
+              per_page: 100
+            });
+            
+            const dependabotPRs = prs.filter(pr => 
+              pr.user.login === 'dependabot[bot]' && 
+              new Date(pr.created_at) >= thirtyDaysAgo
+            );
+            
+            // Categorize PRs
+            const metrics = {
+              total: dependabotPRs.length,
+              autoMerged: 0,
+              manualReview: 0,
+              securityUpdates: 0,
+              devDependencies: 0,
+              prodDependencies: 0,
+              cargoUpdates: 0,
+              githubActions: 0,
+              merged: 0,
+              closed: 0,
+              open: 0,
+              averageMergeTime: 0,
+              ecosystems: {
+                npm: 0,
+                cargo: 0,
+                'github-actions': 0
+              },
+              updateTypes: {
+                patch: 0,
+                minor: 0,
+                major: 0,
+                security: 0
+              }
+            };
+            
+            let totalMergeTime = 0;
+            let mergedCount = 0;
+            
+            for (const pr of dependabotPRs) {
+              // Count by state
+              if (pr.state === 'open') metrics.open++;
+              else if (pr.merged_at) {
+                metrics.merged++;
+                const mergeTime = new Date(pr.merged_at) - new Date(pr.created_at);
+                totalMergeTime += mergeTime;
+                mergedCount++;
+              } else {
+                metrics.closed++;
+              }
+              
+              // Categorize by title/labels
+              const title = pr.title.toLowerCase();
+              const labels = pr.labels.map(l => l.name.toLowerCase());
+              
+              if (title.includes('security') || labels.includes('security')) {
+                metrics.securityUpdates++;
+                metrics.updateTypes.security++;
+              }
+              
+              if (title.includes('dev-dependencies') || title.includes('@types') || title.includes('eslint')) {
+                metrics.devDependencies++;
+              }
+              
+              if (title.includes('prod-dependencies')) {
+                metrics.prodDependencies++;
+              }
+              
+              if (title.includes('cargo') || title.includes('rust')) {
+                metrics.cargoUpdates++;
+                metrics.ecosystems.cargo++;
+              }
+              
+              if (title.includes('github-actions')) {
+                metrics.githubActions++;
+                metrics.ecosystems['github-actions']++;
+              }
+              
+              if (title.includes('npm') || (!title.includes('cargo') && !title.includes('github-actions'))) {
+                metrics.ecosystems.npm++;
+              }
+              
+              // Detect update types
+              if (title.includes('patch') || title.match(/\d+\.\d+\.\d+/)) {
+                metrics.updateTypes.patch++;
+              } else if (title.includes('minor')) {
+                metrics.updateTypes.minor++;
+              } else if (title.includes('major')) {
+                metrics.updateTypes.major++;
+              }
+              
+              // Check for auto-merge labels
+              if (labels.includes('auto-merge-approved') || labels.includes('dependabot-safe')) {
+                metrics.autoMerged++;
+              } else if (labels.includes('manual-review-required')) {
+                metrics.manualReview++;
+              }
+            }
+            
+            // Calculate average merge time in hours
+            if (mergedCount > 0) {
+              metrics.averageMergeTime = Math.round((totalMergeTime / mergedCount) / (1000 * 60 * 60));
+            }
+            
+            // Calculate efficiency metrics
+            const efficiency = {
+              autoMergeRate: metrics.total > 0 ? Math.round((metrics.autoMerged / metrics.total) * 100) : 0,
+              mergeRate: metrics.total > 0 ? Math.round((metrics.merged / metrics.total) * 100) : 0,
+              securityUpdateRate: metrics.total > 0 ? Math.round((metrics.securityUpdates / metrics.total) * 100) : 0,
+              averagePRsPerDay: Math.round(metrics.total / 30)
+            };
+            
+            // Generate HTML dashboard
+            const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Dependabot Metrics Dashboard</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+                    .container { max-width: 1200px; margin: 0 auto; }
+                    .header { background: #2563eb; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+                    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .metric { font-size: 2rem; font-weight: bold; color: #2563eb; }
+                    .label { color: #666; margin-top: 5px; }
+                    .chart { height: 200px; margin-top: 10px; }
+                    .status-success { color: #059669; }
+                    .status-warning { color: #d97706; }
+                    .status-danger { color: #dc2626; }
+                    .update-time { font-size: 0.8rem; color: #666; text-align: center; margin-top: 20px; }
+                    .progress-bar { background: #e5e7eb; border-radius: 4px; height: 8px; margin-top: 5px; }
+                    .progress-fill { background: #2563eb; height: 100%; border-radius: 4px; transition: width 0.3s; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🤖 Dependabot Metrics Dashboard</h1>
+                        <p>Daily dependency update analytics and automation efficiency</p>
+                    </div>
+                    
+                    <div class="grid">
+                        <!-- Overview Metrics -->
+                        <div class="card">
+                            <h3>📊 Overview (Last 30 Days)</h3>
+                            <div class="metric">${metrics.total}</div>
+                            <div class="label">Total Dependency PRs</div>
+                            <div style="margin-top: 15px;">
+                                <small>Daily Average: ${efficiency.averagePRsPerDay} PRs</small>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>⚡ Auto-Merge Efficiency</h3>
+                            <div class="metric status-success">${efficiency.autoMergeRate}%</div>
+                            <div class="label">Auto-Merged PRs</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${efficiency.autoMergeRate}%"></div>
+                            </div>
+                            <small>${metrics.autoMerged} of ${metrics.total} PRs</small>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>🔄 Merge Rate</h3>
+                            <div class="metric ${efficiency.mergeRate > 80 ? 'status-success' : efficiency.mergeRate > 60 ? 'status-warning' : 'status-danger'}">${efficiency.mergeRate}%</div>
+                            <div class="label">Successfully Merged</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${efficiency.mergeRate}%"></div>
+                            </div>
+                            <small>${metrics.merged} merged, ${metrics.open} open, ${metrics.closed} closed</small>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>🚨 Security Updates</h3>
+                            <div class="metric status-danger">${metrics.securityUpdates}</div>
+                            <div class="label">Security PRs (${efficiency.securityUpdateRate}%)</div>
+                            <div style="margin-top: 10px;">
+                                <small>Critical for system security</small>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>⏱️ Average Merge Time</h3>
+                            <div class="metric">${metrics.averageMergeTime}h</div>
+                            <div class="label">Hours to Merge</div>
+                            <div style="margin-top: 10px;">
+                                <small>${metrics.averageMergeTime < 24 ? '✅ Excellent' : metrics.averageMergeTime < 72 ? '⚠️ Good' : '🔄 Needs improvement'}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>👥 Manual Review</h3>
+                            <div class="metric status-warning">${metrics.manualReview}</div>
+                            <div class="label">Requiring Manual Review</div>
+                            <div style="margin-top: 10px;">
+                                <small>Major updates & critical deps</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Ecosystem Breakdown -->
+                        <div class="card">
+                            <h3>📦 Ecosystem Breakdown</h3>
+                            <div style="margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>NPM</span>
+                                    <span>${metrics.ecosystems.npm}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Cargo (Rust)</span>
+                                    <span>${metrics.ecosystems.cargo}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>GitHub Actions</span>
+                                    <span>${metrics.ecosystems['github-actions']}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Update Types -->
+                        <div class="card">
+                            <h3>🎯 Update Types</h3>
+                            <div style="margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🔧 Patch</span>
+                                    <span>${metrics.updateTypes.patch}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>⬆️ Minor</span>
+                                    <span>${metrics.updateTypes.minor}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🚀 Major</span>
+                                    <span>${metrics.updateTypes.major}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🛡️ Security</span>
+                                    <span>${metrics.updateTypes.security}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dependency Categories -->
+                        <div class="card">
+                            <h3>📂 Dependency Categories</h3>
+                            <div style="margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🛠️ Dev Dependencies</span>
+                                    <span>${metrics.devDependencies}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🏗️ Production</span>
+                                    <span>${metrics.prodDependencies}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>🦀 Cargo</span>
+                                    <span>${metrics.cargoUpdates}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>⚙️ CI/CD Actions</span>
+                                    <span>${metrics.githubActions}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="update-time">
+                        Dashboard updated: ${new Date().toISOString()}
+                        <br>
+                        <small>Data covers the last 30 days of Dependabot activity</small>
+                    </div>
+                </div>
+            </body>
+            </html>
+            `;
+            
+            // Ensure docs directory exists
+            const docsDir = path.join(process.cwd(), 'docs');
+            if (!fs.existsSync(docsDir)) {
+              fs.mkdirSync(docsDir, { recursive: true });
+            }
+            
+            // Write metrics to files
+            fs.writeFileSync(path.join(docsDir, 'dependabot-metrics.html'), html);
+            fs.writeFileSync(path.join(docsDir, 'dependabot-metrics.json'), JSON.stringify({
+              metrics,
+              efficiency,
+              generatedAt: new Date().toISOString()
+            }, null, 2));
+            
+            console.log('📊 Dependabot metrics generated successfully!');
+            console.log(`Auto-merge rate: ${efficiency.autoMergeRate}%`);
+            console.log(`Merge rate: ${efficiency.mergeRate}%`);
+            console.log(`Security updates: ${metrics.securityUpdates}`);
+            console.log(`Average merge time: ${metrics.averageMergeTime} hours`);
+
+      - name: Store metrics in memory for agents
+        run: |
+          if command -v npx >/dev/null 2>&1; then
+            echo "Storing Dependabot metrics in agent memory..."
+            npx claude-flow@alpha hooks memory-store \
+              --key "dependabot/daily-metrics" \
+              --value "$(cat docs/dependabot-metrics.json)" \
+              --ttl 86400 || true
+              
+            npx claude-flow@alpha hooks memory-store \
+              --key "dependabot/config-optimized" \
+              --value "Daily updates with intelligent grouping and auto-merge enabled" \
+              --ttl 86400 || true
+          else
+            echo "Claude-flow not available, skipping memory storage"
+          fi
+
+      - name: Commit metrics dashboard
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/dependabot-metrics.*
+          git diff --staged --quiet || git commit -m "📊 Update Dependabot metrics dashboard
+
+          Auto-generated daily metrics report:
+          - Track auto-merge efficiency
+          - Monitor security update processing
+          - Analyze dependency update patterns
+          - Measure merge time performance
+          
+          🤖 Generated by Dependabot Metrics workflow"
+          git push || true

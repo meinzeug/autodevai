@@ -1,0 +1,180 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  auto-approve:
+    name: Auto-approve safe dependency updates
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Check PR details
+        id: pr-details
+        run: |
+          echo "PR Title: ${{ github.event.pull_request.title }}"
+          echo "PR Labels: ${{ join(github.event.pull_request.labels.*.name, ', ') }}"
+          
+          # Check if this is a safe update for auto-approval
+          title="${{ github.event.pull_request.title }}"
+          
+          # Security updates - always auto-approve
+          if [[ "$title" == *"security-updates"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=security-update" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Development dependencies - auto-approve patch/minor
+          if [[ "$title" == *"dev-dependencies"* ]] && [[ "$title" != *"major"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=dev-dependencies" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # GitHub Actions - auto-approve all
+          if [[ "$title" == *"github-actions"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=github-actions" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Production dependencies - auto-approve only patch updates
+          if [[ "$title" == *"prod-dependencies"* ]] && [[ "$title" == *"patch"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=prod-patch-update" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Cargo dev dependencies - auto-approve patch/minor
+          if [[ "$title" == *"cargo-dev-dependencies"* ]] && [[ "$title" != *"major"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=cargo-dev-dependencies" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Tauri ecosystem - auto-approve patch updates only
+          if [[ "$title" == *"tauri-ecosystem"* ]] && [[ "$title" == *"patch"* ]]; then
+            echo "auto_approve=true" >> $GITHUB_OUTPUT
+            echo "reason=tauri-patch-update" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "auto_approve=false" >> $GITHUB_OUTPUT
+          echo "reason=requires-manual-review" >> $GITHUB_OUTPUT
+
+      - name: Auto-approve PR
+        if: steps.pr-details.outputs.auto_approve == 'true'
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add auto-merge label
+        if: steps.pr-details.outputs.auto_approve == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['auto-merge-approved', 'dependabot-safe']
+            });
+
+      - name: Comment on PR
+        if: steps.pr-details.outputs.auto_approve == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reason = '${{ steps.pr-details.outputs.reason }}';
+            const reasonText = {
+              'security-update': 'Security updates are automatically approved for safety.',
+              'dev-dependencies': 'Development dependencies are safe for automatic updates.',
+              'github-actions': 'GitHub Actions updates are typically safe.',
+              'prod-patch-update': 'Production patch updates are low-risk.',
+              'cargo-dev-dependencies': 'Cargo development dependencies are safe.',
+              'tauri-patch-update': 'Tauri patch updates are low-risk.'
+            }[reason] || 'This update has been identified as safe.';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🤖 **Auto-approved by Dependabot Auto-Merge**\n\n${reasonText}\n\nThis PR will be automatically merged once all checks pass.`
+            });
+
+  auto-merge:
+    name: Auto-merge approved dependencies
+    runs-on: ubuntu-latest
+    needs: auto-approve
+    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.labels.*.name, 'auto-merge-approved')
+    steps:
+      - name: Wait for CI checks
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'CI'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+          allowed-conclusions: success,neutral
+
+      - name: Auto-merge PR
+        uses: pascalgn/merge-action@v0.16.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: squash
+          merge_commit_title: '${{ github.event.pull_request.title }}'
+          merge_commit_message: |
+            ${{ github.event.pull_request.body }}
+            
+            Auto-merged by Dependabot Auto-Merge workflow.
+
+  security-notification:
+    name: Notify on security updates
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' && contains(github.event.pull_request.title, 'security-updates')
+    steps:
+      - name: Notify security update
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🚨 **SECURITY UPDATE DETECTED**\n\nThis PR contains security updates and has been prioritized for automatic processing.\n\n⚡ **Action Required:**\n- This will be auto-merged after CI passes\n- Review the security advisory details\n- Monitor application behavior post-merge\n\n🔒 Security updates are critical for maintaining system integrity.`
+            });
+
+  manual-review-notification:
+    name: Notify manual review required
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' && !contains(github.event.pull_request.labels.*.name, 'auto-merge-approved')
+    steps:
+      - name: Add manual review label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['manual-review-required', 'dependabot-major']
+            });
+
+      - name: Comment manual review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `📋 **MANUAL REVIEW REQUIRED**\n\nThis dependency update requires manual review because:\n- Major version update detected\n- Critical dependency identified\n- Potential breaking changes\n\n👥 **Next Steps:**\n1. Review the changelog and breaking changes\n2. Test the application thoroughly\n3. Approve and merge when ready\n\n⚠️ This PR will NOT be auto-merged for safety.`
+            });

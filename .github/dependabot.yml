@@ -1,22 +1,62 @@
 version: 2
 updates:
-  # NPM dependencies - grouped by type
+  # NPM dependencies - OPTIMIZED for daily updates with intelligent grouping
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'monthly' # Changed from weekly to monthly
-      day: 'tuesday'
+      interval: 'daily' # OPTIMIZED: Daily updates at 9:00 AM
       time: '09:00'
-    open-pull-requests-limit: 3 # Reduced from 5 to 3
+    open-pull-requests-limit: 5 # Allow more PRs for daily processing
     groups:
-      # Group ALL dependencies together to create single PR
-      all-npm-dependencies:
+      # SECURITY UPDATES - Highest Priority (separate PR)
+      security-updates:
+        applies-to: security-updates
         patterns:
-          - '*' # Match all packages
+          - '*'
+      
+      # DEVELOPMENT DEPENDENCIES - Safe for auto-merge
+      dev-dependencies:
+        patterns:
+          - '@types/*'
+          - '@testing-library/*'
+          - '@eslint/*'
+          - '@typescript-eslint/*'
+          - '@vitejs/*'
+          - '@vitest/*'
+          - 'eslint*'
+          - 'prettier'
+          - 'husky'
+          - 'lint-staged'
+          - 'jest*'
+          - 'vitest*'
+          - 'playwright*'
         update-types:
           - 'minor'
           - 'patch'
-      # Major updates still separate for safety
+      
+      # PRODUCTION DEPENDENCIES - Minor/Patch updates only
+      prod-dependencies:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - '@types/*'
+          - '@testing-library/*'
+          - '@eslint/*'
+          - '@typescript-eslint/*'
+          - '@vitejs/*'
+          - '@vitest/*'
+          - 'eslint*'
+          - 'prettier'
+          - 'husky'
+          - 'lint-staged'
+          - 'jest*'
+          - 'vitest*'
+          - 'playwright*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      
+      # MAJOR UPDATES - Manual review required
       major-updates:
         patterns:
           - '*'
@@ -24,78 +64,138 @@ updates:
           - 'major'
 
     ignore:
-      # Major updates need manual review
+      # Critical dependencies requiring manual review for major updates
       - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-dom'
         update-types: ['version-update:semver-major']
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
       - dependency-name: '@tauri-apps/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'vite'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'tailwindcss'
         update-types: ['version-update:semver-major']
 
     labels:
       - 'dependencies'
       - 'npm'
       - 'automated'
+      - 'auto-merge-candidate' # Label for auto-merge workflow
 
     reviewers:
       - 'meinzeug'
 
     commit-message:
-      prefix: 'chore'
+      prefix: 'chore(deps)'
       include: 'scope'
 
-  # Cargo dependencies
+  # Cargo dependencies - OPTIMIZED for daily updates
   - package-ecosystem: 'cargo'
     directory: '/src-tauri'
     schedule:
-      interval: 'monthly' # Changed from weekly to monthly
-      day: 'wednesday'
-      time: '09:00'
-    open-pull-requests-limit: 2 # Reduced from 3 to 2
+      interval: 'daily' # OPTIMIZED: Daily updates
+      time: '09:30' # Staggered 30 minutes after npm
+    open-pull-requests-limit: 4 # Increased for daily processing
     groups:
-      # Group ALL Rust dependencies together
-      all-cargo-dependencies:
+      # SECURITY UPDATES - Highest Priority
+      cargo-security-updates:
+        applies-to: security-updates
         patterns:
           - '*'
+      
+      # DEVELOPMENT/BUILD DEPENDENCIES
+      cargo-dev-dependencies:
+        patterns:
+          - 'serde*'
+          - 'clap*'
+          - 'anyhow'
+          - 'thiserror'
+          - 'tracing*'
+          - 'log'
+          - 'env_logger'
+        update-types:
+          - 'minor'
+          - 'patch'
+      
+      # TAURI ECOSYSTEM - Grouped together
+      tauri-ecosystem:
+        patterns:
+          - 'tauri*'
+          - '@tauri-apps/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      
+      # OTHER PRODUCTION DEPENDENCIES
+      cargo-prod-dependencies:
+        patterns:
+          - '*'
+        exclude-patterns:
+          - 'serde*'
+          - 'clap*'
+          - 'anyhow'
+          - 'thiserror'
+          - 'tracing*'
+          - 'log'
+          - 'env_logger'
+          - 'tauri*'
+          - '@tauri-apps/*'
         update-types:
           - 'minor'
           - 'patch'
 
     ignore:
-      # Critical dependencies - manual review
+      # Critical dependencies requiring manual review
       - dependency-name: 'tauri'
         update-types: ['version-update:semver-major']
       - dependency-name: 'tokio'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'serde'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'reqwest'
         update-types: ['version-update:semver-major']
 
     labels:
       - 'dependencies'
       - 'rust'
       - 'automated'
+      - 'auto-merge-candidate'
 
     reviewers:
       - 'meinzeug'
 
     commit-message:
-      prefix: 'chore(rust)'
+      prefix: 'chore(deps-rust)'
       include: 'scope'
 
-  # GitHub Actions
+  # GitHub Actions - OPTIMIZED for daily updates
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'monthly' # Changed from weekly to monthly
-      day: 'thursday'
-      time: '09:00'
-    open-pull-requests-limit: 1 # Reduced from 2 to 1
+      interval: 'daily' # OPTIMIZED: Daily updates
+      time: '10:00' # Staggered 1 hour after npm
+    open-pull-requests-limit: 3 # Increased for daily processing
+    groups:
+      # GROUP ALL GitHub Actions together - they're usually safe
+      github-actions-all:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+          - 'major' # Actions updates are typically safe
+    
     labels:
       - 'dependencies'
       - 'ci/cd'
       - 'automated'
+      - 'auto-merge-candidate' # Safe for auto-merge
 
     reviewers:
       - 'meinzeug'
 
     commit-message:
-      prefix: 'ci'
+      prefix: 'ci(deps)'
       include: 'scope'

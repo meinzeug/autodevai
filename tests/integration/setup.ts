@@ -1,11 +1,11 @@
-import { jest } from '@jest/globals';
+import { vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
 // Global test timeout
-jest.setTimeout(30000);
+vi.setConfig({ testTimeout: 30000 });
 
 // Mock external services
 export const mockServices = {

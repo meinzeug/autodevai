@@ -1,0 +1,443 @@
+name: 🔔 Security Notification System
+
+on:
+  issues:
+    types: [opened, closed]
+  pull_request:
+    types: [opened, closed, merged]
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly security summary on Mondays
+  workflow_run:
+    workflows: ["🛡️ Automated Security Fix"]
+    types: [completed]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  TEAMS_WEBHOOK: ${{ secrets.TEAMS_WEBHOOK }}
+  SECURITY_EMAIL: ${{ secrets.SECURITY_TEAM_EMAIL }}
+
+jobs:
+  security-issue-notification:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'security')
+    
+    steps:
+    - name: 🔔 Security Issue Notification
+      run: |
+        echo "🔔 Processing security issue notification..."
+        
+        ISSUE_NUMBER="${{ github.event.issue.number }}"
+        ISSUE_TITLE="${{ github.event.issue.title }}"
+        ISSUE_ACTION="${{ github.event.action }}"
+        ISSUE_URL="${{ github.event.issue.html_url }}"
+        ISSUE_AUTHOR="${{ github.event.issue.user.login }}"
+        
+        # Determine urgency based on labels
+        URGENCY="MEDIUM"
+        if echo "${{ join(github.event.issue.labels.*.name, ' ') }}" | grep -q "critical"; then
+          URGENCY="CRITICAL"
+        elif echo "${{ join(github.event.issue.labels.*.name, ' ') }}" | grep -q "high"; then
+          URGENCY="HIGH"
+        fi
+        
+        # Create notification message
+        if [ "$ISSUE_ACTION" = "opened" ]; then
+          MESSAGE="🚨 **New Security Issue Detected**
+
+        **Issue:** [#$ISSUE_NUMBER - $ISSUE_TITLE]($ISSUE_URL)
+        **Urgency:** $URGENCY
+        **Author:** @$ISSUE_AUTHOR
+        **Repository:** ${{ github.repository }}
+        **Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+        **Labels:** ${{ join(github.event.issue.labels.*.name, ', ') }}
+
+        🔗 **Quick Actions:**
+        • [View Issue]($ISSUE_URL)
+        • [Assign to Security Team]($ISSUE_URL)
+        • [View Security Dashboard](${{ github.server_url }}/${{ github.repository }}/security)
+
+        $(if [ "$URGENCY" = "CRITICAL" ]; then echo "🚨 **IMMEDIATE ATTENTION REQUIRED** 🚨"; fi)"
+        
+        elif [ "$ISSUE_ACTION" = "closed" ]; then
+          MESSAGE="✅ **Security Issue Resolved**
+
+        **Issue:** [#$ISSUE_NUMBER - $ISSUE_TITLE]($ISSUE_URL)
+        **Resolution Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        **Repository:** ${{ github.repository }}
+
+        The security issue has been successfully resolved and closed.
+
+        📊 [View Security Metrics](${{ github.server_url }}/${{ github.repository }}/security)"
+        fi
+        
+        # Send Slack notification
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          echo "📱 Sending Slack notification..."
+          
+          SLACK_PAYLOAD=$(cat <<EOF
+        {
+          "text": "Security Issue Alert",
+          "attachments": [
+            {
+              "color": "$(if [ '$URGENCY' = 'CRITICAL' ]; then echo 'danger'; elif [ '$URGENCY' = 'HIGH' ]; then echo 'warning'; else echo 'good'; fi)",
+              "title": "$ISSUE_TITLE",
+              "title_link": "$ISSUE_URL",
+              "text": "$MESSAGE",
+              "fields": [
+                {
+                  "title": "Repository",
+                  "value": "${{ github.repository }}",
+                  "short": true
+                },
+                {
+                  "title": "Urgency",
+                  "value": "$URGENCY",
+                  "short": true
+                },
+                {
+                  "title": "Issue Number",
+                  "value": "#$ISSUE_NUMBER",
+                  "short": true
+                },
+                {
+                  "title": "Action",
+                  "value": "$ISSUE_ACTION",
+                  "short": true
+                }
+              ],
+              "footer": "GitHub Security Monitor",
+              "ts": $(date +%s)
+            }
+          ]
+        }
+        EOF
+          )
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$SLACK_PAYLOAD" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+        
+        # Send Teams notification
+        if [ -n "${{ secrets.TEAMS_WEBHOOK }}" ]; then
+          echo "💼 Sending Teams notification..."
+          
+          TEAMS_PAYLOAD=$(cat <<EOF
+        {
+          "@type": "MessageCard",
+          "@context": "http://schema.org/extensions",
+          "themeColor": "$(if [ '$URGENCY' = 'CRITICAL' ]; then echo 'FF0000'; elif [ '$URGENCY' = 'HIGH' ]; then echo 'FF8C00'; else echo '00FF00'; fi)",
+          "summary": "Security Issue: $ISSUE_TITLE",
+          "sections": [
+            {
+              "activityTitle": "Security Issue Alert",
+              "activitySubtitle": "${{ github.repository }}",
+              "activityImage": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "facts": [
+                {
+                  "name": "Issue",
+                  "value": "#$ISSUE_NUMBER - $ISSUE_TITLE"
+                },
+                {
+                  "name": "Urgency",
+                  "value": "$URGENCY"
+                },
+                {
+                  "name": "Author",
+                  "value": "$ISSUE_AUTHOR"
+                },
+                {
+                  "name": "Action",
+                  "value": "$ISSUE_ACTION"
+                }
+              ],
+              "markdown": true
+            }
+          ],
+          "potentialAction": [
+            {
+              "@type": "OpenUri",
+              "name": "View Issue",
+              "targets": [
+                {
+                  "os": "default",
+                  "uri": "$ISSUE_URL"
+                }
+              ]
+            }
+          ]
+        }
+        EOF
+          )
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$TEAMS_PAYLOAD" \
+            "${{ secrets.TEAMS_WEBHOOK }}"
+        fi
+
+  security-pr-notification:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (contains(github.event.pull_request.labels.*.name, 'security') || contains(github.event.pull_request.title, 'security'))
+    
+    steps:
+    - name: 🔔 Security PR Notification
+      run: |
+        echo "🔔 Processing security PR notification..."
+        
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        PR_ACTION="${{ github.event.action }}"
+        PR_URL="${{ github.event.pull_request.html_url }}"
+        PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+        PR_MERGED="${{ github.event.pull_request.merged }}"
+        
+        # Determine notification type
+        if [ "$PR_ACTION" = "opened" ]; then
+          NOTIFICATION_TYPE="New Security PR"
+          ICON="🔧"
+        elif [ "$PR_ACTION" = "closed" ] && [ "$PR_MERGED" = "true" ]; then
+          NOTIFICATION_TYPE="Security PR Merged"
+          ICON="✅"
+        elif [ "$PR_ACTION" = "closed" ] && [ "$PR_MERGED" = "false" ]; then
+          NOTIFICATION_TYPE="Security PR Closed"
+          ICON="❌"
+        else
+          exit 0
+        fi
+        
+        MESSAGE="$ICON **$NOTIFICATION_TYPE**
+
+        **PR:** [#$PR_NUMBER - $PR_TITLE]($PR_URL)
+        **Author:** @$PR_AUTHOR
+        **Repository:** ${{ github.repository }}
+        **Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+        $(if [ "$PR_ACTION" = "opened" ]; then echo "🔍 **Review Required:** Security team review needed before merge"; fi)
+        $(if [ "$PR_MERGED" = "true" ]; then echo "🚀 **Deployed:** Security changes have been deployed"; fi)
+
+        🔗 **Actions:**
+        • [View PR]($PR_URL)
+        • [View Files Changed]($PR_URL/files)
+        • [Security Dashboard](${{ github.server_url }}/${{ github.repository }}/security)"
+        
+        # Send notification to appropriate channels
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$MESSAGE\"}" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+
+  security-workflow-notification:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.name == '🛡️ Automated Security Fix'
+    
+    steps:
+    - name: 🔔 Security Workflow Notification
+      run: |
+        echo "🔔 Processing security workflow notification..."
+        
+        WORKFLOW_STATUS="${{ github.event.workflow_run.conclusion }}"
+        WORKFLOW_URL="${{ github.event.workflow_run.html_url }}"
+        RUN_NUMBER="${{ github.event.workflow_run.run_number }}"
+        
+        if [ "$WORKFLOW_STATUS" = "success" ]; then
+          ICON="✅"
+          COLOR="good"
+          STATUS_TEXT="Completed Successfully"
+        elif [ "$WORKFLOW_STATUS" = "failure" ]; then
+          ICON="❌"
+          COLOR="danger"
+          STATUS_TEXT="Failed"
+        else
+          ICON="⚠️"
+          COLOR="warning"
+          STATUS_TEXT="Completed with Issues"
+        fi
+        
+        MESSAGE="$ICON **Security Workflow $STATUS_TEXT**
+
+        **Workflow:** Automated Security Fix
+        **Run:** #$RUN_NUMBER
+        **Status:** $WORKFLOW_STATUS
+        **Repository:** ${{ github.repository }}
+        **Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+        🔗 **Links:**
+        • [View Workflow Run]($WORKFLOW_URL)
+        • [Security Issues](${{ github.server_url }}/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Asecurity)
+        • [Security Dashboard](${{ github.server_url }}/${{ github.repository }}/security)
+
+        $(if [ '$WORKFLOW_STATUS' = 'failure' ]; then echo '🚨 **Action Required:** Review failed security workflow and resolve issues'; fi)"
+        
+        # Send notification
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$MESSAGE\", \"attachments\":[{\"color\":\"$COLOR\", \"text\":\"Security workflow run #$RUN_NUMBER $STATUS_TEXT\"}]}" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+
+  weekly-security-summary:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    steps:
+    - name: 🔍 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 📊 Generate Weekly Security Summary
+      run: |
+        echo "📊 Generating weekly security summary..."
+        
+        # Get date range for the past week
+        END_DATE=$(date -u +"%Y-%m-%d")
+        START_DATE=$(date -u -d '7 days ago' +"%Y-%m-%d")
+        
+        # Count security issues
+        OPEN_SECURITY_ISSUES=$(gh issue list --label "security" --state "open" --json number | jq length)
+        CLOSED_SECURITY_ISSUES=$(gh issue list --label "security" --state "closed" --search "closed:>=$START_DATE" --json number | jq length)
+        
+        # Count security PRs
+        SECURITY_PRS=$(gh pr list --label "security" --state "all" --search "created:>=$START_DATE" --json number | jq length)
+        MERGED_SECURITY_PRS=$(gh pr list --label "security" --state "merged" --search "merged:>=$START_DATE" --json number | jq length)
+        
+        # Get workflow runs
+        SECURITY_WORKFLOW_RUNS=$(gh run list --workflow="security-fix.yml" --created ">=$START_DATE" --json conclusion | jq length)
+        SUCCESSFUL_RUNS=$(gh run list --workflow="security-fix.yml" --created ">=$START_DATE" --json conclusion | jq '[.[] | select(.conclusion == "success")] | length')
+        
+        # Generate summary
+        SUMMARY="📊 **Weekly Security Summary** ($START_DATE to $END_DATE)
+
+        ## 🎯 Security Metrics
+
+        ### Issues
+        • **Open Security Issues:** $OPEN_SECURITY_ISSUES
+        • **Resolved This Week:** $CLOSED_SECURITY_ISSUES
+
+        ### Pull Requests  
+        • **Security PRs Created:** $SECURITY_PRS
+        • **Security PRs Merged:** $MERGED_SECURITY_PRS
+
+        ### Automation
+        • **Security Workflow Runs:** $SECURITY_WORKFLOW_RUNS
+        • **Successful Runs:** $SUCCESSFUL_RUNS
+        • **Success Rate:** $(echo 'scale=1; '$SUCCESSFUL_RUNS' * 100 / '$SECURITY_WORKFLOW_RUNS | bc)%
+
+        ## 🔗 Quick Links
+
+        • [Open Security Issues](${{ github.server_url }}/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Asecurity)
+        • [Security Workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/security-fix.yml)
+        • [Security Policy](${{ github.server_url }}/${{ github.repository }}/security/policy)
+
+        ## 🎯 Recommendations
+
+        $(if [ $OPEN_SECURITY_ISSUES -gt 5 ]; then echo '⚠️ High number of open security issues - consider prioritizing resolution'; fi)
+        $(if [ $SUCCESSFUL_RUNS -lt $((SECURITY_WORKFLOW_RUNS * 80 / 100)) ]; then echo '⚠️ Security workflow success rate below 80% - investigate failures'; fi)
+        $(if [ $CLOSED_SECURITY_ISSUES -eq 0 ] && [ $OPEN_SECURITY_ISSUES -gt 0 ]; then echo '📋 No security issues resolved this week - review open issues'; fi)
+
+        ---
+
+        🤖 **Auto-generated** Weekly Security Report"
+        
+        echo "📧 Sending weekly security summary..."
+        
+        # Send to configured channels
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$SUMMARY\"}" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+        
+        # Create weekly summary issue for tracking
+        gh issue create \
+          --title "📊 Weekly Security Summary - $(date +%Y-%m-%d)" \
+          --body "$SUMMARY" \
+          --label "security,weekly-summary,documentation" \
+          --assignee "security-team"
+
+  critical-security-alert:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'critical') && contains(github.event.issue.labels.*.name, 'security')
+    
+    steps:
+    - name: 🚨 Critical Security Alert
+      run: |
+        echo "🚨 Processing critical security alert..."
+        
+        ISSUE_NUMBER="${{ github.event.issue.number }}"
+        ISSUE_TITLE="${{ github.event.issue.title }}"
+        ISSUE_URL="${{ github.event.issue.html_url }}"
+        ISSUE_AUTHOR="${{ github.event.issue.user.login }}"
+        
+        ALERT_MESSAGE="🚨🚨🚨 **CRITICAL SECURITY ALERT** 🚨🚨🚨
+
+        **IMMEDIATE ATTENTION REQUIRED**
+
+        **Issue:** [#$ISSUE_NUMBER - $ISSUE_TITLE]($ISSUE_URL)
+        **Reporter:** @$ISSUE_AUTHOR
+        **Repository:** ${{ github.repository }}
+        **Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+        ⚡ **EMERGENCY RESPONSE PROTOCOL ACTIVATED**
+
+        🔗 **Immediate Actions:**
+        1. [Review Issue]($ISSUE_URL) - URGENT
+        2. [Assign Security Lead]($ISSUE_URL) 
+        3. [Start Incident Response](${{ github.server_url }}/${{ github.repository }}/security)
+
+        📞 **Escalation:**
+        • Security Team: @security-team
+        • On-call Engineer: @on-call
+        • Emergency Contact: ${{ secrets.EMERGENCY_CONTACT }}
+
+        ⏰ **SLA:** 30 minutes response time for critical security issues
+
+        ---
+
+        🚨 **THIS IS A CRITICAL SECURITY ALERT** 🚨"
+        
+        # Send to ALL configured channels for critical alerts
+        if [ -n "${{ secrets.SLACK_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"🚨 CRITICAL SECURITY ALERT 🚨\",
+              \"attachments\": [{
+                \"color\": \"danger\",
+                \"title\": \"$ISSUE_TITLE\",
+                \"title_link\": \"$ISSUE_URL\",
+                \"text\": \"$ALERT_MESSAGE\",
+                \"fields\": [{
+                  \"title\": \"Repository\",
+                  \"value\": \"${{ github.repository }}\",
+                  \"short\": true
+                }, {
+                  \"title\": \"Issue\",
+                  \"value\": \"#$ISSUE_NUMBER\",
+                  \"short\": true
+                }],
+                \"footer\": \"EMERGENCY SECURITY ALERT\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+            "${{ secrets.SLACK_WEBHOOK }}"
+        fi
+        
+        # Additional emergency notifications
+        if [ -n "${{ secrets.TEAMS_WEBHOOK }}" ]; then
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"@type\": \"MessageCard\",
+              \"@context\": \"http://schema.org/extensions\",
+              \"themeColor\": \"FF0000\",
+              \"summary\": \"CRITICAL SECURITY ALERT\",
+              \"title\": \"🚨 CRITICAL SECURITY ALERT 🚨\",
+              \"text\": \"$ALERT_MESSAGE\"
+            }" \
+            "${{ secrets.TEAMS_WEBHOOK }}"
+        fi
+        
+        # Create emergency incident
+        gh issue edit $ISSUE_NUMBER --add-label "emergency,incident" --milestone "Security Incidents"
+        
+        echo "🚨 Critical security alert sent to all channels"
