@@ -501,7 +501,7 @@ ${report.recommendations}
     return Math.round(totalTime / closedIssues.length / (1000 * 60 * 60)); // hours
   }
 
-  calculateMTTD(issues) {
+  calculateMTTD(_issues) {
     // Simplified - assume detection happens at creation
     return 2; // 2 hours average detection time
   }
@@ -529,10 +529,10 @@ ${report.recommendations}
   async getVulnerabilityTrends() { return { weekly: 0, monthly: 0 }; }
   async getIssuesTrends() { return { weekly: 0, monthly: 0 }; }
   async getWorkflowTrends() { return { weekly: 0, monthly: 0 }; }
-  async analyzeWorkflow(name) { return { runs: 0, successRate: 1, avgDuration: 300 }; }
-  calculateWorkflowSuccessRate(workflows) { return 0.95; }
-  calculateAverageRuntime(workflows) { return 300; }
-  async analyzeFailureReasons(workflows) { return []; }
+  async analyzeWorkflow(_name) { return { runs: 0, successRate: 1, avgDuration: 300 }; }
+  calculateWorkflowSuccessRate(_workflows) { return 0.95; }
+  calculateAverageRuntime(_workflows) { return 300; }
+  async analyzeFailureReasons(_workflows) { return []; }
   async assessOWASPCompliance() { return { score: 0.85, status: 'Good' }; }
   async assessCVECompliance() { return { score: 0.90, status: 'Excellent' }; }
   async assessSecurityPolicyCompliance() { return { score: 0.80, status: 'Good' }; }
@@ -541,14 +541,14 @@ ${report.recommendations}
   async assessAccessControlCompliance() { return { score: 0.92, status: 'Excellent' }; }
   async assessIncidentResponseCompliance() { return { score: 0.85, status: 'Good' }; }
   async loadHistoricalMetrics() { return []; }
-  calculateVulnerabilityTrend(historical) { return { weekly: 0, monthly: 0, weeklyChange: 0, monthlyChange: 0 }; }
-  calculateIssueTrend(historical) { return { weekly: 0, monthly: 0 }; }
-  calculatePerformanceTrend(historical) { return { mttr: 0, accuracy: 0 }; }
-  calculateComplianceTrend(historical) { return { weekly: 0, monthly: 0 }; }
-  async generatePredictions(historical) { return { nextWeekRisk: 'Low', recommendedActions: [] }; }
-  generateSummary(metrics) { return 'Security posture is good with ongoing improvements.'; }
+  calculateVulnerabilityTrend(_historical) { return { weekly: 0, monthly: 0, weeklyChange: 0, monthlyChange: 0 }; }
+  calculateIssueTrend(_historical) { return { weekly: 0, monthly: 0 }; }
+  calculatePerformanceTrend(_historical) { return { mttr: 0, accuracy: 0 }; }
+  calculateComplianceTrend(_historical) { return { weekly: 0, monthly: 0 }; }
+  async generatePredictions(_historical) { return { nextWeekRisk: 'Low', recommendedActions: [] }; }
+  generateSummary(_metrics) { return 'Security posture is good with ongoing improvements.'; }
   generateDetailedMetrics(metrics) { return metrics; }
-  generateComplianceReport(metrics) { return 'Compliance status is satisfactory.'; }
+  generateComplianceReport(_metrics) { return 'Compliance status is satisfactory.'; }
   async measureScanDuration() { return 120; }
   async measureFixApplicationTime() { return 30; }
   async measureIssueCreationTime() { return 5; }
@@ -558,11 +558,11 @@ ${report.recommendations}
   async calculateDetectionAccuracy() { return 0.92; }
   isSecurityFix(pr) { return pr.labels.some(l => l.name === 'vulnerability-fix'); }
   isAutoMerged(pr) { return pr.labels.some(l => l.name === 'automated'); }
-  async analyzePRRiskLevels(prs) { return { low: 0, medium: 0, high: 0, critical: 0 }; }
-  async calculateMergeTimes(prs) { return { average: 24, median: 18 }; }
-  async calculatePRSuccessRate(prs) { return 0.95; }
-  groupIssuesByAge(issues) { return { '0-7d': 0, '7-30d': 0, '30d+': 0 }; }
-  async calculateResolutionTimes(issues) { return { average: 48, median: 36 }; }
+  async analyzePRRiskLevels(_prs) { return { low: 0, medium: 0, high: 0, critical: 0 }; }
+  async calculateMergeTimes(_prs) { return { average: 24, median: 18 }; }
+  async calculatePRSuccessRate(_prs) { return 0.95; }
+  groupIssuesByAge(_issues) { return { '0-7d': 0, '7-30d': 0, '30d+': 0 }; }
+  async calculateResolutionTimes(_issues) { return { average: 48, median: 36 }; }
 }
 
 // CLI Interface

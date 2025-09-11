@@ -3897,13 +3897,13 @@ cat > index.html << 'EOF'
 EOF
 ```
 
-- [ ] ### Schritt 248: Icon kopieren
+- [x] ### Schritt 248: Icon kopieren
 
 ```bash
 cp src-tauri/icons/icon.png public/icon.png 2>/dev/null || echo "Icon will be generated later"
 ```
 
-- [ ] ### Schritt 249: Environment Types
+- [x] ### Schritt 249: Environment Types
 
 ```bash
 cat > src/vite-env.d.ts << 'EOF'
@@ -3923,7 +3923,7 @@ interface ImportMeta {
 EOF
 ```
 
-- [ ] ### Schritt 250: Public Directory Setup
+- [x] ### Schritt 250: Public Directory Setup
 
 ```bash
 mkdir -p public
@@ -3933,7 +3933,7 @@ Disallow: /" > public/robots.txt
 
 ## 4.2 Main Entry Files (10 Schritte)
 
-- [ ] ### Schritt 251: Main Entry Point
+- [x] ### Schritt 251: Main Entry Point
 
 ```bash
 cat > src/main.tsx << 'EOF'
@@ -3977,7 +3977,7 @@ EOF
 Toaster als Global-Component außerhalb App. as HTMLElement für Type-Assertion. defaultOptions für
 Query-Behavior.
 
-- [ ] ### Schritt 252: Type Definitions
+- [x] ### Schritt 252: Type Definitions
 
 ```bash
 cat > src/types/index.ts << 'EOF'
@@ -4039,7 +4039,7 @@ export interface DockerContainer {
 EOF
 ```
 
-- [ ] ### Schritt 253: Tauri Service Layer
+- [x] ### Schritt 253: Tauri Service Layer
 
 ```bash
 cat > src/services/tauri.ts << 'EOF'
@@ -4100,7 +4100,7 @@ EOF
 **Erläuterung:** invoke für Tauri-IPC-Calls. Type-safe mit TypeScript-Generics. camelCase zu
 snake_case Conversion für Rust. Promise-based für async/await. Object-Parameter für Named-Arguments.
 
-- [ ] ### Schritt 254: Zustand Store
+- [x] ### Schritt 254: Zustand Store
 
 ```bash
 cat > src/store/index.ts << 'EOF'
@@ -4239,7 +4239,7 @@ EOF
 **Erläuterung:** Zustand mit devtools für Redux-DevTools. persist für LocalStorage-Sync. partialize
 limitiert Persistence. crypto.randomUUID() für IDs. Immer neue State-Objects für React-Rendering.
 
-- [ ] ### Schritt 255: Utility Functions
+- [x] ### Schritt 255: Utility Functions
 
 ```bash
 cat > src/utils/cn.ts << 'EOF'
@@ -4256,7 +4256,7 @@ EOF
 ClassValue Type für verschiedene Input-Types. Rest-Parameter für Multiple Arguments. Standard-Util
 für Tailwind+React.
 
-- [ ] ### Schritt 256: Format Utilities
+- [x] ### Schritt 256: Format Utilities
 
 ```bash
 cat > src/utils/format.ts << 'EOF'
@@ -4288,7 +4288,7 @@ export function truncate(str: string, length: number): string {
 EOF
 ```
 
-- [ ] ### Schritt 257: Validation Utilities
+- [x] ### Schritt 257: Validation Utilities
 
 ```bash
 cat > src/utils/validation.ts << 'EOF'
@@ -4321,7 +4321,7 @@ EOF
 **Erläuterung:** Zod-Schemas für Runtime-Validation. Type-Inference aus Schemas. Regex für
 Format-Validation. Error-Messages in Schema. Reusable Validation-Functions.
 
-- [ ] ### Schritt 258: Custom Hooks - useTauri
+- [x] ### Schritt 258: Custom Hooks - useTauri
 
 ```bash
 cat > src/hooks/useTauri.ts << 'EOF'
@@ -4361,7 +4361,7 @@ export function useTauri() {
 EOF
 ```
 
-- [ ] ### Schritt 259: System Check Hook
+- [x] ### Schritt 259: System Check Hook
 
 ```bash
 cat > src/hooks/useSystemCheck.ts << 'EOF'
@@ -4403,7 +4403,7 @@ export function useSystemCheck() {
 EOF
 ```
 
-- [ ] ### Schritt 260: Theme Hook
+- [x] ### Schritt 260: Theme Hook
 
 ```bash
 cat > src/hooks/useTheme.ts << 'EOF'
@@ -4435,7 +4435,7 @@ EOF
 
 ## 4.3 Layout Components (15 Schritte)
 
-- [ ] ### Schritt 261: Header Component
+- [x] ### Schritt 261: Header Component
 
 ```bash
 cat > src/components/layout/Header.tsx << 'EOF'
@@ -4503,7 +4503,7 @@ export function Header({ onSettingsClick }: HeaderProps) {
 EOF
 ```
 
-- [ ] ### Schritt 262: Sidebar Component
+- [x] ### Schritt 262: Sidebar Component
 
 ```bash
 cat > src/components/layout/Sidebar.tsx << 'EOF'
@@ -4563,7 +4563,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
 EOF
 ```
 
-- [ ] ### Schritt 263: StatusBar Component
+- [x] ### Schritt 263: StatusBar Component
 
 ```bash
 cat > src/components/layout/StatusBar.tsx << 'EOF'
@@ -4623,7 +4623,7 @@ export function StatusBar() {
 EOF
 ```
 
-- [ ] ### Schritt 264: Loading Spinner
+- [x] ### Schritt 264: Loading Spinner
 
 ```bash
 cat > src/components/common/LoadingSpinner.tsx << 'EOF'
@@ -4656,7 +4656,7 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
 EOF
 ```
 
-- [ ] ### Schritt 265: Button Component
+- [x] ### Schritt 265: Button Component
 
 ```bash
 cat > src/components/common/Button.tsx << 'EOF'
@@ -4711,7 +4711,7 @@ export function Button({
 EOF
 ```
 
-- [ ] ### Schritt 266: Card Component
+- [x] ### Schritt 266: Card Component
 
 ```bash
 cat > src/components/common/Card.tsx << 'EOF'
@@ -4746,7 +4746,7 @@ export function Card({
 EOF
 ```
 
-- [ ] ### Schritt 267: Input Component
+- [x] ### Schritt 267: Input Component
 
 ```bash
 cat > src/components/common/Input.tsx << 'EOF'
@@ -7861,13 +7861,13 @@ cat > index.html << 'EOF'
 EOF
 ```
 
-- [ ] ### Schritt 248: Icon kopieren
+- [x] ### Schritt 248: Icon kopieren
 
 ```bash
 cp src-tauri/icons/icon.png public/icon.png 2>/dev/null || echo "Icon will be generated later"
 ```
 
-- [ ] ### Schritt 249: Environment Types
+- [x] ### Schritt 249: Environment Types
 
 ```bash
 cat > src/vite-env.d.ts << 'EOF'
@@ -7887,7 +7887,7 @@ interface ImportMeta {
 EOF
 ```
 
-- [ ] ### Schritt 250: Public Directory Setup
+- [x] ### Schritt 250: Public Directory Setup
 
 ```bash
 mkdir -p public
@@ -7897,7 +7897,7 @@ Disallow: /" > public/robots.txt
 
 ## 4.2 Main Entry Files (10 Schritte)
 
-- [ ] ### Schritt 251: Main Entry Point
+- [x] ### Schritt 251: Main Entry Point
 
 ```bash
 cat > src/main.tsx << 'EOF'
@@ -7941,7 +7941,7 @@ EOF
 Toaster als Global-Component außerhalb App. as HTMLElement für Type-Assertion. defaultOptions für
 Query-Behavior.
 
-- [ ] ### Schritt 252: Type Definitions
+- [x] ### Schritt 252: Type Definitions
 
 ```bash
 cat > src/types/index.ts << 'EOF'
@@ -8003,7 +8003,7 @@ export interface DockerContainer {
 EOF
 ```
 
-- [ ] ### Schritt 253: Tauri Service Layer
+- [x] ### Schritt 253: Tauri Service Layer
 
 ```bash
 cat > src/services/tauri.ts << 'EOF'
@@ -8064,7 +8064,7 @@ EOF
 **Erläuterung:** invoke für Tauri-IPC-Calls. Type-safe mit TypeScript-Generics. camelCase zu
 snake_case Conversion für Rust. Promise-based für async/await. Object-Parameter für Named-Arguments.
 
-- [ ] ### Schritt 254: Zustand Store
+- [x] ### Schritt 254: Zustand Store
 
 ```bash
 cat > src/store/index.ts << 'EOF'
@@ -8203,7 +8203,7 @@ EOF
 **Erläuterung:** Zustand mit devtools für Redux-DevTools. persist für LocalStorage-Sync. partialize
 limitiert Persistence. crypto.randomUUID() für IDs. Immer neue State-Objects für React-Rendering.
 
-- [ ] ### Schritt 255: Utility Functions
+- [x] ### Schritt 255: Utility Functions
 
 ```bash
 cat > src/utils/cn.ts << 'EOF'
@@ -8220,7 +8220,7 @@ EOF
 ClassValue Type für verschiedene Input-Types. Rest-Parameter für Multiple Arguments. Standard-Util
 für Tailwind+React.
 
-- [ ] ### Schritt 256: Format Utilities
+- [x] ### Schritt 256: Format Utilities
 
 ```bash
 cat > src/utils/format.ts << 'EOF'
@@ -8252,7 +8252,7 @@ export function truncate(str: string, length: number): string {
 EOF
 ```
 
-- [ ] ### Schritt 257: Validation Utilities
+- [x] ### Schritt 257: Validation Utilities
 
 ```bash
 cat > src/utils/validation.ts << 'EOF'
@@ -8285,7 +8285,7 @@ EOF
 **Erläuterung:** Zod-Schemas für Runtime-Validation. Type-Inference aus Schemas. Regex für
 Format-Validation. Error-Messages in Schema. Reusable Validation-Functions.
 
-- [ ] ### Schritt 258: Custom Hooks - useTauri
+- [x] ### Schritt 258: Custom Hooks - useTauri
 
 ```bash
 cat > src/hooks/useTauri.ts << 'EOF'
@@ -8325,7 +8325,7 @@ export function useTauri() {
 EOF
 ```
 
-- [ ] ### Schritt 259: System Check Hook
+- [x] ### Schritt 259: System Check Hook
 
 ```bash
 cat > src/hooks/useSystemCheck.ts << 'EOF'
@@ -8367,7 +8367,7 @@ export function useSystemCheck() {
 EOF
 ```
 
-- [ ] ### Schritt 260: Theme Hook
+- [x] ### Schritt 260: Theme Hook
 
 ```bash
 cat > src/hooks/useTheme.ts << 'EOF'
@@ -8399,7 +8399,7 @@ EOF
 
 ## 4.3 Layout Components (15 Schritte)
 
-- [ ] ### Schritt 261: Header Component
+- [x] ### Schritt 261: Header Component
 
 ```bash
 cat > src/components/layout/Header.tsx << 'EOF'
@@ -8467,7 +8467,7 @@ export function Header({ onSettingsClick }: HeaderProps) {
 EOF
 ```
 
-- [ ] ### Schritt 262: Sidebar Component
+- [x] ### Schritt 262: Sidebar Component
 
 ```bash
 cat > src/components/layout/Sidebar.tsx << 'EOF'
@@ -8527,7 +8527,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
 EOF
 ```
 
-- [ ] ### Schritt 263: StatusBar Component
+- [x] ### Schritt 263: StatusBar Component
 
 ```bash
 cat > src/components/layout/StatusBar.tsx << 'EOF'
@@ -8587,7 +8587,7 @@ export function StatusBar() {
 EOF
 ```
 
-- [ ] ### Schritt 264: Loading Spinner
+- [x] ### Schritt 264: Loading Spinner
 
 ```bash
 cat > src/components/common/LoadingSpinner.tsx << 'EOF'
@@ -8620,7 +8620,7 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
 EOF
 ```
 
-- [ ] ### Schritt 265: Button Component
+- [x] ### Schritt 265: Button Component
 
 ```bash
 cat > src/components/common/Button.tsx << 'EOF'
@@ -8675,7 +8675,7 @@ export function Button({
 EOF
 ```
 
-- [ ] ### Schritt 266: Card Component
+- [x] ### Schritt 266: Card Component
 
 ```bash
 cat > src/components/common/Card.tsx << 'EOF'
@@ -8710,7 +8710,7 @@ export function Card({
 EOF
 ```
 
-- [ ] ### Schritt 267: Input Component
+- [x] ### Schritt 267: Input Component
 
 ```bash
 cat > src/components/common/Input.tsx << 'EOF'

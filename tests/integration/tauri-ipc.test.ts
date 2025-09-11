@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { helpers } from './setup';
 
 describe('Tauri IPC Integration Tests', () => {

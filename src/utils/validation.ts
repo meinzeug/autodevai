@@ -14,32 +14,19 @@ export const settingsSchema = z.object({
   auto_quality_check: z.boolean(),
 });
 
-export function validateOpenRouterKey(key: string): boolean {
-  return key.startsWith('sk-or-') && key.length > 20;
+export const claudeFlowArgsSchema = z.object({
+  command: z.enum(['swarm', 'sparc', 'hive-mind', 'memory']),
+  args: z.string(),
+});
+
+export function validateTask(data: unknown) {
+  return taskSchema.safeParse(data);
 }
 
-export function validateDockerName(name: string): boolean {
-  return /^[a-zA-Z0-9][a-zA-Z0-9_.-]+$/.test(name);
+export function validateSettings(data: unknown) {
+  return settingsSchema.safeParse(data);
 }
 
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+export function validateClaudeFlowArgs(data: unknown) {
+  return claudeFlowArgsSchema.safeParse(data);
 }
-
-export function validateUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function validatePort(port: string | number): boolean {
-  const portNum = typeof port === 'string' ? parseInt(port, 10) : port;
-  return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
-}
-
-export type TaskValidation = z.infer<typeof taskSchema>;
-export type SettingsValidation = z.infer<typeof settingsSchema>;

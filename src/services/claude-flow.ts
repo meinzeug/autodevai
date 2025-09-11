@@ -430,7 +430,7 @@ class ClaudeFlowOrchestrator {
 
       return {
         agentId: agentTask.agentId,
-        result: response.choices[0].message.content,
+        result: response.choices[0]?.message?.content || '',
         metrics: {
           responseTime,
           tokensUsed: response.usage?.total_tokens || 0,
@@ -529,7 +529,7 @@ class ClaudeFlowOrchestrator {
           complexity: { computational: 0.3, logical: 0.7, creative: 0.6, domain_specific: 0.5 }
         });
 
-        const contribution = response.choices[0].message.content;
+        const contribution = response.choices[0]?.message?.content || '';
         discussion += `**${participant}**: ${contribution}\n\n`;
         context.push(`${participant} said: ${contribution}`);
       }

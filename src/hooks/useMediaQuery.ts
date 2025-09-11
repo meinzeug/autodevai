@@ -165,11 +165,11 @@ export function useResponsiveValue<T>(values: {
 
   // Return the value for current breakpoint, falling back to smaller ones
   const breakpointOrder = ['2xl', 'xl', 'lg', 'md', 'sm', 'xs'] as const;
-  const currentIndex = breakpointOrder.indexOf(breakpoint.current as any);
+  const currentIndex = breakpoint.current ? breakpointOrder.indexOf(breakpoint.current as any) : -1;
 
-  for (let i = currentIndex; i < breakpointOrder.length; i++) {
+  for (let i = currentIndex >= 0 ? currentIndex : 0; i < breakpointOrder.length; i++) {
     const bp = breakpointOrder[i];
-    if (values[bp] !== undefined) {
+    if (bp && bp in values && values[bp] !== undefined) {
       return values[bp];
     }
   }

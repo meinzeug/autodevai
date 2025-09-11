@@ -34,10 +34,13 @@ impl SchemaManager {
         info!("Applying database migrations");
 
         let current_version = self.get_current_schema_version().await?;
-        
+
         for migration in &self.migrations {
             if migration.version > current_version {
-                info!("Applying migration: {} (v{})", migration.name, migration.version);
+                info!(
+                    "Applying migration: {} (v{})",
+                    migration.name, migration.version
+                );
                 self.apply_migration(migration, true).await?;
             }
         }
@@ -51,10 +54,13 @@ impl SchemaManager {
         info!("Rolling back migrations to version {}", target_version);
 
         let current_version = self.get_current_schema_version().await?;
-        
+
         for migration in self.migrations.iter().rev() {
             if migration.version > target_version && migration.version <= current_version {
-                info!("Rolling back migration: {} (v{})", migration.name, migration.version);
+                info!(
+                    "Rolling back migration: {} (v{})",
+                    migration.name, migration.version
+                );
                 self.apply_migration(migration, false).await?;
             }
         }
@@ -72,11 +78,15 @@ impl SchemaManager {
 
     /// Apply a single migration
     async fn apply_migration(&self, migration: &Migration, up: bool) -> Result<()> {
-        let sql = if up { &migration.up_sql } else { &migration.down_sql };
-        
+        let sql = if up {
+            &migration.up_sql
+        } else {
+            &migration.down_sql
+        };
+
         // In a real implementation, this would execute the SQL
         info!("Executing SQL: {}", sql);
-        
+
         // Update schema version in metadata table
         if up {
             self.update_schema_version(migration.version).await?;
@@ -178,7 +188,10 @@ impl SchemaManager {
 
         docs.push_str("## Migrations\n\n");
         for migration in &self.migrations {
-            docs.push_str(&format!("### Migration {} - {}\n", migration.version, migration.name));
+            docs.push_str(&format!(
+                "### Migration {} - {}\n",
+                migration.version, migration.name
+            ));
             docs.push_str(&format!("Version: {}\n\n", migration.version));
         }
 
@@ -405,7 +418,7 @@ mod tests {
     fn test_migration_structure() {
         let migrations = create_migrations();
         assert_eq!(migrations.len(), 1);
-        
+
         let first_migration = &migrations[0];
         assert_eq!(first_migration.version, 1);
         assert_eq!(first_migration.name, "Initial schema");
@@ -417,7 +430,7 @@ mod tests {
     fn test_schema_documentation_generation() {
         let manager = SchemaManager::new();
         let docs = manager.generate_schema_docs();
-        
+
         assert!(docs.contains("Database Schema Documentation"));
         assert!(docs.contains("Users"));
         assert!(docs.contains("Projects"));

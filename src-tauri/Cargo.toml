@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Neural Bridge Platform for Claude-Flow and OpenAI Codex orchestration"
 authors = ["AutoDev-AI"]
 edition = "2021"
+resolver = "2"
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
@@ -12,7 +13,7 @@ serde_json = "1.0"
 
 [dependencies]
 glib = "0.21.1"  # Security fix for GHSA-wrw7-89jp-8q8g vulnerability
-tauri = { version = "2.0", features = ["tray-icon"] }
+tauri = { version = "2.8.5", features = ["tray-icon"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }

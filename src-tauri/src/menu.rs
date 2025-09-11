@@ -1,9 +1,9 @@
+use std::collections::HashMap;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     AppHandle, Manager, Wry,
 };
 use tracing::{debug, info, warn};
-use std::collections::HashMap;
 
 /// Creates the application menu with File menu and native items
 pub fn create_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
@@ -35,10 +35,22 @@ fn create_file_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
     let new_file = MenuItem::with_id(app, "new_file", "New", true, Some("CmdOrCtrl+N"))?;
     let open_file = MenuItem::with_id(app, "open_file", "Open...", true, Some("CmdOrCtrl+O"))?;
     let save_file = MenuItem::with_id(app, "save_file", "Save", true, Some("CmdOrCtrl+S"))?;
-    let save_as = MenuItem::with_id(app, "save_as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?;
+    let save_as = MenuItem::with_id(
+        app,
+        "save_as",
+        "Save As...",
+        true,
+        Some("CmdOrCtrl+Shift+S"),
+    )?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    
-    let new_window = MenuItem::with_id(app, "new_window", "New Window", true, Some("CmdOrCtrl+Shift+N"))?;
+
+    let new_window = MenuItem::with_id(
+        app,
+        "new_window",
+        "New Window",
+        true,
+        Some("CmdOrCtrl+Shift+N"),
+    )?;
     let close_window = MenuItem::with_id(
         app,
         "close_window",
@@ -47,7 +59,7 @@ fn create_file_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
         Some("CmdOrCtrl+W"),
     )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    
+
     let settings = MenuItem::with_id(app, "settings", "Preferences...", true, Some("CmdOrCtrl+,"))?;
     let sep3 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, Some("CmdOrCtrl+Q"))?;
@@ -111,14 +123,21 @@ fn create_view_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
     info!("Creating View menu");
 
     let reload = MenuItem::with_id(app, "reload", "Reload", true, Some("CmdOrCtrl+R"))?;
-    let force_reload = MenuItem::with_id(app, "force_reload", "Force Reload", true, Some("CmdOrCtrl+Shift+R"))?;
+    let force_reload = MenuItem::with_id(
+        app,
+        "force_reload",
+        "Force Reload",
+        true,
+        Some("CmdOrCtrl+Shift+R"),
+    )?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    
+
     let zoom_in = MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+Plus"))?;
     let zoom_out = MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+-"))?;
-    let zoom_reset = MenuItem::with_id(app, "zoom_reset", "Actual Size", true, Some("CmdOrCtrl+0"))?;
+    let zoom_reset =
+        MenuItem::with_id(app, "zoom_reset", "Actual Size", true, Some("CmdOrCtrl+0"))?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    
+
     let fullscreen = MenuItem::with_id(app, "fullscreen", "Enter Full Screen", true, Some("F11"))?;
     let minimize = MenuItem::with_id(app, "minimize", "Minimize", true, Some("CmdOrCtrl+M"))?;
     let sep3 = PredefinedMenuItem::separator(app)?;
@@ -137,8 +156,20 @@ fn create_view_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
 
     // Add developer tools option in debug builds
     if cfg!(debug_assertions) {
-        let devtools = MenuItem::with_id(app, "toggle_devtools", "Toggle Developer Tools", true, Some("F12"))?;
-        let console = MenuItem::with_id(app, "console", "JavaScript Console", true, Some("CmdOrCtrl+Alt+I"))?;
+        let devtools = MenuItem::with_id(
+            app,
+            "toggle_devtools",
+            "Toggle Developer Tools",
+            true,
+            Some("F12"),
+        )?;
+        let console = MenuItem::with_id(
+            app,
+            "console",
+            "JavaScript Console",
+            true,
+            Some("CmdOrCtrl+Alt+I"),
+        )?;
         menu_items.extend_from_slice(&[&sep3, &devtools, &console]);
     }
 
@@ -153,14 +184,26 @@ fn create_help_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
 
     let documentation = MenuItem::with_id(app, "documentation", "User Guide", true, Some("F1"))?;
     let api_docs = MenuItem::with_id(app, "api_docs", "API Documentation", true, None::<&str>)?;
-    let keyboard_shortcuts = MenuItem::with_id(app, "keyboard_shortcuts", "Keyboard Shortcuts", true, Some("CmdOrCtrl+/"))?;
+    let keyboard_shortcuts = MenuItem::with_id(
+        app,
+        "keyboard_shortcuts",
+        "Keyboard Shortcuts",
+        true,
+        Some("CmdOrCtrl+/"),
+    )?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    
+
     let github = MenuItem::with_id(app, "github", "GitHub Repository", true, None::<&str>)?;
     let report_issue = MenuItem::with_id(app, "report_issue", "Report Issue", true, None::<&str>)?;
-    let check_updates = MenuItem::with_id(app, "check_updates", "Check for Updates...", true, None::<&str>)?;
+    let check_updates = MenuItem::with_id(
+        app,
+        "check_updates",
+        "Check for Updates...",
+        true,
+        None::<&str>,
+    )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
-    
+
     let about = MenuItem::with_id(app, "about", "About AutoDev-AI", true, None::<&str>)?;
 
     let help_menu = Submenu::with_items(
@@ -187,7 +230,7 @@ fn create_help_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
 pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     let window = app.webview_windows().values().next().cloned();
     let menu_id = event.id().as_ref();
-    
+
     debug!("Menu event triggered: {}", menu_id);
 
     match menu_id {
@@ -226,7 +269,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             info!("Quit menu item selected");
             app.exit(0);
         }
-        
+
         // View menu actions
         "reload" => {
             info!("Reload menu item selected");
@@ -251,7 +294,9 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         "zoom_reset" => {
             info!("Reset zoom menu item selected");
             if let Some(ref window) = window {
-                let _ = window.eval("document.body.style.zoom = '1'; localStorage.setItem('zoom-level', '1');");
+                let _ = window.eval(
+                    "document.body.style.zoom = '1'; localStorage.setItem('zoom-level', '1');",
+                );
             }
         }
         "fullscreen" => {
@@ -277,7 +322,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
                 }
             }
         }
-        
+
         // Help menu actions
         "documentation" => {
             info!("Documentation menu item selected");
@@ -307,7 +352,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             info!("About menu item selected");
             show_about_dialog(app);
         }
-        
+
         _ => {
             warn!("Unhandled menu event: {}", menu_id);
         }
@@ -359,7 +404,8 @@ fn handle_zoom_change(window: Option<&tauri::WebviewWindow>, factor: f64) {
                 document.body.style.zoom = clampedZoom.toString();
                 localStorage.setItem('zoom-level', clampedZoom.toString());
                 console.log('Zoom changed to:', clampedZoom);
-            }}", factor
+            }}",
+            factor
         );
         let _ = window.eval(&js_code);
     }
@@ -446,7 +492,7 @@ Help Menu:
 • User Guide: F1
 • Keyboard Shortcuts: Ctrl/Cmd + /
         "#;
-        
+
         let js_code = format!(
             r#"alert("{}"); console.log("Keyboard shortcuts dialog shown");"#,
             shortcuts_info.replace('\n', "\\n")
@@ -463,13 +509,13 @@ fn check_for_updates(app: &AppHandle) {
             "AutoDev-AI Update Check\\n\\nCurrent Version: {}\\n\\nChecking for updates...\\n\\nThis feature will be fully implemented in a future version.",
             version
         );
-        
+
         let js_code = format!(
             r#"alert("{}"); console.log("Update check initiated");"#,
             update_message
         );
         let _ = window.eval(&js_code);
-        
+
         info!("Update check requested for version {}", version);
     }
 }
@@ -493,7 +539,7 @@ fn show_about_dialog(app: &AppHandle) {
     let version = env!("CARGO_PKG_VERSION");
     let build_date = option_env!("BUILD_DATE").unwrap_or("Unknown");
     let rust_version = option_env!("RUSTC_VERSION").unwrap_or("Unknown");
-    
+
     let message = format!(
         "AutoDev-AI Neural Bridge Platform\\n\\n\
         Version: {}\\n\
@@ -529,9 +575,7 @@ fn show_about_dialog(app: &AppHandle) {
             }}
             console.log("About dialog shown for AutoDev-AI v{}");
             "#,
-            message,
-            message,
-            version
+            message, message, version
         );
         let _ = window.eval(&js_code);
     }
@@ -578,7 +622,7 @@ pub async fn toggle_menu_visibility(_app: AppHandle, _visible: bool) -> Result<(
 #[tauri::command]
 pub async fn get_menu_info(_app: AppHandle) -> Result<serde_json::Value, String> {
     let mut shortcuts = HashMap::new();
-    
+
     // File menu shortcuts
     shortcuts.insert("new_file", "CmdOrCtrl+N");
     shortcuts.insert("open_file", "CmdOrCtrl+O");
@@ -588,7 +632,7 @@ pub async fn get_menu_info(_app: AppHandle) -> Result<serde_json::Value, String>
     shortcuts.insert("close_window", "CmdOrCtrl+W");
     shortcuts.insert("settings", "CmdOrCtrl+,");
     shortcuts.insert("quit", "CmdOrCtrl+Q");
-    
+
     // View menu shortcuts
     shortcuts.insert("reload", "CmdOrCtrl+R");
     shortcuts.insert("force_reload", "CmdOrCtrl+Shift+R");
@@ -599,7 +643,7 @@ pub async fn get_menu_info(_app: AppHandle) -> Result<serde_json::Value, String>
     shortcuts.insert("minimize", "CmdOrCtrl+M");
     shortcuts.insert("toggle_devtools", "F12");
     shortcuts.insert("console", "CmdOrCtrl+Alt+I");
-    
+
     // Help menu shortcuts
     shortcuts.insert("documentation", "F1");
     shortcuts.insert("keyboard_shortcuts", "CmdOrCtrl+/");
@@ -634,9 +678,9 @@ pub async fn get_menu_info(_app: AppHandle) -> Result<serde_json::Value, String>
 #[tauri::command]
 pub async fn trigger_menu_action(app: AppHandle, action_id: String) -> Result<(), String> {
     info!("Programmatically triggering menu action: {}", action_id);
-    
+
     let window = app.webview_windows().values().next().cloned();
-    
+
     // Handle the action directly without creating a mock event
     match action_id.as_str() {
         "new_file" => handle_new_file(&app, window.as_ref()),
@@ -655,7 +699,9 @@ pub async fn trigger_menu_action(app: AppHandle, action_id: String) -> Result<()
         "zoom_out" => handle_zoom_change(window.as_ref(), 0.9),
         "zoom_reset" => {
             if let Some(ref window) = window {
-                let _ = window.eval("document.body.style.zoom = '1'; localStorage.setItem('zoom-level', '1');");
+                let _ = window.eval(
+                    "document.body.style.zoom = '1'; localStorage.setItem('zoom-level', '1');",
+                );
             }
         }
         "fullscreen" => handle_fullscreen_toggle(window.as_ref()),
@@ -669,7 +715,7 @@ pub async fn trigger_menu_action(app: AppHandle, action_id: String) -> Result<()
         "keyboard_shortcuts" => show_keyboard_shortcuts_dialog(&app),
         _ => return Err(format!("Unknown action: {}", action_id)),
     }
-    
+
     Ok(())
 }
 
@@ -683,7 +729,7 @@ pub async fn get_zoom_level(app: AppHandle) -> Result<f64, String> {
                 return parseFloat(localStorage.getItem('zoom-level') || '1.0');
             })()
         "#;
-        
+
         // In a real implementation, we would use evaluate_script to get the result
         // For now, return default
         Ok(1.0)

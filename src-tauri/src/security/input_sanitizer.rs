@@ -44,12 +44,12 @@ impl Default for SanitizationConfig {
             Regex::new(r"<script[\s\S]*?</script>").unwrap(), // Script tags
             Regex::new(r"javascript:").unwrap(),              // JavaScript URLs
             Regex::new(r"data:text/html").unwrap(),           // Data URLs with HTML
-            Regex::new(r"eval\s*\(").unwrap(),               // eval() calls
-            Regex::new(r"setTimeout\s*\(").unwrap(),         // setTimeout calls
-            Regex::new(r"setInterval\s*\(").unwrap(),        // setInterval calls
-            Regex::new(r"Function\s*\(").unwrap(),           // Function constructor
-            Regex::new(r"\.\.[\\/]").unwrap(),               // Path traversal
-            Regex::new(r"(rm\s+-rf|sudo\s+rm)").unwrap(),   // Dangerous commands
+            Regex::new(r"eval\s*\(").unwrap(),                // eval() calls
+            Regex::new(r"setTimeout\s*\(").unwrap(),          // setTimeout calls
+            Regex::new(r"setInterval\s*\(").unwrap(),         // setInterval calls
+            Regex::new(r"Function\s*\(").unwrap(),            // Function constructor
+            Regex::new(r"\.\.[\\/]").unwrap(),                // Path traversal
+            Regex::new(r"(rm\s+-rf|sudo\s+rm)").unwrap(),     // Dangerous commands
         ];
 
         Self {
@@ -119,7 +119,10 @@ impl InputSanitizer {
         }
 
         // Check for binary data or non-printable characters
-        if !input.chars().all(|c| c.is_ascii() && (c.is_ascii_graphic() || c.is_ascii_whitespace())) {
+        if !input
+            .chars()
+            .all(|c| c.is_ascii() && (c.is_ascii_graphic() || c.is_ascii_whitespace()))
+        {
             return ValidationResult::Invalid {
                 reason: "Input contains non-printable or non-ASCII characters".to_string(),
                 code: 1003,
@@ -215,17 +218,25 @@ impl InputSanitizer {
     }
 
     /// Validate JSON input structure
-    pub fn validate_json_structure(&self, value: &serde_json::Value, depth: usize) -> ValidationResult {
+    pub fn validate_json_structure(
+        &self,
+        value: &serde_json::Value,
+        depth: usize,
+    ) -> ValidationResult {
         if depth > self.config.max_object_depth {
             return ValidationResult::Invalid {
-                reason: format!("JSON depth {} exceeds maximum {}", depth, self.config.max_object_depth),
+                reason: format!(
+                    "JSON depth {} exceeds maximum {}",
+                    depth, self.config.max_object_depth
+                ),
                 code: 1011,
             };
         }
 
         match value {
             serde_json::Value::Object(obj) => {
-                if obj.len() > 100 { // Reasonable limit for object properties
+                if obj.len() > 100 {
+                    // Reasonable limit for object properties
                     return ValidationResult::Invalid {
                         reason: "JSON object has too many properties".to_string(),
                         code: 1012,
@@ -237,7 +248,9 @@ impl InputSanitizer {
                         return ValidationResult::Invalid { reason, code };
                     }
                     // Recursively validate values
-                    if let ValidationResult::Invalid { reason, code } = self.validate_json_structure(val, depth + 1) {
+                    if let ValidationResult::Invalid { reason, code } =
+                        self.validate_json_structure(val, depth + 1)
+                    {
                         return ValidationResult::Invalid { reason, code };
                     }
                 }
@@ -245,12 +258,18 @@ impl InputSanitizer {
             serde_json::Value::Array(arr) => {
                 if arr.len() > self.config.max_array_length {
                     return ValidationResult::Invalid {
-                        reason: format!("Array length {} exceeds maximum {}", arr.len(), self.config.max_array_length),
+                        reason: format!(
+                            "Array length {} exceeds maximum {}",
+                            arr.len(),
+                            self.config.max_array_length
+                        ),
                         code: 1013,
                     };
                 }
                 for item in arr {
-                    if let ValidationResult::Invalid { reason, code } = self.validate_json_structure(item, depth + 1) {
+                    if let ValidationResult::Invalid { reason, code } =
+                        self.validate_json_structure(item, depth + 1)
+                    {
                         return ValidationResult::Invalid { reason, code };
                     }
                 }
@@ -282,8 +301,8 @@ impl InputSanitizer {
     /// Sanitize SQL input (prevent SQL injection)
     pub fn sanitize_sql_input(&self, input: &str) -> ValidationResult {
         let sql_keywords = [
-            "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER",
-            "EXEC", "EXECUTE", "UNION", "SCRIPT", "--", "/*", "*/", "xp_", "sp_",
+            "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "EXEC", "EXECUTE",
+            "UNION", "SCRIPT", "--", "/*", "*/", "xp_", "sp_",
         ];
 
         let input_upper = input.to_uppercase();
@@ -298,11 +317,11 @@ impl InputSanitizer {
 
         // Check for SQL injection patterns
         let sql_patterns = [
-            r"'[\s]*;",       // Quote followed by semicolon
-            r"'[\s]*\|\|",    // Quote followed by OR operator
-            r"'[\s]*OR[\s]",  // Quote followed by OR
-            r"'[\s]*AND[\s]", // Quote followed by AND
-            r"\bOR\b[\s]*\d+[\s]*=[\s]*\d+", // OR 1=1 pattern
+            r"'[\s]*;",                       // Quote followed by semicolon
+            r"'[\s]*\|\|",                    // Quote followed by OR operator
+            r"'[\s]*OR[\s]",                  // Quote followed by OR
+            r"'[\s]*AND[\s]",                 // Quote followed by AND
+            r"\bOR\b[\s]*\d+[\s]*=[\s]*\d+",  // OR 1=1 pattern
             r"\bAND\b[\s]*\d+[\s]*=[\s]*\d+", // AND 1=1 pattern
         ];
 
@@ -324,10 +343,12 @@ impl InputSanitizer {
     pub fn validate_email(&self, email: &str) -> ValidationResult {
         let email_regex = match Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$") {
             Ok(regex) => regex,
-            Err(_) => return ValidationResult::Invalid {
-                reason: "Internal regex error".to_string(),
-                code: 1016,
-            },
+            Err(_) => {
+                return ValidationResult::Invalid {
+                    reason: "Internal regex error".to_string(),
+                    code: 1016,
+                }
+            }
         };
 
         if email_regex.is_match(email) {
@@ -341,7 +362,12 @@ impl InputSanitizer {
     }
 
     /// Validate numeric input within range
-    pub fn validate_number(&self, num: f64, min: Option<f64>, max: Option<f64>) -> ValidationResult {
+    pub fn validate_number(
+        &self,
+        num: f64,
+        min: Option<f64>,
+        max: Option<f64>,
+    ) -> ValidationResult {
         if let Some(min_val) = min {
             if num < min_val {
                 return ValidationResult::Invalid {
@@ -395,18 +421,21 @@ mod tests {
         let sanitizer = InputSanitizer::default();
 
         // Test normal string
-        assert_eq!(sanitizer.sanitize_string("normal text"), ValidationResult::Valid);
+        assert_eq!(
+            sanitizer.sanitize_string("normal text"),
+            ValidationResult::Valid
+        );
 
         // Test HTML characters
         match sanitizer.sanitize_string("<script>alert('xss')</script>") {
-            ValidationResult::Invalid { code: 1002, .. } => {}, // Should be blocked by pattern
+            ValidationResult::Invalid { code: 1002, .. } => {} // Should be blocked by pattern
             _ => panic!("Should block script tags"),
         }
 
         // Test length limit
         let long_string = "a".repeat(20000);
         match sanitizer.sanitize_string(&long_string) {
-            ValidationResult::Invalid { code: 1001, .. } => {},
+            ValidationResult::Invalid { code: 1001, .. } => {}
             _ => panic!("Should reject overly long strings"),
         }
     }
@@ -416,18 +445,24 @@ mod tests {
         let sanitizer = InputSanitizer::default();
 
         // Valid URLs
-        assert_eq!(sanitizer.validate_url("https://example.com"), ValidationResult::Valid);
-        assert_eq!(sanitizer.validate_url("http://localhost:8080"), ValidationResult::Valid);
+        assert_eq!(
+            sanitizer.validate_url("https://example.com"),
+            ValidationResult::Valid
+        );
+        assert_eq!(
+            sanitizer.validate_url("http://localhost:8080"),
+            ValidationResult::Valid
+        );
 
         // Invalid scheme
         match sanitizer.validate_url("javascript:alert('xss')") {
-            ValidationResult::Invalid { code: 1004, .. } => {},
+            ValidationResult::Invalid { code: 1004, .. } => {}
             _ => panic!("Should reject javascript: URLs"),
         }
 
         // Invalid format
         match sanitizer.validate_url("not-a-url") {
-            ValidationResult::Invalid { code: 1005, .. } => {},
+            ValidationResult::Invalid { code: 1005, .. } => {}
             _ => panic!("Should reject malformed URLs"),
         }
     }
@@ -437,18 +472,24 @@ mod tests {
         let sanitizer = InputSanitizer::default();
 
         // Valid paths
-        assert_eq!(sanitizer.validate_file_path("./file.txt"), ValidationResult::Valid);
-        assert_eq!(sanitizer.validate_file_path("folder/file.txt"), ValidationResult::Valid);
+        assert_eq!(
+            sanitizer.validate_file_path("./file.txt"),
+            ValidationResult::Valid
+        );
+        assert_eq!(
+            sanitizer.validate_file_path("folder/file.txt"),
+            ValidationResult::Valid
+        );
 
         // Path traversal
         match sanitizer.validate_file_path("../../../etc/passwd") {
-            ValidationResult::Invalid { code: 1006, .. } => {},
+            ValidationResult::Invalid { code: 1006, .. } => {}
             _ => panic!("Should reject path traversal"),
         }
 
         // Dangerous extensions
         match sanitizer.validate_file_path("malware.exe") {
-            ValidationResult::Invalid { code: 1008, .. } => {},
+            ValidationResult::Invalid { code: 1008, .. } => {}
             _ => panic!("Should reject executable files"),
         }
     }
@@ -458,16 +499,19 @@ mod tests {
         let sanitizer = InputSanitizer::default();
 
         // Safe input
-        assert_eq!(sanitizer.sanitize_sql_input("username123"), ValidationResult::Valid);
+        assert_eq!(
+            sanitizer.sanitize_sql_input("username123"),
+            ValidationResult::Valid
+        );
 
         // SQL injection attempts
         match sanitizer.sanitize_sql_input("'; DROP TABLE users; --") {
-            ValidationResult::Invalid { code: 1014, .. } => {},
+            ValidationResult::Invalid { code: 1014, .. } => {}
             _ => panic!("Should detect SQL injection"),
         }
 
         match sanitizer.sanitize_sql_input("' OR 1=1 --") {
-            ValidationResult::Invalid { .. } => {},
+            ValidationResult::Invalid { .. } => {}
             _ => panic!("Should detect OR injection"),
         }
     }
@@ -482,7 +526,10 @@ mod tests {
             "value": 123,
             "nested": {"key": "value"}
         });
-        assert_eq!(sanitizer.validate_json_structure(&valid_json, 0), ValidationResult::Valid);
+        assert_eq!(
+            sanitizer.validate_json_structure(&valid_json, 0),
+            ValidationResult::Valid
+        );
 
         // Too deep nesting (create 15 levels)
         let mut deep_json = serde_json::json!("value");
@@ -490,7 +537,7 @@ mod tests {
             deep_json = serde_json::json!({"nested": deep_json});
         }
         match sanitizer.validate_json_structure(&deep_json, 0) {
-            ValidationResult::Invalid { code: 1011, .. } => {},
+            ValidationResult::Invalid { code: 1011, .. } => {}
             _ => panic!("Should reject deeply nested JSON"),
         }
     }

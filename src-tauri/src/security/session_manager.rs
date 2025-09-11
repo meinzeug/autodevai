@@ -13,9 +13,9 @@ use uuid::Uuid;
 /// Session security level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SessionSecurityLevel {
-    Basic,     // Standard session security
-    Enhanced,  // Additional validation checks
-    Strict,    // Maximum security with frequent revalidation
+    Basic,      // Standard session security
+    Enhanced,   // Additional validation checks
+    Strict,     // Maximum security with frequent revalidation
     Restricted, // Limited functionality session
 }
 
@@ -142,14 +142,13 @@ impl SecureSessionManager {
     ) -> Result<SessionSecurityContext, String> {
         let session_id = Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         // Generate secure session token
         let session_token = self.generate_secure_token(&session_id, &user_id);
-        
+
         // Generate device fingerprint
-        let device_fingerprint = self.generate_device_fingerprint(
-            &ip_address, &user_agent, &window_label
-        );
+        let device_fingerprint =
+            self.generate_device_fingerprint(&ip_address, &user_agent, &window_label);
 
         // Set default permissions
         let mut permissions = HashSet::new();
@@ -164,9 +163,8 @@ impl SecureSessionManager {
         }
 
         // Calculate initial risk score
-        let risk_score = self.calculate_initial_risk_score(
-            &ip_address, &user_agent, security_level
-        );
+        let risk_score =
+            self.calculate_initial_risk_score(&ip_address, &user_agent, security_level);
 
         let session = SessionSecurityContext {
             session_id: session_id.clone(),
@@ -197,27 +195,43 @@ impl SecureSessionManager {
         };
 
         // Log session creation
-        self.log_session_activity(&session_id, "session_created", HashMap::from([
-            ("user_id".to_string(), serde_json::Value::String(
-                user_id.unwrap_or("anonymous".to_string())
-            )),
-            ("security_level".to_string(), serde_json::Value::String(
-                format!("{:?}", security_level)
-            )),
-            ("risk_score".to_string(), serde_json::Value::Number(risk_score.into())),
-        ]), 10);
+        self.log_session_activity(
+            &session_id,
+            "session_created",
+            HashMap::from([
+                (
+                    "user_id".to_string(),
+                    serde_json::Value::String(user_id.unwrap_or("anonymous".to_string())),
+                ),
+                (
+                    "security_level".to_string(),
+                    serde_json::Value::String(format!("{:?}", security_level)),
+                ),
+                (
+                    "risk_score".to_string(),
+                    serde_json::Value::Number(risk_score.into()),
+                ),
+            ]),
+            10,
+        );
 
         self.sessions.insert(session_id.clone(), session.clone());
         Ok(session)
     }
 
     /// Validate session and return current context
-    pub fn validate_session(&mut self, session_id: &str, current_ip: Option<&str>) -> SessionValidation {
+    pub fn validate_session(
+        &mut self,
+        session_id: &str,
+        current_ip: Option<&str>,
+    ) -> SessionValidation {
         let session = match self.sessions.get_mut(session_id) {
             Some(session) => session,
-            None => return SessionValidation::Invalid { 
-                reason: "Session not found".to_string() 
-            },
+            None => {
+                return SessionValidation::Invalid {
+                    reason: "Session not found".to_string(),
+                }
+            }
         };
 
         let now = Utc::now();
@@ -231,22 +245,28 @@ impl SecureSessionManager {
         // Check authentication state
         match session.authentication_state {
             AuthenticationState::Expired => return SessionValidation::Expired,
-            AuthenticationState::Revoked => return SessionValidation::Invalid { 
-                reason: "Session revoked".to_string() 
-            },
+            AuthenticationState::Revoked => {
+                return SessionValidation::Invalid {
+                    reason: "Session revoked".to_string(),
+                }
+            }
             AuthenticationState::Suspended => return SessionValidation::Suspended,
             AuthenticationState::TwoFactorPending => return SessionValidation::RequiresMFA,
-            _ => {},
+            _ => {}
         }
 
         // Check inactivity timeout
         let inactive_duration = now - session.last_activity;
         if inactive_duration > Duration::minutes(self.config.max_inactive_minutes) {
-            self.log_session_activity(session_id, "session_inactive_timeout", HashMap::from([
-                ("inactive_minutes".to_string(), serde_json::Value::Number(
-                    inactive_duration.num_minutes().into()
-                )),
-            ]), 30);
+            self.log_session_activity(
+                session_id,
+                "session_inactive_timeout",
+                HashMap::from([(
+                    "inactive_minutes".to_string(),
+                    serde_json::Value::Number(inactive_duration.num_minutes().into()),
+                )]),
+                30,
+            );
             session.authentication_state = AuthenticationState::Expired;
             return SessionValidation::Expired;
         }
@@ -255,16 +275,27 @@ impl SecureSessionManager {
         if self.config.require_ip_validation {
             if let (Some(session_ip), Some(current_ip)) = (&session.ip_address, current_ip) {
                 if session_ip != current_ip {
-                    self.log_session_activity(session_id, "ip_mismatch", HashMap::from([
-                        ("session_ip".to_string(), serde_json::Value::String(session_ip.clone())),
-                        ("current_ip".to_string(), serde_json::Value::String(current_ip.to_string())),
-                    ]), 60);
-                    
+                    self.log_session_activity(
+                        session_id,
+                        "ip_mismatch",
+                        HashMap::from([
+                            (
+                                "session_ip".to_string(),
+                                serde_json::Value::String(session_ip.clone()),
+                            ),
+                            (
+                                "current_ip".to_string(),
+                                serde_json::Value::String(current_ip.to_string()),
+                            ),
+                        ]),
+                        60,
+                    );
+
                     // Increase risk score for IP changes
                     session.risk_score = (session.risk_score + 20).min(100);
-                    
-                    return SessionValidation::Invalid { 
-                        reason: "IP address validation failed".to_string() 
+
+                    return SessionValidation::Invalid {
+                        reason: "IP address validation failed".to_string(),
                     };
                 }
             }
@@ -289,24 +320,27 @@ impl SecureSessionManager {
 
     /// Refresh session with new token
     pub fn refresh_session(&mut self, session_id: &str) -> Result<String, String> {
-        let session = self.sessions.get_mut(session_id)
+        let session = self
+            .sessions
+            .get_mut(session_id)
             .ok_or("Session not found")?;
 
         // Generate new token
         let new_token = self.generate_secure_token(session_id, &session.user_id);
-        
+
         // Blacklist old token
-        self.blacklisted_tokens.insert(session.session_token.clone());
-        
+        self.blacklisted_tokens
+            .insert(session.session_token.clone());
+
         // Update session
         session.session_token = new_token.clone();
         session.last_activity = Utc::now();
-        
+
         // Extend expiry
         session.expires_at = Utc::now() + Duration::hours(self.config.default_expiry_hours);
 
         self.log_session_activity(session_id, "session_refreshed", HashMap::new(), 5);
-        
+
         Ok(new_token)
     }
 
@@ -315,16 +349,33 @@ impl SecureSessionManager {
         if let Some(session) = self.sessions.get_mut(session_id) {
             let old_permissions = session.permissions.clone();
             session.permissions = permissions.clone();
-            
-            self.log_session_activity(session_id, "permissions_updated", HashMap::from([
-                ("old_permissions".to_string(), serde_json::Value::Array(
-                    old_permissions.into_iter().map(serde_json::Value::String).collect()
-                )),
-                ("new_permissions".to_string(), serde_json::Value::Array(
-                    permissions.into_iter().map(serde_json::Value::String).collect()
-                )),
-            ]), 15);
-            
+
+            self.log_session_activity(
+                session_id,
+                "permissions_updated",
+                HashMap::from([
+                    (
+                        "old_permissions".to_string(),
+                        serde_json::Value::Array(
+                            old_permissions
+                                .into_iter()
+                                .map(serde_json::Value::String)
+                                .collect(),
+                        ),
+                    ),
+                    (
+                        "new_permissions".to_string(),
+                        serde_json::Value::Array(
+                            permissions
+                                .into_iter()
+                                .map(serde_json::Value::String)
+                                .collect(),
+                        ),
+                    ),
+                ]),
+                15,
+            );
+
             true
         } else {
             false
@@ -336,20 +387,37 @@ impl SecureSessionManager {
         if let Some(session) = self.sessions.get_mut(session_id) {
             session.failed_attempts += 1;
             session.risk_score = (session.risk_score + 15).min(100);
-            
-            self.log_session_activity(session_id, "failed_attempt", HashMap::from([
-                ("total_attempts".to_string(), serde_json::Value::Number(session.failed_attempts.into())),
-                ("risk_score".to_string(), serde_json::Value::Number(session.risk_score.into())),
-            ]), 40);
+
+            self.log_session_activity(
+                session_id,
+                "failed_attempt",
+                HashMap::from([
+                    (
+                        "total_attempts".to_string(),
+                        serde_json::Value::Number(session.failed_attempts.into()),
+                    ),
+                    (
+                        "risk_score".to_string(),
+                        serde_json::Value::Number(session.risk_score.into()),
+                    ),
+                ]),
+                40,
+            );
 
             // Suspend session after too many failures
             if session.failed_attempts >= self.config.max_failed_attempts {
                 session.authentication_state = AuthenticationState::Suspended;
-                self.log_session_activity(session_id, "session_suspended", HashMap::from([
-                    ("reason".to_string(), serde_json::Value::String("too_many_failed_attempts".to_string())),
-                ]), 80);
+                self.log_session_activity(
+                    session_id,
+                    "session_suspended",
+                    HashMap::from([(
+                        "reason".to_string(),
+                        serde_json::Value::String("too_many_failed_attempts".to_string()),
+                    )]),
+                    80,
+                );
             }
-            
+
             true
         } else {
             false
@@ -373,7 +441,7 @@ impl SecureSessionManager {
             session.mfa_verified = true;
             session.authentication_state = AuthenticationState::TwoFactorAuthenticated;
             session.risk_score = session.risk_score.saturating_sub(20); // Reduce risk after MFA
-            
+
             self.log_session_activity(session_id, "mfa_verified", HashMap::new(), 5);
             true
         } else {
@@ -389,12 +457,12 @@ impl SecureSessionManager {
             if let Some(refresh_token) = session.refresh_token {
                 self.blacklisted_tokens.insert(refresh_token);
             }
-            
+
             self.log_session_activity(session_id, "session_terminated", HashMap::new(), 10);
-            
+
             // Keep activity log for audit purposes
             // self.session_activities.remove(session_id); // Don't remove for audit trail
-            
+
             true
         } else {
             false
@@ -415,12 +483,12 @@ impl SecureSessionManager {
             hasher.update(uid.as_bytes());
         }
         hasher.update(Utc::now().timestamp().to_be_bytes());
-        
+
         // Add some randomness
         let mut rng = rand::thread_rng();
         let random_bytes: [u8; 16] = rng.gen();
         hasher.update(&random_bytes);
-        
+
         let result = hasher.finalize();
         hex::encode(result)
     }
@@ -432,7 +500,7 @@ impl SecureSessionManager {
         hasher.update(&self.token_salt);
         hasher.update(session_id.as_bytes());
         hasher.update(Utc::now().timestamp().to_be_bytes());
-        
+
         let result = hasher.finalize();
         hex::encode(result)
     }
@@ -445,7 +513,7 @@ impl SecureSessionManager {
         window_label: &str,
     ) -> String {
         let mut hasher = Sha256::new();
-        
+
         if let Some(ip) = ip_address {
             hasher.update(ip.as_bytes());
         }
@@ -453,7 +521,7 @@ impl SecureSessionManager {
             hasher.update(ua.as_bytes());
         }
         hasher.update(window_label.as_bytes());
-        
+
         let result = hasher.finalize();
         hex::encode(&result[..16]) // Use first 16 bytes for shorter fingerprint
     }
@@ -511,8 +579,7 @@ impl SecureSessionManager {
             .sessions
             .iter()
             .filter(|(_, session)| {
-                now > session.expires_at || 
-                (now - session.last_activity) > Duration::hours(24)
+                now > session.expires_at || (now - session.last_activity) > Duration::hours(24)
             })
             .map(|(id, _)| id.clone())
             .collect();
@@ -537,12 +604,12 @@ impl SecureSessionManager {
     /// Get session statistics
     pub fn get_statistics(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
-        
+
         stats.insert(
             "active_sessions".to_string(),
             serde_json::Value::Number(self.sessions.len().into()),
         );
-        
+
         stats.insert(
             "blacklisted_tokens".to_string(),
             serde_json::Value::Number(self.blacklisted_tokens.len().into()),
@@ -566,7 +633,11 @@ impl SecureSessionManager {
 
         // Average risk score
         let avg_risk = if !self.sessions.is_empty() {
-            self.sessions.values().map(|s| s.risk_score as u64).sum::<u64>() / self.sessions.len() as u64
+            self.sessions
+                .values()
+                .map(|s| s.risk_score as u64)
+                .sum::<u64>()
+                / self.sessions.len() as u64
         } else {
             0
         };
@@ -602,16 +673,21 @@ mod tests {
     #[test]
     fn test_session_creation() {
         let mut manager = SecureSessionManager::new();
-        
-        let session = manager.create_session(
-            "main".to_string(),
-            Some("user123".to_string()),
-            Some("192.168.1.1".to_string()),
-            Some("TestAgent/1.0".to_string()),
-            SessionSecurityLevel::Enhanced,
-        ).unwrap();
 
-        assert_eq!(session.authentication_state, AuthenticationState::Authenticated);
+        let session = manager
+            .create_session(
+                "main".to_string(),
+                Some("user123".to_string()),
+                Some("192.168.1.1".to_string()),
+                Some("TestAgent/1.0".to_string()),
+                SessionSecurityLevel::Enhanced,
+            )
+            .unwrap();
+
+        assert_eq!(
+            session.authentication_state,
+            AuthenticationState::Authenticated
+        );
         assert_eq!(session.security_level, SessionSecurityLevel::Enhanced);
         assert!(session.permissions.contains("user.authenticated"));
         assert!(session.refresh_token.is_some());
@@ -620,24 +696,29 @@ mod tests {
     #[test]
     fn test_session_validation() {
         let mut manager = SecureSessionManager::new();
-        
-        let session = manager.create_session(
-            "test".to_string(),
-            None,
-            None,
-            None,
-            SessionSecurityLevel::Basic,
-        ).unwrap();
+
+        let session = manager
+            .create_session(
+                "test".to_string(),
+                None,
+                None,
+                None,
+                SessionSecurityLevel::Basic,
+            )
+            .unwrap();
 
         let session_id = session.session_id.clone();
-        
+
         // Valid session
-        assert_eq!(manager.validate_session(&session_id, None), SessionValidation::Valid);
-        
+        assert_eq!(
+            manager.validate_session(&session_id, None),
+            SessionValidation::Valid
+        );
+
         // Terminate and check invalid
         manager.terminate_session(&session_id);
         match manager.validate_session(&session_id, None) {
-            SessionValidation::Invalid { .. } => {},
+            SessionValidation::Invalid { .. } => {}
             _ => panic!("Should be invalid after termination"),
         }
     }
@@ -646,42 +727,47 @@ mod tests {
     fn test_failed_attempts() {
         let mut manager = SecureSessionManager::new();
         manager.config.max_failed_attempts = 3;
-        
-        let session = manager.create_session(
-            "test".to_string(),
-            Some("user".to_string()),
-            None,
-            None,
-            SessionSecurityLevel::Basic,
-        ).unwrap();
+
+        let session = manager
+            .create_session(
+                "test".to_string(),
+                Some("user".to_string()),
+                None,
+                None,
+                SessionSecurityLevel::Basic,
+            )
+            .unwrap();
 
         let session_id = session.session_id;
-        
+
         // Record failed attempts
         for _ in 0..4 {
             manager.record_failed_attempt(&session_id);
         }
-        
+
         // Session should be suspended
         let session = manager.get_session(&session_id).unwrap();
         assert_eq!(session.authentication_state, AuthenticationState::Suspended);
-        
+
         // Validation should return suspended
-        assert_eq!(manager.validate_session(&session_id, None), SessionValidation::Suspended);
+        assert_eq!(
+            manager.validate_session(&session_id, None),
+            SessionValidation::Suspended
+        );
     }
 
     #[test]
     fn test_token_generation() {
         let manager = SecureSessionManager::new();
-        
+
         let token1 = manager.generate_secure_token("session1", &Some("user1".to_string()));
         let token2 = manager.generate_secure_token("session2", &Some("user2".to_string()));
         let token3 = manager.generate_secure_token("session1", &Some("user1".to_string()));
-        
+
         // Tokens should be different
         assert_ne!(token1, token2);
         assert_ne!(token1, token3); // Different due to timestamp
-        
+
         // Tokens should be hex encoded (64 chars for SHA256)
         assert_eq!(token1.len(), 64);
         assert!(token1.chars().all(|c| c.is_ascii_hexdigit()));
@@ -690,27 +776,38 @@ mod tests {
     #[test]
     fn test_mfa_workflow() {
         let mut manager = SecureSessionManager::new();
-        
-        let session = manager.create_session(
-            "test".to_string(),
-            Some("user".to_string()),
-            None,
-            None,
-            SessionSecurityLevel::Enhanced,
-        ).unwrap();
+
+        let session = manager
+            .create_session(
+                "test".to_string(),
+                Some("user".to_string()),
+                None,
+                None,
+                SessionSecurityLevel::Enhanced,
+            )
+            .unwrap();
 
         let session_id = session.session_id;
-        
+
         // Enable MFA
         assert!(manager.enable_mfa(&session_id));
-        assert_eq!(manager.validate_session(&session_id, None), SessionValidation::RequiresMFA);
-        
+        assert_eq!(
+            manager.validate_session(&session_id, None),
+            SessionValidation::RequiresMFA
+        );
+
         // Verify MFA
         assert!(manager.verify_mfa(&session_id));
-        assert_eq!(manager.validate_session(&session_id, None), SessionValidation::Valid);
-        
+        assert_eq!(
+            manager.validate_session(&session_id, None),
+            SessionValidation::Valid
+        );
+
         let session = manager.get_session(&session_id).unwrap();
-        assert_eq!(session.authentication_state, AuthenticationState::TwoFactorAuthenticated);
+        assert_eq!(
+            session.authentication_state,
+            AuthenticationState::TwoFactorAuthenticated
+        );
         assert!(session.mfa_verified);
     }
 }

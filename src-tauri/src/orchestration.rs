@@ -1,5 +1,5 @@
 //! AI Integration Orchestration Service
-//! 
+//!
 //! Implements Claude-Flow swarm integration, SPARC methodology modes,
 //! hive-mind coordination, and memory layer persistence according to
 //! AutoDev-AI roadmap steps 327-330.
@@ -19,7 +19,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,7 +51,7 @@ pub enum SwarmTopology {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CoordinationStrategy {
     Balanced,
-    Specialized, 
+    Specialized,
     Adaptive,
     CollectiveIntelligence,
 }
@@ -253,7 +253,7 @@ impl ClaudeFlowService {
 
         // Build Claude Flow command with integrated orchestration
         let mut cmd = Command::new("npx");
-        
+
         // Determine SPARC mode
         let sparc_mode = match request.sparc_mode {
             Some(SparcMode::Specification) => "spec-pseudocode",
@@ -265,9 +265,9 @@ impl ClaudeFlowService {
             Some(SparcMode::Integration) => "integration",
             None => "coder",
         };
-        
+
         cmd.args(["claude-flow@alpha", "sparc", "run", sparc_mode]);
-        
+
         // Add swarm coordination hooks
         if swarm_context.is_some() {
             cmd.env("CLAUDE_FLOW_SWARM_ENABLED", "true");
@@ -319,7 +319,7 @@ impl ClaudeFlowService {
         }
 
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         // Collect swarm metrics if swarm was used
         let swarm_metrics = if let Some(_swarm_ctx) = swarm_context {
             Some(self.collect_swarm_metrics(&request.id).await?)
@@ -391,10 +391,13 @@ impl ClaudeFlowService {
 
     /// Initialize swarm coordination for task execution
     async fn initialize_swarm(&self, config: &SwarmConfig, session_id: &str) -> Result<String> {
-        info!("Initializing swarm with topology: {:?}, max_agents: {}", config.topology, config.max_agents);
-        
+        info!(
+            "Initializing swarm with topology: {:?}, max_agents: {}",
+            config.topology, config.max_agents
+        );
+
         let swarm_id = format!("swarm_{}_{}", session_id, Uuid::new_v4().simple());
-        
+
         // Execute swarm initialization via Claude-Flow MCP
         let topology_str = match config.topology {
             SwarmTopology::Hierarchical => "hierarchical",
@@ -403,7 +406,7 @@ impl ClaudeFlowService {
             SwarmTopology::Star => "star",
             SwarmTopology::Adaptive => "mesh", // Default to mesh for adaptive
         };
-        
+
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "swarm", "init", topology_str])
             .env("MAX_AGENTS", config.max_agents.to_string())
@@ -411,18 +414,24 @@ impl ClaudeFlowService {
             .env("MEMORY_PERSISTENCE", config.memory_persistence.to_string())
             .output()
             .await?;
-            
+
         if output.status.success() {
             Ok(swarm_id)
         } else {
-            Err(anyhow::anyhow!("Failed to initialize swarm: {}", String::from_utf8_lossy(&output.stderr)))
+            Err(anyhow::anyhow!(
+                "Failed to initialize swarm: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
-    
+
     /// Process hive-mind coordination commands
     async fn process_hive_mind_command(&self, command: &HiveMindCommand) -> Result<()> {
-        info!("Processing hive-mind command: {:?} for agents: {:?}", command.command_type, command.target_agents);
-        
+        info!(
+            "Processing hive-mind command: {:?} for agents: {:?}",
+            command.command_type, command.target_agents
+        );
+
         let command_str = match command.command_type {
             HiveMindCommandType::TaskDistribution => "task-distribute",
             HiveMindCommandType::CollectiveDecision => "collective-decision",
@@ -431,26 +440,32 @@ impl ClaudeFlowService {
             HiveMindCommandType::ConsensusBuild => "consensus-build",
             HiveMindCommandType::AdaptiveResponse => "adaptive-response",
         };
-        
+
         let agents_json = serde_json::to_string(&command.target_agents)?;
         let payload_json = serde_json::to_string(&command.payload)?;
-        
+
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "hive", command_str])
             .env("HIVE_COMMAND_ID", &command.id)
             .env("TARGET_AGENTS", &agents_json)
-            .env("COORDINATION_LEVEL", format!("{:?}", command.coordination_level))
+            .env(
+                "COORDINATION_LEVEL",
+                format!("{:?}", command.coordination_level),
+            )
             .env("COMMAND_PAYLOAD", &payload_json)
             .output()
             .await?;
-            
+
         if !output.status.success() {
-            return Err(anyhow::anyhow!("Hive-mind command failed: {}", String::from_utf8_lossy(&output.stderr)));
+            return Err(anyhow::anyhow!(
+                "Hive-mind command failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Store data in persistent memory layer
     async fn store_memory(&self, key: &str, value: &str) -> Result<()> {
         let output = Command::new("npx")
@@ -460,14 +475,17 @@ impl ClaudeFlowService {
             .env("TTL", "86400") // 24 hours
             .output()
             .await?;
-            
+
         if output.status.success() {
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Memory store failed: {}", String::from_utf8_lossy(&output.stderr)))
+            Err(anyhow::anyhow!(
+                "Memory store failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
-    
+
     /// Retrieve data from persistent memory layer
     async fn retrieve_memory(&self, key: &str) -> Result<String> {
         let output = Command::new("npx")
@@ -475,34 +493,44 @@ impl ClaudeFlowService {
             .env("MEMORY_NAMESPACE", "autodev-ai")
             .output()
             .await?;
-            
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            Err(anyhow::anyhow!("Memory retrieve failed: {}", String::from_utf8_lossy(&output.stderr)))
+            Err(anyhow::anyhow!(
+                "Memory retrieve failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
-    
+
     /// Collect swarm performance metrics
     async fn collect_swarm_metrics(&self, session_id: &str) -> Result<SwarmMetrics> {
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "swarm", "metrics", session_id])
             .output()
             .await?;
-            
+
         if output.status.success() {
             let metrics_json = String::from_utf8_lossy(&output.stdout);
             let metrics: serde_json::Value = serde_json::from_str(&metrics_json)?;
-            
+
             Ok(SwarmMetrics {
                 active_agents: metrics["active_agents"].as_u64().unwrap_or(0) as u32,
                 tasks_completed: metrics["tasks_completed"].as_u64().unwrap_or(0),
-                avg_response_time: Duration::from_millis(metrics["avg_response_time_ms"].as_u64().unwrap_or(0)),
+                avg_response_time: Duration::from_millis(
+                    metrics["avg_response_time_ms"].as_u64().unwrap_or(0),
+                ),
                 coordination_efficiency: metrics["coordination_efficiency"].as_f64().unwrap_or(0.0),
-                collective_intelligence_score: metrics["collective_intelligence_score"].as_f64().unwrap_or(0.0),
+                collective_intelligence_score: metrics["collective_intelligence_score"]
+                    .as_f64()
+                    .unwrap_or(0.0),
             })
         } else {
-            Err(anyhow::anyhow!("Failed to collect swarm metrics: {}", String::from_utf8_lossy(&output.stderr)))
+            Err(anyhow::anyhow!(
+                "Failed to collect swarm metrics: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
@@ -767,8 +795,11 @@ impl OrchestrationService {
 
     /// Execute dual mode with integrated AI orchestration features
     pub async fn execute_dual_mode(&self, request: DualModeRequest) -> Result<DualModeResponse> {
-        info!("Starting dual mode execution with AI orchestration: {}", request.id);
-        
+        info!(
+            "Starting dual mode execution with AI orchestration: {}",
+            request.id
+        );
+
         // Create enhanced execution requests
         let base_prompt = request.command.clone();
 
@@ -810,9 +841,10 @@ impl OrchestrationService {
         let codex_response = codex_result.ok();
 
         // Collect swarm metrics and memory state
-        let swarm_metrics = claude_response.as_ref()
+        let swarm_metrics = claude_response
+            .as_ref()
             .and_then(|r| r.swarm_metrics.clone());
-            
+
         let memory_state = self.calculate_memory_state().await.ok();
 
         // Generate comparison and recommendation
@@ -821,8 +853,11 @@ impl OrchestrationService {
 
         Ok(DualModeResponse {
             id: request.id,
-            result: format!("AI Orchestration Complete - Claude: {}, Codex: {}", 
-                          claude_response.is_some(), codex_response.is_some()),
+            result: format!(
+                "AI Orchestration Complete - Claude: {}, Codex: {}",
+                claude_response.is_some(),
+                codex_response.is_some()
+            ),
             success: claude_response.is_some() || codex_response.is_some(),
             swarm_metrics,
             memory_state,
@@ -836,11 +871,11 @@ impl OrchestrationService {
             .env("MEMORY_NAMESPACE", "autodev-ai")
             .output()
             .await?;
-            
+
         if output.status.success() {
             let stats_json = String::from_utf8_lossy(&output.stdout);
             let stats: serde_json::Value = serde_json::from_str(&stats_json)?;
-            
+
             Ok(MemoryState {
                 total_entries: stats["total_entries"].as_u64().unwrap_or(0) as usize,
                 memory_usage: stats["memory_usage"].as_u64().unwrap_or(0),
@@ -856,7 +891,7 @@ impl OrchestrationService {
             })
         }
     }
-    
+
     fn analyze_results(
         &self,
         claude_result: &Option<ExecutionResponse>,
@@ -971,7 +1006,7 @@ impl OrchestrationService {
         if response.swarm_metrics.is_some() {
             score += 10.0; // Bonus for swarm coordination
         }
-        
+
         score += response.memory_operations.len() as f64 * 2.0; // Bonus for memory operations
 
         score.max(0.0)
@@ -991,7 +1026,7 @@ impl OrchestrationService {
 }
 
 /// Enhanced AI Orchestration Service with Phase 3 capabilities
-/// 
+///
 /// This service integrates all Phase 3 enhanced features:
 /// - Multi-model routing with OpenRouter
 /// - Advanced swarm coordination
@@ -1036,7 +1071,7 @@ impl Default for EnhancedOrchestrationConfig {
 }
 
 /// Enhanced orchestration capabilities marker
-/// 
+///
 /// This indicates that the system has been designed with Phase 3 enhanced
 /// orchestration capabilities including:
 /// - OpenRouter multi-model routing

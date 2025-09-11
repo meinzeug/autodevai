@@ -1,6 +1,6 @@
 //! Enhanced Rate Limiter
 //!
-//! Advanced rate limiting with sliding windows, adaptive limits, 
+//! Advanced rate limiting with sliding windows, adaptive limits,
 //! and comprehensive protection against abuse patterns.
 
 use serde::{Deserialize, Serialize};
@@ -99,13 +99,13 @@ pub enum RateLimitResult {
 pub struct EnhancedRateLimiter {
     // Global configuration
     global_config: RateLimitConfig,
-    
+
     // Per-endpoint configurations
     endpoint_configs: HashMap<String, RateLimitConfig>,
-    
+
     // Rate limiting state per key (session_id:endpoint)
     states: RwLock<HashMap<String, RateLimiterState>>,
-    
+
     // Global statistics
     stats: RwLock<RateLimitStats>,
 }
@@ -158,7 +158,9 @@ impl EnhancedRateLimiter {
         let config = self.get_config_for_endpoint(endpoint);
 
         let mut states = self.states.write().await;
-        let state = states.entry(key.clone()).or_insert_with(RateLimiterState::new);
+        let state = states
+            .entry(key.clone())
+            .or_insert_with(RateLimiterState::new);
 
         // Check if currently in penalty period
         if let Some(penalty_until) = state.penalty_until {
@@ -174,16 +176,20 @@ impl EnhancedRateLimiter {
 
         let result = match config.strategy {
             RateLimitStrategy::FixedWindow => {
-                self.check_fixed_window(state, &config, endpoint, session_id, risk_score).await
+                self.check_fixed_window(state, &config, endpoint, session_id, risk_score)
+                    .await
             }
             RateLimitStrategy::SlidingWindow => {
-                self.check_sliding_window(state, &config, endpoint, session_id, risk_score).await
+                self.check_sliding_window(state, &config, endpoint, session_id, risk_score)
+                    .await
             }
             RateLimitStrategy::TokenBucket => {
-                self.check_token_bucket(state, &config, endpoint, session_id, risk_score).await
+                self.check_token_bucket(state, &config, endpoint, session_id, risk_score)
+                    .await
             }
             RateLimitStrategy::Adaptive => {
-                self.check_adaptive(state, &config, endpoint, session_id, risk_score).await
+                self.check_adaptive(state, &config, endpoint, session_id, risk_score)
+                    .await
             }
         };
 
@@ -217,9 +223,11 @@ impl EnhancedRateLimiter {
         risk_score: u8,
     ) -> RateLimitResult {
         let now = Instant::now();
-        
+
         // Clean old requests (older than 1 minute for simplicity)
-        state.requests.retain(|req| now.duration_since(req.timestamp) < Duration::from_secs(60));
+        state
+            .requests
+            .retain(|req| now.duration_since(req.timestamp) < Duration::from_secs(60));
 
         // Count requests in current window
         let requests_this_minute = state.requests.len() as u32;
@@ -228,7 +236,10 @@ impl EnhancedRateLimiter {
         if requests_this_minute >= limit {
             RateLimitResult::Limited {
                 retry_after: Duration::from_secs(60),
-                reason: format!("Fixed window rate limit exceeded: {}/{}", requests_this_minute, limit),
+                reason: format!(
+                    "Fixed window rate limit exceeded: {}/{}",
+                    requests_this_minute, limit
+                ),
             }
         } else {
             // Allow request and record it
@@ -267,7 +278,9 @@ impl EnhancedRateLimiter {
         }
 
         // Check different time windows
-        let requests_last_second = state.requests.iter()
+        let requests_last_second = state
+            .requests
+            .iter()
             .filter(|req| now.duration_since(req.timestamp) < Duration::from_secs(1))
             .count() as u32;
 
@@ -282,12 +295,17 @@ impl EnhancedRateLimiter {
         if requests_last_second >= second_limit {
             return RateLimitResult::Limited {
                 retry_after: Duration::from_secs(1),
-                reason: format!("Per-second rate limit exceeded: {}/{}", requests_last_second, second_limit),
+                reason: format!(
+                    "Per-second rate limit exceeded: {}/{}",
+                    requests_last_second, second_limit
+                ),
             };
         }
 
         // Check burst limit (last 5 seconds)
-        let burst_requests = state.requests.iter()
+        let burst_requests = state
+            .requests
+            .iter()
             .filter(|req| now.duration_since(req.timestamp) < Duration::from_secs(5))
             .count() as u32;
 
@@ -302,7 +320,10 @@ impl EnhancedRateLimiter {
         if requests_last_minute >= minute_limit {
             return RateLimitResult::Limited {
                 retry_after: Duration::from_secs(60),
-                reason: format!("Per-minute rate limit exceeded: {}/{}", requests_last_minute, minute_limit),
+                reason: format!(
+                    "Per-minute rate limit exceeded: {}/{}",
+                    requests_last_minute, minute_limit
+                ),
             };
         }
 
@@ -355,8 +376,10 @@ impl EnhancedRateLimiter {
         } else {
             RateLimitResult::Limited {
                 retry_after: Duration::from_secs_f64((token_cost - state.tokens) / refill_rate),
-                reason: format!("Token bucket empty: {:.1} tokens available, {:.1} required", 
-                               state.tokens, token_cost),
+                reason: format!(
+                    "Token bucket empty: {:.1} tokens available, {:.1} required",
+                    state.tokens, token_cost
+                ),
             }
         }
     }
@@ -374,27 +397,36 @@ impl EnhancedRateLimiter {
         let base_limit = config.requests_per_minute;
         let load_factor = self.calculate_system_load().await;
         let violation_factor = (state.violation_count as f64 * 0.1).min(0.5);
-        
-        let adaptive_limit = (base_limit as f64 * (1.0 - load_factor - violation_factor)).max(1.0) as u32;
+
+        let adaptive_limit =
+            (base_limit as f64 * (1.0 - load_factor - violation_factor)).max(1.0) as u32;
         state.adaptive_limit = Some(adaptive_limit);
 
         // Update global stats
         {
             let mut stats = self.stats.write().await;
-            stats.current_adaptive_limits.insert(endpoint.to_string(), adaptive_limit);
+            stats
+                .current_adaptive_limits
+                .insert(endpoint.to_string(), adaptive_limit);
         }
 
         // Use sliding window with adaptive limit
         let mut adaptive_config = config.clone();
         adaptive_config.requests_per_minute = adaptive_limit;
-        
-        self.check_sliding_window(state, &adaptive_config, endpoint, session_id, risk_score).await
+
+        self.check_sliding_window(state, &adaptive_config, endpoint, session_id, risk_score)
+            .await
     }
 
     /// Get effective rate limit considering risk score and adaptive adjustments
-    async fn get_effective_limit(&self, config: &RateLimitConfig, endpoint: &str, risk_score: u8) -> u32 {
+    async fn get_effective_limit(
+        &self,
+        config: &RateLimitConfig,
+        endpoint: &str,
+        risk_score: u8,
+    ) -> u32 {
         let base_limit = config.requests_per_minute;
-        
+
         // Reduce limit for high-risk requests
         let risk_factor = match risk_score {
             0..=20 => 1.0,
@@ -418,7 +450,7 @@ impl EnhancedRateLimiter {
         let stats = self.stats.read().await;
         let total_requests = stats.total_requests as f64;
         let total_limited = stats.total_limited as f64;
-        
+
         if total_requests == 0.0 {
             0.0
         } else {
@@ -431,10 +463,10 @@ impl EnhancedRateLimiter {
         // Apply penalty period for repeated violations
         if state.violation_count >= 5 {
             let penalty_duration = Duration::from_secs(
-                (config.cooldown_period_seconds as f64 * config.penalty_multiplier) as u64
+                (config.cooldown_period_seconds as f64 * config.penalty_multiplier) as u64,
             );
             state.penalty_until = Some(Instant::now() + penalty_duration);
-            
+
             // Reset violation count after applying penalty
             state.violation_count = 0;
         }
@@ -443,7 +475,7 @@ impl EnhancedRateLimiter {
     /// Update rate limiting statistics
     async fn update_stats(&self, result: &RateLimitResult) {
         let mut stats = self.stats.write().await;
-        
+
         match result {
             RateLimitResult::Allowed { .. } => {
                 stats.total_requests += 1;
@@ -463,7 +495,7 @@ impl EnhancedRateLimiter {
     pub async fn cleanup_expired_states(&self) {
         let mut states = self.states.write().await;
         let now = Instant::now();
-        
+
         states.retain(|_, state| {
             // Remove states with no recent activity (1 hour)
             if let Some(last_request) = state.requests.back() {
@@ -479,11 +511,11 @@ impl EnhancedRateLimiter {
     pub async fn get_stats(&self) -> RateLimitStats {
         let stats = self.stats.read().await;
         let mut result = stats.clone();
-        
+
         // Update active sessions count
         let states = self.states.read().await;
         result.active_sessions = states.len() as u64;
-        
+
         result
     }
 
@@ -495,23 +527,29 @@ impl EnhancedRateLimiter {
     }
 
     /// Get rate limit status for a specific key
-    pub async fn get_rate_limit_status(&self, session_id: &str, endpoint: &str) -> Option<(u32, Duration)> {
+    pub async fn get_rate_limit_status(
+        &self,
+        session_id: &str,
+        endpoint: &str,
+    ) -> Option<(u32, Duration)> {
         let key = format!("{}:{}", session_id, endpoint);
         let states = self.states.read().await;
-        
+
         if let Some(state) = states.get(&key) {
             let config = self.get_config_for_endpoint(endpoint);
             let now = Instant::now();
-            
+
             // Count recent requests
-            let recent_requests = state.requests.iter()
+            let recent_requests = state
+                .requests
+                .iter()
                 .filter(|req| now.duration_since(req.timestamp) < Duration::from_secs(60))
                 .count() as u32;
-            
+
             let limit = config.requests_per_minute;
             let remaining = limit.saturating_sub(recent_requests);
             let reset_after = Duration::from_secs(60);
-            
+
             Some((remaining, reset_after))
         } else {
             None
@@ -533,12 +571,15 @@ mod tests {
     #[tokio::test]
     async fn test_sliding_window_rate_limiting() {
         let mut limiter = EnhancedRateLimiter::new();
-        limiter.set_endpoint_config("test", RateLimitConfig {
-            requests_per_second: 2,
-            requests_per_minute: 5,
-            burst_limit: 3,
-            ..Default::default()
-        });
+        limiter.set_endpoint_config(
+            "test",
+            RateLimitConfig {
+                requests_per_second: 2,
+                requests_per_minute: 5,
+                burst_limit: 3,
+                ..Default::default()
+            },
+        );
 
         let session_id = "test_session";
         let endpoint = "test";
@@ -547,7 +588,7 @@ mod tests {
         for i in 0..3 {
             let result = limiter.check_rate_limit(session_id, endpoint, 0).await;
             match result {
-                RateLimitResult::Allowed { .. } => {},
+                RateLimitResult::Allowed { .. } => {}
                 _ => panic!("Request {} should be allowed", i),
             }
         }
@@ -555,7 +596,7 @@ mod tests {
         // Next request should hit burst limit
         let result = limiter.check_rate_limit(session_id, endpoint, 0).await;
         match result {
-            RateLimitResult::Limited { .. } => {},
+            RateLimitResult::Limited { .. } => {}
             _ => panic!("Request should be limited by burst"),
         }
     }
@@ -567,7 +608,7 @@ mod tests {
             requests_per_minute: 60, // 1 per second
             ..Default::default()
         };
-        
+
         let limiter = EnhancedRateLimiter::with_config(config);
         let session_id = "token_test";
         let endpoint = "test";
@@ -580,7 +621,7 @@ mod tests {
         let result = limiter.check_rate_limit(session_id, endpoint, 90).await;
         // Depending on initial token state, this might be allowed or limited
         match result {
-            RateLimitResult::Allowed { .. } | RateLimitResult::Limited { .. } => {},
+            RateLimitResult::Allowed { .. } | RateLimitResult::Limited { .. } => {}
             _ => panic!("Unexpected result for high-risk request"),
         }
     }
@@ -588,19 +629,23 @@ mod tests {
     #[tokio::test]
     async fn test_penalty_system() {
         let mut limiter = EnhancedRateLimiter::new();
-        limiter.set_endpoint_config("penalty_test", RateLimitConfig {
-            requests_per_second: 1,
-            requests_per_minute: 1,
-            cooldown_period_seconds: 1,
-            penalty_multiplier: 2.0,
-            ..Default::default()
-        });
+        limiter.set_endpoint_config(
+            "penalty_test",
+            RateLimitConfig {
+                requests_per_second: 1,
+                requests_per_minute: 1,
+                cooldown_period_seconds: 1,
+                penalty_multiplier: 2.0,
+                ..Default::default()
+            },
+        );
 
         let session_id = "penalty_session";
         let endpoint = "penalty_test";
 
         // Trigger violations
-        for i in 0..7 { // Exceed the violation threshold (5)
+        for i in 0..7 {
+            // Exceed the violation threshold (5)
             let result = limiter.check_rate_limit(session_id, endpoint, 0).await;
             if i == 0 {
                 assert!(matches!(result, RateLimitResult::Allowed { .. }));
@@ -613,8 +658,8 @@ mod tests {
         let result = limiter.check_rate_limit(session_id, endpoint, 0).await;
         // The exact behavior depends on timing and violation counting
         match result {
-            RateLimitResult::Limited { .. } | RateLimitResult::Blocked { .. } => {},
-            RateLimitResult::Allowed { .. } => {}, // May still be allowed if penalty not yet applied
+            RateLimitResult::Limited { .. } | RateLimitResult::Blocked { .. } => {}
+            RateLimitResult::Allowed { .. } => {} // May still be allowed if penalty not yet applied
         }
     }
 
@@ -626,7 +671,7 @@ mod tests {
             adaptive_threshold: 0.5,
             ..Default::default()
         };
-        
+
         let limiter = EnhancedRateLimiter::with_config(config);
         let session_id = "adaptive_test";
         let endpoint = "adaptive";

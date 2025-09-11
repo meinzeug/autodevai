@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
 
@@ -39,9 +39,9 @@ export class UpdateNotificationManager {
     notificationPosition: 'top-right'
   };
 
-  private checkTimer?: NodeJS.Timeout;
+  private checkTimer?: NodeJS.Timeout | undefined;
   private isChecking = false;
-  private lastCheckedVersion?: string;
+  private lastCheckedVersion?: string | undefined;
 
   constructor(config?: Partial<UpdateNotificationConfig>) {
     if (config) {

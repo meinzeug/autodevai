@@ -3,9 +3,9 @@
 //! Comprehensive command validation and whitelisting system for secure IPC operations.
 //! Provides fine-grained control over which commands can be executed and under what conditions.
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use regex::Regex;
 
 /// Command validation result with detailed information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,12 +49,12 @@ pub enum ViolationType {
 /// Command security classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SecurityClassification {
-    Public,      // Safe for all users
-    Authenticated, // Requires authentication
-    Privileged,  // Requires specific permissions
+    Public,         // Safe for all users
+    Authenticated,  // Requires authentication
+    Privileged,     // Requires specific permissions
     Administrative, // Admin-only operations
-    Restricted,  // Heavily restricted operations
-    Blocked,     // Never allowed
+    Restricted,     // Heavily restricted operations
+    Blocked,        // Never allowed
 }
 
 /// Command configuration with security settings
@@ -88,7 +88,7 @@ impl Default for CommandWhitelist {
             permission_hierarchy: HashMap::new(),
             command_aliases: HashMap::new(),
         };
-        
+
         whitelist.initialize_default_commands();
         whitelist.initialize_global_patterns();
         whitelist.initialize_permission_hierarchy();
@@ -258,23 +258,23 @@ impl CommandWhitelist {
     /// Initialize global blocked patterns
     fn initialize_global_patterns(&mut self) {
         let patterns = vec![
-            r"<script[\s\S]*?</script>",  // Script tags
-            r"javascript:",               // JavaScript URLs
+            r"<script[\s\S]*?</script>", // Script tags
+            r"javascript:",              // JavaScript URLs
             r"data:text/html",           // HTML data URLs
-            r"eval\s*\(",               // eval() calls
-            r"Function\s*\(",           // Function constructor
-            r"setTimeout\s*\(",         // setTimeout calls
-            r"setInterval\s*\(",        // setInterval calls
-            r"\.\./",                   // Path traversal
-            r"\.\.\\",                  // Windows path traversal
-            r"/etc/passwd",             // System files
+            r"eval\s*\(",                // eval() calls
+            r"Function\s*\(",            // Function constructor
+            r"setTimeout\s*\(",          // setTimeout calls
+            r"setInterval\s*\(",         // setInterval calls
+            r"\.\./",                    // Path traversal
+            r"\.\.\\",                   // Windows path traversal
+            r"/etc/passwd",              // System files
             r"/etc/shadow",
-            r"C:\\Windows\\System32",    // Windows system dir
-            r"rm\s+-rf\s+/",           // Dangerous rm commands
-            r"sudo\s+rm",              // Sudo rm
-            r">\s*/dev/null\s+2>&1",   // Output redirection
-            r"\|\s*sh",                // Pipe to shell
-            r"\|\s*bash",              // Pipe to bash
+            r"C:\\Windows\\System32", // Windows system dir
+            r"rm\s+-rf\s+/",          // Dangerous rm commands
+            r"sudo\s+rm",             // Sudo rm
+            r">\s*/dev/null\s+2>&1",  // Output redirection
+            r"\|\s*sh",               // Pipe to shell
+            r"\|\s*bash",             // Pipe to bash
             r"\$\([^)]+\)",           // Command substitution
             r"`[^`]+`",               // Backtick command substitution
         ];
@@ -300,7 +300,7 @@ impl CommandWhitelist {
                 "app.update".to_string(),
                 "extension.install".to_string(),
                 "user.manage".to_string(),
-            ]
+            ],
         );
 
         // Power user permissions
@@ -311,16 +311,13 @@ impl CommandWhitelist {
                 "settings.write".to_string(),
                 "project.create".to_string(),
                 "system.execute".to_string(),
-            ]
+            ],
         );
 
         // Basic user permissions
         self.permission_hierarchy.insert(
             "user".to_string(),
-            vec![
-                "settings.read".to_string(),
-                "settings.write".to_string(),
-            ]
+            vec!["settings.read".to_string(), "settings.write".to_string()],
         );
     }
 
@@ -344,7 +341,7 @@ impl CommandWhitelist {
     ) -> CommandValidationResult {
         // Resolve aliases
         let resolved_command = self.resolve_alias(command);
-        
+
         // Get command configuration
         let config = match self.commands.get(&resolved_command) {
             Some(config) => config,
@@ -399,14 +396,12 @@ impl CommandWhitelist {
 
         // Validate and sanitize arguments
         match self.validate_arguments(config, args) {
-            Ok(sanitized_args) => {
-                CommandValidationResult::Allowed {
-                    command: resolved_command,
-                    sanitized_args: sanitized_args,
-                    risk_score: config.risk_score,
-                    required_permissions: config.required_permissions.clone(),
-                }
-            }
+            Ok(sanitized_args) => CommandValidationResult::Allowed {
+                command: resolved_command,
+                sanitized_args: sanitized_args,
+                risk_score: config.risk_score,
+                required_permissions: config.required_permissions.clone(),
+            },
             Err(reason) => CommandValidationResult::Denied {
                 command: command.to_string(),
                 reason,
@@ -418,15 +413,20 @@ impl CommandWhitelist {
 
     /// Resolve command aliases
     fn resolve_alias(&self, command: &str) -> String {
-        self.command_aliases.get(command)
+        self.command_aliases
+            .get(command)
             .cloned()
             .unwrap_or_else(|| command.to_string())
     }
 
     /// Check global blocked patterns
     fn check_global_patterns(&self, command: &str, args: &serde_json::Value) -> Option<String> {
-        let full_text = format!("{} {}", command, serde_json::to_string(args).unwrap_or_default());
-        
+        let full_text = format!(
+            "{} {}",
+            command,
+            serde_json::to_string(args).unwrap_or_default()
+        );
+
         for pattern in &self.global_blocked_patterns {
             if pattern.is_match(&full_text) {
                 return Some(pattern.as_str().to_string());
@@ -436,18 +436,25 @@ impl CommandWhitelist {
     }
 
     /// Check if user has required permissions
-    fn check_permissions(&self, config: &CommandConfig, user_permissions: &HashSet<String>) -> bool {
+    fn check_permissions(
+        &self,
+        config: &CommandConfig,
+        user_permissions: &HashSet<String>,
+    ) -> bool {
         if config.required_permissions.is_empty() {
             return true;
         }
 
-        config.required_permissions.iter().all(|perm| user_permissions.contains(perm))
+        config
+            .required_permissions
+            .iter()
+            .all(|perm| user_permissions.contains(perm))
     }
 
     /// Expand permissions based on hierarchy
     fn expand_permissions(&self, base_permissions: &HashSet<String>) -> HashSet<String> {
         let mut expanded = base_permissions.clone();
-        
+
         for permission in base_permissions {
             if let Some(inherited) = self.permission_hierarchy.get(permission) {
                 for inherited_perm in inherited {
@@ -455,7 +462,7 @@ impl CommandWhitelist {
                 }
             }
         }
-        
+
         expanded
     }
 
@@ -471,7 +478,10 @@ impl CommandWhitelist {
         for blocked_pattern in &config.blocked_arg_patterns {
             if let Ok(regex) = Regex::new(blocked_pattern) {
                 if regex.is_match(&args_str) {
-                    return Err(format!("Arguments contain blocked pattern: {}", blocked_pattern));
+                    return Err(format!(
+                        "Arguments contain blocked pattern: {}",
+                        blocked_pattern
+                    ));
                 }
             }
         }
@@ -502,13 +512,17 @@ impl CommandWhitelist {
     }
 
     /// List all available commands for user
-    pub fn list_available_commands(&self, user_permissions: &HashSet<String>) -> Vec<CommandConfig> {
+    pub fn list_available_commands(
+        &self,
+        user_permissions: &HashSet<String>,
+    ) -> Vec<CommandConfig> {
         let expanded_permissions = self.expand_permissions(user_permissions);
-        
-        self.commands.values()
+
+        self.commands
+            .values()
             .filter(|config| {
-                config.classification != SecurityClassification::Blocked &&
-                self.check_permissions(config, &expanded_permissions)
+                config.classification != SecurityClassification::Blocked
+                    && self.check_permissions(config, &expanded_permissions)
             })
             .cloned()
             .collect()
@@ -517,35 +531,48 @@ impl CommandWhitelist {
     /// Get security statistics
     pub fn get_security_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
-        
+
         // Count by classification
         let mut by_classification = HashMap::new();
         for config in self.commands.values() {
             let key = format!("{:?}", config.classification);
             *by_classification.entry(key).or_insert(0) += 1;
         }
-        stats.insert("commands_by_classification".to_string(), 
-                     serde_json::Value::Object(
-                         by_classification.into_iter()
-                             .map(|(k, v)| (k, serde_json::Value::Number(v.into())))
-                             .collect()
-                     ));
+        stats.insert(
+            "commands_by_classification".to_string(),
+            serde_json::Value::Object(
+                by_classification
+                    .into_iter()
+                    .map(|(k, v)| (k, serde_json::Value::Number(v.into())))
+                    .collect(),
+            ),
+        );
 
-        stats.insert("total_commands".to_string(), 
-                     serde_json::Value::Number(self.commands.len().into()));
-        
-        stats.insert("blocked_patterns".to_string(), 
-                     serde_json::Value::Number(self.global_blocked_patterns.len().into()));
-        
-        stats.insert("aliases".to_string(), 
-                     serde_json::Value::Number(self.command_aliases.len().into()));
+        stats.insert(
+            "total_commands".to_string(),
+            serde_json::Value::Number(self.commands.len().into()),
+        );
+
+        stats.insert(
+            "blocked_patterns".to_string(),
+            serde_json::Value::Number(self.global_blocked_patterns.len().into()),
+        );
+
+        stats.insert(
+            "aliases".to_string(),
+            serde_json::Value::Number(self.command_aliases.len().into()),
+        );
 
         // High-risk commands
-        let high_risk_count = self.commands.values()
+        let high_risk_count = self
+            .commands
+            .values()
             .filter(|c| c.risk_score >= 70)
             .count();
-        stats.insert("high_risk_commands".to_string(), 
-                     serde_json::Value::Number(high_risk_count.into()));
+        stats.insert(
+            "high_risk_commands".to_string(),
+            serde_json::Value::Number(high_risk_count.into()),
+        );
 
         stats
     }
@@ -584,7 +611,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Allowed { .. } => {},
+            CommandValidationResult::Allowed { .. } => {}
             _ => panic!("Command should be allowed"),
         }
     }
@@ -602,7 +629,10 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Denied { violation_type: ViolationType::CommandBlocked, .. } => {},
+            CommandValidationResult::Denied {
+                violation_type: ViolationType::CommandBlocked,
+                ..
+            } => {}
             _ => panic!("Command should be blocked"),
         }
     }
@@ -620,7 +650,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::RequiresElevation { .. } => {},
+            CommandValidationResult::RequiresElevation { .. } => {}
             _ => panic!("Should require elevation for insufficient permissions"),
         }
     }
@@ -639,7 +669,10 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Denied { violation_type: ViolationType::MaliciousPattern, .. } => {},
+            CommandValidationResult::Denied {
+                violation_type: ViolationType::MaliciousPattern,
+                ..
+            } => {}
             _ => panic!("Should detect malicious pattern"),
         }
     }
@@ -662,12 +695,13 @@ mod tests {
         whitelist.add_alias("info".to_string(), "get_app_info".to_string());
 
         let permissions = HashSet::new();
-        let result = whitelist.validate_command("info", &serde_json::json!({}), &permissions, false);
+        let result =
+            whitelist.validate_command("info", &serde_json::json!({}), &permissions, false);
 
         match result {
             CommandValidationResult::Allowed { command, .. } => {
                 assert_eq!(command, "get_app_info");
-            },
+            }
             _ => panic!("Alias should resolve to allowed command"),
         }
     }
@@ -687,7 +721,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::RequiresElevation { .. } => {},
+            CommandValidationResult::RequiresElevation { .. } => {}
             _ => panic!("Should require MFA elevation"),
         }
 
@@ -700,7 +734,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Allowed { .. } => {},
+            CommandValidationResult::Allowed { .. } => {}
             _ => panic!("Should be allowed with MFA"),
         }
     }
@@ -720,7 +754,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Allowed { .. } => {},
+            CommandValidationResult::Allowed { .. } => {}
             _ => panic!("npm command should be allowed"),
         }
 
@@ -733,7 +767,7 @@ mod tests {
         );
 
         match result {
-            CommandValidationResult::Denied { .. } => {},
+            CommandValidationResult::Denied { .. } => {}
             _ => panic!("sudo command should be blocked"),
         }
     }

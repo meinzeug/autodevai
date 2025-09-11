@@ -7,12 +7,63 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Recent Changes (September 11, 2025)
+
+- **Layout & Responsive Design**: Fixed sidebar positioning to ensure menu is fully visible on the left with proper responsive behavior
+  - Implemented dynamic margin system for main content area (`lg:ml-64`) based on sidebar state
+  - Fixed sidebar positioning with proper z-index and transform transitions
+  - Ensured content boxes display correctly beside the sidebar on desktop
+  - Added responsive breakpoints for mobile/tablet/desktop layouts
+
+- **Dark/Light Mode Theming**: Complete theme system overhaul
+  - Fixed header component theming with proper dark mode colors (`bg-gray-800`, `border-gray-700`)
+  - Updated sidebar theming for consistent dark/light mode support
+  - Implemented proper text color contrast in both themes (dark text in light mode, light text in dark mode)
+  - Added comprehensive Tailwind CSS dark mode classes throughout components
+
+- **PWA Manifest & Icons**: Resolved icon and manifest issues
+  - Created SVG icon (`/public/icon.svg`) with gradient background and "AD" branding
+  - Fixed manifest.json to reference correct SVG icon format
+  - Resolved console error: "Resource size is not correct - typo in the Manifest"
+  - Updated HTML meta tags to use SVG icon for better scalability
+
+- **Tauri API Compatibility**: Fixed runtime import errors
+  - Updated Tauri API imports from deprecated `@tauri-apps/api/tauri` to `@tauri-apps/api/core`
+  - Implemented environment detection and browser fallbacks for cross-platform compatibility
+  - Added lazy loading for Tauri APIs to prevent runtime errors in browser environments
+  - Fixed TauriService method implementations with proper error handling
+
 ### Planned
 
 - Machine learning-based task routing optimization
-- Visual design integration for UI/UX generation
+- Visual design integration for UI/UX generation  
 - VS Code extension for real-time AI assistance
 - Advanced security vulnerability detection
+
+## [1.2.0] - 2025-01-11
+
+### Added
+
+- **MAJOR FRONTEND INFRASTRUCTURE** (Roadmap Schritt 248-267): Complete React/TypeScript foundation
+  - **Type System**: Comprehensive interfaces for ExecutionResult, Task, Settings, SystemInfo, OrchestrationMode
+  - **Services Layer**: TauriService with IPC calls for claude-flow, codex, sandboxes, and system operations
+  - **State Management**: Zustand store with persistent tasks, settings, UI state, and devtools integration
+  - **Custom Hooks**: useTauri (command execution), useSystemCheck (prerequisites), useTheme (dark/light mode)
+  - **Layout Components**: Header (with GitHub link, theme toggle), Sidebar (navigation), StatusBar (system info)
+  - **Common Components**: Button (variants, loading states), Card (styled containers), Input (with validation), LoadingSpinner
+  - **Utility Functions**: cn (Tailwind class merging), format utilities (bytes, duration, dates), Zod validation schemas
+  - **Environment Setup**: Vite environment types with feature flags, public directory with robots.txt and icon assets
+  - **Project Structure**: Organized directories (src/hooks/, services/, store/, components/layout/, components/common/, utils/, types/)
+  - **Theme Support**: Complete dark/light mode switching with localStorage persistence
+
+### Technical Implementation
+
+- **20 Roadmap Steps Completed**: Systematic implementation of core frontend infrastructure
+- **Type-Safe Architecture**: Full TypeScript implementation with strict typing throughout
+- **React Integration**: Modern hooks-based architecture with proper state management
+- **Component Library**: Reusable UI components with consistent styling and behavior
+- **Service Layer**: Clean separation between UI and backend IPC communications
+- **Utility Ecosystem**: Comprehensive helper functions for common operations
 
 ## [1.1.0] - 2025-01-10
 

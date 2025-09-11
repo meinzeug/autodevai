@@ -433,7 +433,7 @@ mod tests {
             "test@example.com".to_string(),
             "hashed_password".to_string(),
         );
-        
+
         assert_eq!(user.username, "testuser");
         assert_eq!(user.email, "test@example.com");
         assert!(user.is_active);
@@ -447,7 +447,7 @@ mod tests {
             Some("A test project".to_string()),
             owner_id,
         );
-        
+
         assert_eq!(project.name, "Test Project");
         assert_eq!(project.owner_id, owner_id);
         assert!(!project.is_archived);
@@ -461,7 +461,7 @@ mod tests {
             "Test Task".to_string(),
             "A test task".to_string(),
         );
-        
+
         assert_eq!(task.title, "Test Task");
         assert_eq!(task.project_id, project_id);
         assert!(matches!(task.status, TaskStatus::Pending));
@@ -475,10 +475,10 @@ mod tests {
             "test@example.com".to_string(),
             "hashed_password".to_string(),
         );
-        
+
         let json = serde_json::to_string(&user).unwrap();
         let deserialized: User = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(user.username, deserialized.username);
         assert_eq!(user.email, deserialized.email);
     }
@@ -490,16 +490,13 @@ mod tests {
             AgentType::Specialist("Rust".to_string()),
             AgentType::Coder,
         ];
-        
+
         for agent_type in agent_types {
             let json = serde_json::to_string(&agent_type).unwrap();
             let deserialized: AgentType = serde_json::from_str(&json).unwrap();
-            
+
             // Compare string representations since enum variants may not implement PartialEq
-            assert_eq!(
-                format!("{:?}", agent_type),
-                format!("{:?}", deserialized)
-            );
+            assert_eq!(format!("{:?}", agent_type), format!("{:?}", deserialized));
         }
     }
 }

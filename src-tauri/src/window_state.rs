@@ -1,14 +1,14 @@
 // Window state management for AutoDev-AI Neural Bridge Platform
 // Comprehensive window management with persistence, multi-monitor support, and focus handling
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use tauri::{AppHandle, LogicalSize, Manager, Runtime, Window, Monitor};
+use tauri::{AppHandle, LogicalSize, Manager, Monitor, Runtime, Window};
 use tokio::fs;
-use tracing::{error, info, warn, debug};
-use chrono::{DateTime, Utc};
+use tracing::{debug, error, info, warn};
 use uuid;
 
 /// Error types for window state management
@@ -79,16 +79,16 @@ impl WindowState {
                 "Window dimensions must be positive".to_string(),
             ));
         }
-        
+
         if self.width > 10000.0 || self.height > 10000.0 {
             return Err(WindowStateError::InvalidState(
                 "Window dimensions too large".to_string(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Check if position is within reasonable bounds
     pub fn is_position_valid(&self, monitors: &[Monitor]) -> bool {
         if let (Some(x), Some(y)) = (self.x, self.y) {
@@ -96,11 +96,12 @@ impl WindowState {
             for monitor in monitors {
                 let pos = monitor.position();
                 let size = monitor.size();
-                
-                if x >= (pos.x as f64 - 100.0) && 
-                   x <= (pos.x as f64 + size.width as f64 + 100.0) &&
-                   y >= (pos.y as f64 - 100.0) && 
-                   y <= (pos.y as f64 + size.height as f64 + 100.0) {
+
+                if x >= (pos.x as f64 - 100.0)
+                    && x <= (pos.x as f64 + size.width as f64 + 100.0)
+                    && y >= (pos.y as f64 - 100.0)
+                    && y <= (pos.y as f64 + size.height as f64 + 100.0)
+                {
                     return true;
                 }
             }
@@ -109,7 +110,7 @@ impl WindowState {
             true // No position set, will use center
         }
     }
-    
+
     /// Create safe fallback state
     pub fn create_safe_fallback() -> Self {
         Self {
@@ -190,34 +191,39 @@ impl WindowStateManager {
             focus_tracker: Arc::new(RwLock::new(HashMap::new())),
         }
     }
-    
+
     /// Update monitor information
     pub async fn update_monitors<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         let available_monitors = app.available_monitors().map_err(WindowStateError::Tauri)?;
-        
+
         {
             let mut monitors = self.monitors.write().unwrap();
             *monitors = available_monitors.unwrap_or_default();
         }
-        
+
         // Update monitor info in collection
         {
             let monitors = self.monitors.read().unwrap();
             let mut states = self.states.write().unwrap();
-            
-            states.monitors = monitors.iter().map(|m| MonitorInfo {
-                name: m.name().clone(),
-                x: m.position().x,
-                y: m.position().y,
-                width: m.size().width,
-                height: m.size().height,
-                scale_factor: m.scale_factor(),
-                is_primary: false, // Tauri doesn't provide primary monitor info directly
-            }).collect();
+
+            states.monitors = monitors
+                .iter()
+                .map(|m| MonitorInfo {
+                    name: m.name().clone(),
+                    x: m.position().x,
+                    y: m.position().y,
+                    width: m.size().width,
+                    height: m.size().height,
+                    scale_factor: m.scale_factor(),
+                    is_primary: false, // Tauri doesn't provide primary monitor info directly
+                })
+                .collect();
         }
-        
-        debug!("Updated monitor information: {} monitors", 
-               self.monitors.read().unwrap().len());
+
+        debug!(
+            "Updated monitor information: {} monitors",
+            self.monitors.read().unwrap().len()
+        );
         Ok(())
     }
 
@@ -225,12 +231,12 @@ impl WindowStateManager {
     pub async fn initialize<R: Runtime>(&self, app: &AppHandle<R>) -> Result<()> {
         self.load_states().await?;
         self.update_monitors(app).await?;
-        
+
         let state_count = {
             let states = self.states.read().unwrap();
             states.states.len()
         };
-        
+
         info!(
             "WindowStateManager initialized with {} saved states",
             state_count
@@ -245,21 +251,24 @@ impl WindowStateManager {
         window: &Window<R>,
     ) -> Result<()> {
         let mut state = self.extract_window_state(window).await?;
-        
+
         // Validate state before saving
         state.validate()?;
-        
+
         // Check if position is valid across available monitors
         let monitors = self.monitors.read().unwrap();
         if !state.is_position_valid(&monitors) {
-            warn!("Window '{}' position is invalid, will center on restore", label);
+            warn!(
+                "Window '{}' position is invalid, will center on restore",
+                label
+            );
             state.x = None;
             state.y = None;
         }
-        
+
         // Update state metadata
         state.saved_at = Utc::now();
-        
+
         // Save to collection
         {
             let mut states = self.states.write().unwrap();
@@ -267,7 +276,7 @@ impl WindowStateManager {
             states.last_updated = Utc::now();
             states.last_active_window = Some(label.to_string());
         }
-        
+
         // Update focus tracker
         {
             let mut focus_tracker = self.focus_tracker.write().unwrap();
@@ -292,22 +301,25 @@ impl WindowStateManager {
             let states = self.states.read().unwrap();
             states.states.get(label).cloned()
         };
-        
+
         if let Some(mut state) = state_opt {
             // Validate state before applying
             if let Err(e) = state.validate() {
                 warn!("Invalid saved state for '{}': {}, using fallback", label, e);
                 state = WindowState::create_safe_fallback();
             }
-            
+
             // Check monitor validity
             let monitors = self.monitors.read().unwrap();
             if !state.is_position_valid(&monitors) {
-                warn!("Window '{}' saved position is invalid, centering window", label);
+                warn!(
+                    "Window '{}' saved position is invalid, centering window",
+                    label
+                );
                 state.x = None;
                 state.y = None;
             }
-            
+
             match self.apply_window_state(window, &state).await {
                 Ok(_) => {
                     // Update restore success status
@@ -318,13 +330,16 @@ impl WindowStateManager {
                             stored_state.last_restore_success = true;
                         }
                     }
-                    
+
                     info!("Restored window state for '{}'", label);
                     Ok(())
                 }
                 Err(e) => {
-                    warn!("Failed to restore window state for '{}': {}, using fallback", label, e);
-                    
+                    warn!(
+                        "Failed to restore window state for '{}': {}, using fallback",
+                        label, e
+                    );
+
                     // Mark restore failure and try fallback
                     {
                         let mut states = self.states.write().unwrap();
@@ -332,17 +347,20 @@ impl WindowStateManager {
                             stored_state.last_restore_success = false;
                         }
                     }
-                    
+
                     // Try with safe fallback
                     let fallback_state = WindowState::create_safe_fallback();
                     self.apply_window_state(window, &fallback_state).await?;
-                    
+
                     info!("Applied fallback state for window '{}'", label);
                     Ok(())
                 }
             }
         } else {
-            debug!("No saved state found for window '{}', using defaults", label);
+            debug!(
+                "No saved state found for window '{}', using defaults",
+                label
+            );
             Ok(())
         }
     }
@@ -352,33 +370,33 @@ impl WindowStateManager {
         let states = self.states.read().unwrap();
         states.states.get(label).cloned()
     }
-    
+
     /// Get all window states
     pub fn get_all_window_states(&self) -> HashMap<String, WindowState> {
         let states = self.states.read().unwrap();
         states.states.clone()
     }
-    
+
     /// Track window focus
     pub fn track_focus(&self, label: &str) {
         let mut focus_tracker = self.focus_tracker.write().unwrap();
         focus_tracker.insert(label.to_string(), Utc::now());
-        
+
         // Update last active window
         {
             let mut states = self.states.write().unwrap();
             states.last_active_window = Some(label.to_string());
         }
-        
+
         debug!("Tracked focus for window '{}'", label);
     }
-    
+
     /// Get last focused window
     pub fn get_last_focused_window(&self) -> Option<String> {
         let states = self.states.read().unwrap();
         states.last_active_window.clone()
     }
-    
+
     /// Clean up old focus entries
     pub fn cleanup_focus_tracker(&self) {
         let cutoff = Utc::now() - chrono::Duration::hours(24);
@@ -390,17 +408,25 @@ impl WindowStateManager {
     pub async fn save_all_states(&self) -> Result<()> {
         self.persist_states().await
     }
-    
+
     /// Get manager statistics
     pub fn get_stats(&self) -> WindowStateStats {
         let states = self.states.read().unwrap();
         let focus_tracker = self.focus_tracker.read().unwrap();
         let monitors = self.monitors.read().unwrap();
-        
+
         WindowStateStats {
             total_windows: states.states.len(),
-            successful_restores: states.states.values().filter(|s| s.last_restore_success).count(),
-            failed_restores: states.states.values().filter(|s| !s.last_restore_success).count(),
+            successful_restores: states
+                .states
+                .values()
+                .filter(|s| s.last_restore_success)
+                .count(),
+            failed_restores: states
+                .states
+                .values()
+                .filter(|s| !s.last_restore_success)
+                .count(),
             active_focus_entries: focus_tracker.len(),
             monitor_count: monitors.len(),
             last_updated: states.last_updated,
@@ -409,13 +435,10 @@ impl WindowStateManager {
     }
 
     /// Extract current window state from a Window object with comprehensive data
-    async fn extract_window_state<R: Runtime>(
-        &self,
-        window: &Window<R>,
-    ) -> Result<WindowState> {
+    async fn extract_window_state<R: Runtime>(&self, window: &Window<R>) -> Result<WindowState> {
         let size = window.inner_size().map_err(WindowStateError::Tauri)?;
         let position = window.outer_position().ok();
-        
+
         // Try to get current monitor
         let current_monitor = window.current_monitor().map_err(WindowStateError::Tauri)?;
         let monitor_id = current_monitor.and_then(|m| m.name());
@@ -452,13 +475,15 @@ impl WindowStateManager {
         if state.visible {
             window.show().map_err(WindowStateError::Tauri)?;
         }
-        
+
         // Set window size with bounds checking
         let logical_size = LogicalSize {
             width: state.width.max(200.0).min(8000.0), // Reasonable bounds
             height: state.height.max(150.0).min(6000.0),
         };
-        window.set_size(logical_size).map_err(WindowStateError::Tauri)?;
+        window
+            .set_size(logical_size)
+            .map_err(WindowStateError::Tauri)?;
 
         // Set window position if available and valid
         if let (Some(x), Some(y)) = (state.x, state.y) {
@@ -490,7 +515,7 @@ impl WindowStateManager {
                 warn!("Failed to set fullscreen: {}", e);
             }
         }
-        
+
         // Handle focus if requested
         if state.focused {
             if let Err(e) = window.set_focus() {
@@ -503,9 +528,15 @@ impl WindowStateManager {
             window.hide().map_err(WindowStateError::Tauri)?;
         }
 
-        debug!("Applied window state for '{}': {}x{} at ({:?}, {:?})", 
-               window.label(), state.width, state.height, state.x, state.y);
-        
+        debug!(
+            "Applied window state for '{}': {}x{} at ({:?}, {:?})",
+            window.label(),
+            state.width,
+            state.height,
+            state.x,
+            state.y
+        );
+
         Ok(())
     }
 
@@ -524,25 +555,25 @@ impl WindowStateManager {
                                     invalid_states.push(label.clone());
                                 }
                             }
-                            
+
                             // Remove invalid states
                             for label in invalid_states {
                                 collection.states.remove(&label);
                             }
-                            
+
                             // Update session info
                             collection.session_id = uuid::Uuid::new_v4().to_string();
-                            
+
                             {
                                 let mut states = self.states.write().unwrap();
                                 *states = collection;
                             }
-                            
+
                             let state_count = {
                                 let states = self.states.read().unwrap();
                                 states.states.len()
                             };
-                            
+
                             info!(
                                 "Loaded {} window states from {}",
                                 state_count,
@@ -575,7 +606,9 @@ impl WindowStateManager {
             *states = WindowStateCollection::default();
 
             // Add default main window state
-            states.states.insert("main".to_string(), WindowState::default());
+            states
+                .states
+                .insert("main".to_string(), WindowState::default());
         }
 
         self.persist_states().await?;
@@ -587,7 +620,9 @@ impl WindowStateManager {
     async fn persist_states(&self) -> Result<()> {
         // Ensure parent directory exists
         if let Some(parent) = self.config_path.parent() {
-            fs::create_dir_all(parent).await.map_err(WindowStateError::Io)?;
+            fs::create_dir_all(parent)
+                .await
+                .map_err(WindowStateError::Io)?;
         }
 
         // Create content to write
@@ -596,20 +631,24 @@ impl WindowStateManager {
             // Update timestamp and version
             states.last_updated = Utc::now();
             states.version += 1;
-            
+
             serde_json::to_string_pretty(&*states).map_err(WindowStateError::Serialization)?
         };
-        
+
         // Atomic write using temporary file
         let temp_path = self.config_path.with_extension("tmp");
-        fs::write(&temp_path, &content).await.map_err(WindowStateError::Io)?;
-        fs::rename(&temp_path, &self.config_path).await.map_err(WindowStateError::Io)?;
+        fs::write(&temp_path, &content)
+            .await
+            .map_err(WindowStateError::Io)?;
+        fs::rename(&temp_path, &self.config_path)
+            .await
+            .map_err(WindowStateError::Io)?;
 
         let state_count = {
             let states = self.states.read().unwrap();
             states.states.len()
         };
-        
+
         debug!(
             "Persisted {} window states to {}",
             state_count,
@@ -633,11 +672,11 @@ pub struct WindowStateStats {
 
 /// Initialize comprehensive window state management for the application
 /// This works alongside the tauri-plugin-window-state plugin with enhanced features
-pub async fn setup_window_state<R: Runtime>(
-    app: &AppHandle<R>,
-) -> Result<()> {
+pub async fn setup_window_state<R: Runtime>(app: &AppHandle<R>) -> Result<()> {
     // Get config directory using proper Tauri approach
-    let config_dir = app.path().app_config_dir()
+    let config_dir = app
+        .path()
+        .app_config_dir()
         .map_err(WindowStateError::Tauri)?
         .join("window-states");
 
@@ -676,8 +715,7 @@ pub async fn handle_window_event<R: Runtime>(
 ) -> Result<()> {
     if let Some(manager) = app.try_state::<WindowStateManager>() {
         match event {
-            tauri::WindowEvent::Moved(_) | 
-            tauri::WindowEvent::Resized(_) => {
+            tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
                 // Save state on move/resize with debouncing
                 if let Some(window) = app.get_webview_window(window_label) {
                     if let Err(e) = manager.save_window_state(window_label, &window).await {
@@ -694,7 +732,10 @@ pub async fn handle_window_event<R: Runtime>(
                 // Save state before closing
                 if let Some(window) = app.get_webview_window(window_label) {
                     if let Err(e) = manager.save_window_state(window_label, &window).await {
-                        error!("Failed to save window state on close for '{}': {}", window_label, e);
+                        error!(
+                            "Failed to save window state on close for '{}': {}",
+                            window_label, e
+                        );
                     }
                 }
             }
@@ -711,12 +752,12 @@ pub async fn save_current_window_state<R: Runtime>(
     manager: tauri::State<'_, WindowStateManager>,
 ) -> std::result::Result<(), String> {
     let label = window.label();
-    
+
     manager
         .save_window_state(label, &window)
         .await
         .map_err(|e| format!("Failed to save window state: {}", e))?;
-    
+
     info!("Manual save completed for window '{}'", label);
     Ok(())
 }
@@ -744,12 +785,12 @@ pub async fn restore_window_state_command<R: Runtime>(
     manager: tauri::State<'_, WindowStateManager>,
 ) -> std::result::Result<(), String> {
     let label = window.label();
-    
+
     manager
         .restore_window_state(label, &window)
         .await
         .map_err(|e| format!("Failed to restore window state: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -789,7 +830,7 @@ mod tests {
         // Test valid state
         let valid_state = WindowState::default();
         assert!(valid_state.validate().is_ok());
-        
+
         // Test invalid dimensions
         let invalid_state = WindowState {
             width: -100.0,
@@ -797,7 +838,7 @@ mod tests {
             ..Default::default()
         };
         assert!(invalid_state.validate().is_err());
-        
+
         // Test oversized dimensions
         let oversized_state = WindowState {
             width: 15000.0,
@@ -815,7 +856,7 @@ mod tests {
         // Initialize (should create default)
         manager.create_default_states().await.unwrap();
         assert!(manager.config_path.exists());
-        
+
         let state_count = {
             let states = manager.states.read().unwrap();
             states.states.len()
@@ -834,7 +875,9 @@ mod tests {
 
         {
             let mut states = manager.states.write().unwrap();
-            states.states.insert("test-window".to_string(), custom_state.clone());
+            states
+                .states
+                .insert("test-window".to_string(), custom_state.clone());
         }
         manager.save_all_states().await.unwrap();
 
@@ -863,7 +906,7 @@ mod tests {
         assert!(state.resizable);
         assert!(!state.skip_taskbar);
     }
-    
+
     #[test]
     fn test_safe_fallback_state() {
         let fallback = WindowState::create_safe_fallback();
@@ -875,29 +918,32 @@ mod tests {
         assert!(!fallback.maximized);
         assert!(fallback.visible);
     }
-    
+
     #[test]
     fn test_focus_tracking() {
         let temp_dir = TempDir::new().unwrap();
         let manager = WindowStateManager::new(temp_dir.path().to_path_buf(), true);
-        
+
         // Test focus tracking
         manager.track_focus("window1");
         manager.track_focus("window2");
-        
-        assert_eq!(manager.get_last_focused_window(), Some("window2".to_string()));
-        
+
+        assert_eq!(
+            manager.get_last_focused_window(),
+            Some("window2".to_string())
+        );
+
         // Test cleanup (should not remove recent entries)
         manager.cleanup_focus_tracker();
         let focus_tracker = manager.focus_tracker.read().unwrap();
         assert_eq!(focus_tracker.len(), 2);
     }
-    
+
     #[test]
     fn test_manager_stats() {
         let temp_dir = TempDir::new().unwrap();
         let manager = WindowStateManager::new(temp_dir.path().to_path_buf(), true);
-        
+
         let stats = manager.get_stats();
         assert_eq!(stats.total_windows, 0);
         assert_eq!(stats.active_focus_entries, 0);

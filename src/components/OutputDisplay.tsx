@@ -213,7 +213,9 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
                       </span>
                     )}
                     <span className="text-gray-500 text-xs">
-                      {output.timestamp.toLocaleTimeString()}
+                      {typeof output.timestamp === 'string' ? 
+                        new Date(output.timestamp).toLocaleTimeString() : 
+                        output.timestamp?.toLocaleTimeString?.() || output.timestamp}
                     </span>
                   </div>
                   
@@ -250,7 +252,11 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             Success: {outputs.filter(o => o.type === 'success').length}
           </span>
           <span>
-            Last update: {outputs.length > 0 ? outputs[outputs.length - 1]?.timestamp.toLocaleTimeString() : 'Never'}
+            Last update: {outputs.length > 0 ? (
+              typeof outputs[outputs.length - 1]?.timestamp === 'string' 
+                ? new Date(outputs[outputs.length - 1].timestamp).toLocaleTimeString()
+                : outputs[outputs.length - 1]?.timestamp?.toLocaleTimeString?.() || 'Invalid'
+            ) : 'Never'}
           </span>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { TauriService } from '../services/tauri';
-import { useStore } from '../store';
+import { TauriService } from '@/services/tauri';
+import { useStore } from '@/store';
 import toast from 'react-hot-toast';
 
 export function useTauri() {
@@ -10,13 +10,12 @@ export function useTauri() {
 
   const executeCommand = async (
     command: string,
-    args?: any
+    _args?: any
   ): Promise<any> => {
     setIsLoading(true);
     setError(null);
     try {
-      const service = TauriService.getInstance();
-      const result = await service.executeClaudeFlow(command);
+      const result = await TauriService.executeClaudeFlow(command);
       store.appendOutput(result.output);
       toast.success('Command executed successfully');
       return result;

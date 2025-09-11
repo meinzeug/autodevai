@@ -4,7 +4,7 @@
  * SPARC methodology, hive-mind communication, and memory persistence.
  */
 
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import type {
   AiOrchestrationService,
@@ -249,10 +249,10 @@ class AiOrchestrationServiceImpl implements AiOrchestrationService {
 
       this.emitEvent('workflow_complete', {
         type: 'comprehensive',
-        sessionId: result.session_id,
-        success: result.success,
-        executionTime: result.execution_time,
-        swarmMetrics: result.swarm_metrics
+        sessionId: result['session_id'],
+        success: result['success'],
+        executionTime: result['execution_time'],
+        swarmMetrics: result['swarm_metrics']
       });
 
       return result;
@@ -406,5 +406,11 @@ export function getAiOrchestrationService(): AiOrchestrationService {
   }
   return aiOrchestrationService;
 }
+
+// EMERGENCY REPAIR: Add getInstance method for backward compatibility
+export const aiOrchestrationServiceInstance = {
+  getInstance: getAiOrchestrationService,
+  ...getAiOrchestrationService()
+};
 
 export default getAiOrchestrationService;

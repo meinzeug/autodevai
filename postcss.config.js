@@ -12,17 +12,5 @@ export default {
       grid: 'autoplace',
       cascade: false,
     },
-    'postcss-import': {},
-    'postcss-nested': {},
-    'postcss-custom-properties': {
-      preserve: false,
-    },
-    'postcss-calc': {},
-    'postcss-color-function': {},
-    ...(process.env.NODE_ENV === 'production' ? {
-      cssnano: {
-        preset: 'default',
-      },
-    } : {}),
   },
 };

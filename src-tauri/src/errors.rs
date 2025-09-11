@@ -37,7 +37,10 @@ pub enum NeuralBridgeError {
 
     /// API communication errors
     #[error("API error: {message}, status: {status:?}")]
-    Api { message: String, status: Option<u16> },
+    Api {
+        message: String,
+        status: Option<u16>,
+    },
 
     /// File system operation errors
     #[error("File system error: {message}")]

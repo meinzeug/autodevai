@@ -1,17 +1,14 @@
 // AutoDev-AI Neural Bridge Platform - Docker API Integration
 //! Docker API integration for container management
 
-use crate::{
-    errors::Result,
-    types::DockerContainer,
-};
-use bollard::{Docker, API_DEFAULT_VERSION};
+use crate::{errors::Result, types::DockerContainer};
 use bollard::container::{
-    Config, CreateContainerOptions, ListContainersOptions, 
-    StartContainerOptions, StopContainerOptions
+    Config, CreateContainerOptions, ListContainersOptions, StartContainerOptions,
+    StopContainerOptions,
 };
 use bollard::image::CreateImageOptions;
 use bollard::models::{ContainerSummary, HostConfig, PortBinding};
+use bollard::{Docker, API_DEFAULT_VERSION};
 use futures_util::stream::StreamExt;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -25,8 +22,9 @@ pub struct DockerClient {
 impl DockerClient {
     /// Create a new Docker client
     pub fn new() -> Result<Self> {
-        let client = Docker::connect_with_socket_defaults()
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to connect to Docker: {}", e)))?;
+        let client = Docker::connect_with_socket_defaults().map_err(|e| {
+            crate::errors::NeuralBridgeError::docker(format!("Failed to connect to Docker: {}", e))
+        })?;
 
         Ok(Self { client })
     }
@@ -40,10 +38,9 @@ impl DockerClient {
             ..Default::default()
         });
 
-        let containers = self.client
-            .list_containers(options)
-            .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to list containers: {}", e)))?;
+        let containers = self.client.list_containers(options).await.map_err(|e| {
+            crate::errors::NeuralBridgeError::docker(format!("Failed to list containers: {}", e))
+        })?;
 
         let result = containers
             .into_iter()
@@ -64,18 +61,32 @@ impl DockerClient {
         let container_config = self.parse_container_config(image, config)?;
 
         // Create container
-        let options = CreateContainerOptions { name, platform: None };
-        
-        let container = self.client
+        let options = CreateContainerOptions {
+            name,
+            platform: None,
+        };
+
+        let container = self
+            .client
             .create_container(Some(options), container_config)
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to create container: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!(
+                    "Failed to create container: {}",
+                    e
+                ))
+            })?;
 
         // Start container
         self.client
             .start_container(&container.id, None::<StartContainerOptions<String>>)
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to start container: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!(
+                    "Failed to start container: {}",
+                    e
+                ))
+            })?;
 
         info!("Container created and started: {}", container.id);
         Ok(container.id)
@@ -85,12 +96,16 @@ impl DockerClient {
     pub async fn stop_container(&self, container_id: &str, timeout: Option<i64>) -> Result<()> {
         info!("Stopping Docker container: {}", container_id);
 
-        let options = StopContainerOptions { t: timeout.unwrap_or(10) };
+        let options = StopContainerOptions {
+            t: timeout.unwrap_or(10),
+        };
 
         self.client
             .stop_container(container_id, Some(options))
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to stop container: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!("Failed to stop container: {}", e))
+            })?;
 
         info!("Container stopped: {}", container_id);
         Ok(())
@@ -98,7 +113,10 @@ impl DockerClient {
 
     /// Remove a container
     pub async fn remove_container(&self, container_id: &str, force: bool) -> Result<()> {
-        info!("Removing Docker container: {} (force: {})", container_id, force);
+        info!(
+            "Removing Docker container: {} (force: {})",
+            container_id, force
+        );
 
         let options = Some(bollard::container::RemoveContainerOptions {
             force,
@@ -108,14 +126,23 @@ impl DockerClient {
         self.client
             .remove_container(container_id, options)
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to remove container: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!(
+                    "Failed to remove container: {}",
+                    e
+                ))
+            })?;
 
         info!("Container removed: {}", container_id);
         Ok(())
     }
 
     /// Get container logs
-    pub async fn get_container_logs(&self, container_id: &str, lines: Option<String>) -> Result<String> {
+    pub async fn get_container_logs(
+        &self,
+        container_id: &str,
+        lines: Option<String>,
+    ) -> Result<String> {
         info!("Getting logs for container: {}", container_id);
 
         let options = Some(bollard::container::LogsOptions::<String> {
@@ -144,8 +171,15 @@ impl DockerClient {
     }
 
     /// Execute command in container
-    pub async fn exec_in_container(&self, container_id: &str, command: Vec<String>) -> Result<String> {
-        info!("Executing command in container {}: {:?}", container_id, command);
+    pub async fn exec_in_container(
+        &self,
+        container_id: &str,
+        command: Vec<String>,
+    ) -> Result<String> {
+        info!(
+            "Executing command in container {}: {:?}",
+            container_id, command
+        );
 
         let exec_config = bollard::exec::CreateExecOptions {
             cmd: Some(command),
@@ -154,10 +188,13 @@ impl DockerClient {
             ..Default::default()
         };
 
-        let exec = self.client
+        let exec = self
+            .client
             .create_exec(container_id, exec_config)
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to create exec: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!("Failed to create exec: {}", e))
+            })?;
 
         let mut stream = self.client.start_exec(&exec.id, None);
         let mut output = String::new();
@@ -182,14 +219,17 @@ impl DockerClient {
         info!("Checking if image exists: {}", image);
 
         // Check if image exists locally
-        let images = self.client
+        let images = self
+            .client
             .list_images(None::<bollard::image::ListImagesOptions<String>>)
             .await
-            .map_err(|e| crate::errors::NeuralBridgeError::docker(format!("Failed to list images: {}", e)))?;
+            .map_err(|e| {
+                crate::errors::NeuralBridgeError::docker(format!("Failed to list images: {}", e))
+            })?;
 
-        let image_exists = images.iter().any(|img| {
-            img.repo_tags.iter().any(|tag| tag == image)
-        });
+        let image_exists = images
+            .iter()
+            .any(|img| img.repo_tags.iter().any(|tag| tag == image));
 
         if !image_exists {
             info!("Pulling image: {}", image);
@@ -199,13 +239,16 @@ impl DockerClient {
             });
 
             let mut stream = self.client.create_image(options, None, None);
-            
+
             while let Some(result) = stream.next().await {
                 match result {
                     Ok(_) => continue,
                     Err(e) => {
                         error!("Failed to pull image: {}", e);
-                        return Err(crate::errors::NeuralBridgeError::docker(format!("Failed to pull image: {}", e)));
+                        return Err(crate::errors::NeuralBridgeError::docker(format!(
+                            "Failed to pull image: {}",
+                            e
+                        )));
                     }
                 }
             }
@@ -220,23 +263,19 @@ impl DockerClient {
 
     /// Parse container configuration from JSON
     fn parse_container_config(&self, image: &str, config: Value) -> Result<Config<String>> {
-        let env: Option<Vec<String>> = config.get("env")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str())
-                    .map(String::from)
-                    .collect()
-            });
+        let env: Option<Vec<String>> = config.get("env").and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(String::from)
+                .collect()
+        });
 
-        let cmd: Option<Vec<String>> = config.get("cmd")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str())
-                    .map(String::from)
-                    .collect()
-            });
+        let cmd: Option<Vec<String>> = config.get("cmd").and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(String::from)
+                .collect()
+        });
 
         // Parse port bindings
         let mut port_bindings: HashMap<String, Option<Vec<PortBinding>>> = HashMap::new();
@@ -277,18 +316,22 @@ impl DockerClient {
 fn container_summary_to_docker_container(summary: ContainerSummary) -> DockerContainer {
     DockerContainer {
         id: summary.id.unwrap_or_default(),
-        name: summary.names
+        name: summary
+            .names
             .and_then(|names| names.first().cloned())
             .unwrap_or_default()
             .trim_start_matches('/')
             .to_string(),
         image: summary.image.unwrap_or_default(),
         status: summary.status.unwrap_or_default(),
-        ports: summary.ports
+        ports: summary
+            .ports
             .unwrap_or_default()
             .into_iter()
             .filter_map(|port| {
-                if let (Some(private_port), Some(public_port)) = (port.private_port, port.public_port) {
+                if let (Some(private_port), Some(public_port)) =
+                    (port.private_port, port.public_port)
+                {
                     Some(format!("{}:{}", public_port, private_port))
                 } else if let Some(private_port) = port.private_port {
                     Some(format!("{}", private_port))
@@ -303,21 +346,24 @@ fn container_summary_to_docker_container(summary: ContainerSummary) -> DockerCon
 }
 
 // Public API functions
-static DOCKER_CLIENT: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<DockerClient>>>> = std::sync::OnceLock::new();
+static DOCKER_CLIENT: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<DockerClient>>>> =
+    std::sync::OnceLock::new();
 
 fn get_docker_client() -> Result<std::sync::Arc<std::sync::Mutex<Option<DockerClient>>>> {
-    Ok(DOCKER_CLIENT.get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(None))).clone())
+    Ok(DOCKER_CLIENT
+        .get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(None)))
+        .clone())
 }
 
 /// List all containers
 pub async fn list_containers() -> Result<Vec<DockerContainer>> {
     let client_mutex = get_docker_client()?;
     let mut client_guard = client_mutex.lock().unwrap();
-    
+
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
-    
+
     let client = client_guard.as_ref().unwrap();
     client.list_containers(false).await
 }
@@ -326,11 +372,11 @@ pub async fn list_containers() -> Result<Vec<DockerContainer>> {
 pub async fn create_container(image: &str, name: &str, config: Value) -> Result<String> {
     let client_mutex = get_docker_client()?;
     let mut client_guard = client_mutex.lock().unwrap();
-    
+
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
-    
+
     let client = client_guard.as_ref().unwrap();
     client.create_container(image, name, config).await
 }
@@ -339,11 +385,11 @@ pub async fn create_container(image: &str, name: &str, config: Value) -> Result<
 pub async fn stop_container(container_id: &str) -> Result<()> {
     let client_mutex = get_docker_client()?;
     let mut client_guard = client_mutex.lock().unwrap();
-    
+
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
-    
+
     let client = client_guard.as_ref().unwrap();
     client.stop_container(container_id, None).await
 }
@@ -376,7 +422,10 @@ mod tests {
         // This test may fail if Docker is not running
         match DockerClient::new() {
             Ok(_) => println!("Docker client created successfully"),
-            Err(e) => println!("Docker client creation failed (expected if Docker not running): {}", e),
+            Err(e) => println!(
+                "Docker client creation failed (expected if Docker not running): {}",
+                e
+            ),
         }
     }
 
@@ -386,7 +435,7 @@ mod tests {
         if client.is_err() {
             return; // Skip test if Docker not available
         }
-        
+
         let client = client.unwrap();
         let config = serde_json::json!({
             "env": ["NODE_ENV=production", "PORT=3000"],
@@ -399,7 +448,7 @@ mod tests {
 
         let result = client.parse_container_config("node:18", config);
         assert!(result.is_ok());
-        
+
         let parsed_config = result.unwrap();
         assert_eq!(parsed_config.image, Some("node:18".to_string()));
         assert!(parsed_config.env.is_some());

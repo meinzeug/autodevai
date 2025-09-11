@@ -135,7 +135,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
           const currentIndex = items.findIndex((_, i) => i === focusedIndex);
           let prevIndex = currentIndex - 1;
           
-          while (prevIndex >= 0 && (items[prevIndex].disabled || !itemsRef.current[prevIndex])) {
+          while (prevIndex >= 0 && (items[prevIndex]?.disabled || !itemsRef.current?.[prevIndex])) {
             prevIndex--;
           }
           
@@ -144,7 +144,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
           } else {
             // Wrap to last available item
             let lastIndex = items.length - 1;
-            while (lastIndex >= 0 && (items[lastIndex].disabled || !itemsRef.current[lastIndex])) {
+            while (lastIndex >= 0 && (items[lastIndex]?.disabled || !itemsRef.current?.[lastIndex])) {
               lastIndex--;
             }
             newIndex = lastIndex;
@@ -156,7 +156,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
           const currentIndex = items.findIndex((_, i) => i === focusedIndex);
           let nextIndex = currentIndex + 1;
           
-          while (nextIndex < items.length && (items[nextIndex].disabled || !itemsRef.current[nextIndex])) {
+          while (nextIndex < items.length && (items[nextIndex]?.disabled || !itemsRef.current?.[nextIndex])) {
             nextIndex++;
           }
           
@@ -165,7 +165,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
           } else {
             // Wrap to first available item
             let firstIndex = 0;
-            while (firstIndex < items.length && (items[firstIndex].disabled || !itemsRef.current[firstIndex])) {
+            while (firstIndex < items.length && (items[firstIndex]?.disabled || !itemsRef.current?.[firstIndex])) {
               firstIndex++;
             }
             newIndex = firstIndex;
@@ -175,7 +175,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
         
         case 'first': {
           let firstIndex = 0;
-          while (firstIndex < items.length && (items[firstIndex].disabled || !itemsRef.current[firstIndex])) {
+          while (firstIndex < items.length && (items[firstIndex]?.disabled || !itemsRef.current?.[firstIndex])) {
             firstIndex++;
           }
           newIndex = firstIndex < items.length ? firstIndex : focusedIndex;
@@ -184,7 +184,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
         
         case 'last': {
           let lastIndex = items.length - 1;
-          while (lastIndex >= 0 && (items[lastIndex].disabled || !itemsRef.current[lastIndex])) {
+          while (lastIndex >= 0 && (items[lastIndex]?.disabled || !itemsRef.current?.[lastIndex])) {
             lastIndex--;
           }
           newIndex = lastIndex >= 0 ? lastIndex : focusedIndex;
@@ -195,7 +195,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
       if (newIndex !== focusedIndex && newIndex >= 0 && newIndex < items.length) {
         setFocusedIndex(newIndex);
         itemsRef.current[newIndex]?.focus();
-        announce(items[newIndex].label);
+        announce(items[newIndex]?.label || 'Item');
       }
     }, [items, focusedIndex, accessibilityConfig.enableKeyboardNavigation, announce]);
 
@@ -241,14 +241,14 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
       const rgb = color.match(/\d+/g);
       if (!rgb) return 0;
 
-      const [r, g, b] = rgb.map(val => {
+      const [r, g, b] = rgb.map((val): number => {
         const normalized = parseInt(val) / 255;
         return normalized <= 0.03928 
           ? normalized / 12.92 
           : Math.pow((normalized + 0.055) / 1.055, 2.4);
       });
 
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
     };
 
     const lum1 = getLuminance(color1);
@@ -329,7 +329,7 @@ export function useAccessibility(config: Partial<AccessibilityConfig> = {}) {
   }) => {
     const attributes: Record<string, string | boolean> = {};
 
-    if (options.role) attributes.role = options.role;
+    if (options.role) attributes['role'] = options.role;
     if (options.label) attributes['aria-label'] = options.label;
     if (options.describedBy) attributes['aria-describedby'] = options.describedBy;
     if (options.expanded !== undefined) attributes['aria-expanded'] = options.expanded;

@@ -1,13 +1,13 @@
 // Advanced concurrency optimization for AI operations and parallel processing
 // Implements intelligent task scheduling, load balancing, and bottleneck detection
 
-use std::sync::Arc;
-use tokio::sync::{RwLock, Semaphore, Mutex};
-use tokio::time::{Duration, Instant};
 use futures::future::join_all;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use serde::{Serialize, Deserialize};
-use tracing::{info, warn, debug, error};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock, Semaphore};
+use tokio::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,7 +101,11 @@ impl Default for ResourceRequirements {
     }
 }
 
-pub type TaskFunction = Box<dyn Fn() -> Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin> + Send + Sync>;
+pub type TaskFunction = Box<
+    dyn Fn() -> Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin>
+        + Send
+        + Sync,
+>;
 
 pub struct Task {
     pub metadata: TaskMetadata,
@@ -162,7 +166,7 @@ pub struct BottleneckReport {
 impl ConcurrencyManager {
     pub fn new(config: ConcurrencyConfig) -> Self {
         let semaphore = Arc::new(Semaphore::new(config.max_concurrent_operations));
-        
+
         // Initialize priority queues
         let mut task_queues = Vec::new();
         for _ in 0..config.priority_levels {
@@ -172,7 +176,7 @@ impl ConcurrencyManager {
         // Initialize worker pool
         let mut workers = Vec::new();
         let worker_count = (config.max_concurrent_operations / 4).max(1);
-        
+
         for i in 0..worker_count {
             workers.push(Worker {
                 id: i,
@@ -201,8 +205,10 @@ impl ConcurrencyManager {
             resource_utilization: 0.0,
         }));
 
-        info!("Concurrency manager initialized with {} workers and {} priority levels", 
-              worker_count, config.priority_levels);
+        info!(
+            "Concurrency manager initialized with {} workers and {} priority levels",
+            worker_count, config.priority_levels
+        );
 
         Self {
             config,
@@ -216,19 +222,20 @@ impl ConcurrencyManager {
         }
     }
 
-    pub async fn submit_task<F, Fut>(&self, 
-        name: String, 
-        priority: TaskPriority, 
+    pub async fn submit_task<F, Fut>(
+        &self,
+        name: String,
+        priority: TaskPriority,
         estimated_duration: Option<Duration>,
         resource_requirements: ResourceRequirements,
-        function: F
-    ) -> anyhow::Result<Uuid> 
+        function: F,
+    ) -> anyhow::Result<Uuid>
     where
         F: Fn() -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = anyhow::Result<()>> + Send + 'static,
     {
         let task_id = Uuid::new_v4();
-        
+
         let metadata = TaskMetadata {
             id: task_id,
             name: name.clone(),
@@ -248,7 +255,8 @@ impl ConcurrencyManager {
 
         // Wrap function in BoxedFuture
         let task_function: TaskFunction = Box::new(move || {
-            Box::new(function()) as Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin>
+            Box::new(function())
+                as Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin>
         });
 
         let task = Task {
@@ -260,18 +268,18 @@ impl ConcurrencyManager {
         let priority_index = priority as usize;
         if priority_index < self.task_queues.len() {
             let mut queue = self.task_queues[priority_index].lock().await;
-            
+
             // Check queue size limit
             if queue.len() >= self.config.queue_size_limit {
                 return Err(anyhow::anyhow!("Task queue is full"));
             }
-            
+
             queue.push_back(task);
-            
+
             // Update stats
             let mut stats = self.stats.lock().await;
             stats.queued_tasks += 1;
-            
+
             debug!("Task '{}' queued with priority {:?}", name, priority);
         } else {
             return Err(anyhow::anyhow!("Invalid priority level"));
@@ -294,7 +302,7 @@ impl ConcurrencyManager {
             if let Some(mut task) = task_opt {
                 // Update task metadata
                 task.metadata.started_at = Some(Instant::now());
-                
+
                 // Update registry
                 {
                     let mut registry = self.task_registry.write().await;
@@ -309,7 +317,7 @@ impl ConcurrencyManager {
                 let task_id = task.metadata.id;
                 let task_name = task.metadata.name.clone();
                 let start_time = Instant::now();
-                
+
                 tokio::spawn(async move {
                     let _permit = match semaphore.acquire().await {
                         Ok(permit) => permit,
@@ -335,11 +343,14 @@ impl ConcurrencyManager {
                     {
                         let mut stats_lock = stats.lock().await;
                         stats_lock.active_tasks = stats_lock.active_tasks.saturating_sub(1);
-                        
+
                         match result {
                             Ok(_) => {
                                 stats_lock.completed_tasks += 1;
-                                debug!("Task '{}' completed successfully in {:?}", task_name, execution_duration);
+                                debug!(
+                                    "Task '{}' completed successfully in {:?}",
+                                    task_name, execution_duration
+                                );
                             }
                             Err(e) => {
                                 stats_lock.failed_tasks += 1;
@@ -352,7 +363,7 @@ impl ConcurrencyManager {
                     {
                         let mut completion_times_lock = completion_times.lock().await;
                         completion_times_lock.push_back((Instant::now(), execution_duration));
-                        
+
                         // Keep only recent completion times (last 1000)
                         if completion_times_lock.len() > 1000 {
                             completion_times_lock.drain(..500);
@@ -375,23 +386,27 @@ impl ConcurrencyManager {
 
     pub async fn get_stats(&self) -> ConcurrencyStats {
         let mut stats = self.stats.lock().await;
-        
+
         // Calculate average execution time
         let completion_times = self.completion_times.lock().await;
         if !completion_times.is_empty() {
             let total_time: Duration = completion_times.iter().map(|(_, duration)| *duration).sum();
-            stats.average_execution_time_ms = total_time.as_millis() as f64 / completion_times.len() as f64;
-            
+            stats.average_execution_time_ms =
+                total_time.as_millis() as f64 / completion_times.len() as f64;
+
             // Calculate throughput (tasks per second)
             let time_window = Duration::from_secs(60); // Last minute
-            let recent_completions = completion_times.iter()
+            let recent_completions = completion_times
+                .iter()
                 .filter(|(timestamp, _)| timestamp.elapsed() <= time_window)
                 .count();
             stats.throughput_per_second = recent_completions as f64 / time_window.as_secs_f64();
         }
 
         // Calculate queue wait time
-        let total_queued: usize = self.task_queues.iter()
+        let total_queued: usize = self
+            .task_queues
+            .iter()
             .map(|queue| {
                 // This is a bit hacky but necessary for async context
                 match queue.try_lock() {
@@ -409,7 +424,8 @@ impl ConcurrencyManager {
 
         // Calculate resource utilization
         let active_tasks = stats.active_tasks;
-        stats.resource_utilization = (active_tasks as f64 / self.config.max_concurrent_operations as f64) * 100.0;
+        stats.resource_utilization =
+            (active_tasks as f64 / self.config.max_concurrent_operations as f64) * 100.0;
 
         // Get bottleneck count
         let detector = self.bottleneck_detector.lock().await;
@@ -426,7 +442,7 @@ impl ConcurrencyManager {
     pub async fn optimize_concurrency(&self) -> anyhow::Result<ConcurrencyOptimization> {
         let stats = self.get_stats().await;
         let bottlenecks = self.detect_bottlenecks().await;
-        
+
         let mut optimization = ConcurrencyOptimization {
             current_performance: stats.clone(),
             bottlenecks,
@@ -453,9 +469,13 @@ impl ConcurrencyManager {
         }
 
         if stats.failed_tasks > stats.completed_tasks / 10 {
-            optimization.recommendations.push(OptimizationRecommendation {
+            optimization
+                .recommendations
+                .push(OptimizationRecommendation {
                 category: "Error Handling".to_string(),
-                description: "High failure rate detected. Review task timeout settings and error handling.".to_string(),
+                description:
+                    "High failure rate detected. Review task timeout settings and error handling."
+                        .to_string(),
                 priority: "High".to_string(),
                 estimated_improvement: "10-30% failure reduction".to_string(),
             });
@@ -467,7 +487,7 @@ impl ConcurrencyManager {
     pub async fn scale_workers(&self, target_workers: usize) -> anyhow::Result<()> {
         let mut pool = self.worker_pool.write().await;
         let current_workers = pool.workers.len();
-        
+
         if target_workers > current_workers {
             // Scale up
             for i in current_workers..target_workers {
@@ -478,11 +498,17 @@ impl ConcurrencyManager {
                     resource_usage: Arc::new(Mutex::new(ResourceRequirements::default())),
                 });
             }
-            info!("Scaled up worker pool from {} to {} workers", current_workers, target_workers);
+            info!(
+                "Scaled up worker pool from {} to {} workers",
+                current_workers, target_workers
+            );
         } else if target_workers < current_workers {
             // Scale down
             pool.workers.truncate(target_workers);
-            info!("Scaled down worker pool from {} to {} workers", current_workers, target_workers);
+            info!(
+                "Scaled down worker pool from {} to {} workers",
+                current_workers, target_workers
+            );
         }
 
         Ok(())
@@ -496,7 +522,7 @@ impl ConcurrencyManager {
             } else {
                 TaskStatus::Queued
             };
-            
+
             Some(status)
         } else {
             None
@@ -540,7 +566,7 @@ impl BottleneckDetector {
     fn record_execution(&mut self, duration: Duration) {
         let now = Instant::now();
         self.execution_time_history.push_back((now, duration));
-        
+
         // Keep only recent history (last 1000 entries)
         if self.execution_time_history.len() > 1000 {
             self.execution_time_history.drain(..500);
@@ -553,21 +579,26 @@ impl BottleneckDetector {
 
         // Analyze execution time trends
         if self.execution_time_history.len() > 10 {
-            let recent_times: Vec<_> = self.execution_time_history.iter()
+            let recent_times: Vec<_> = self
+                .execution_time_history
+                .iter()
                 .rev()
                 .take(50)
                 .map(|(_, duration)| duration.as_millis() as f64)
                 .collect();
-                
+
             let avg_time = recent_times.iter().sum::<f64>() / recent_times.len() as f64;
             let max_time = recent_times.iter().cloned().fold(0.0f64, f64::max);
-            
+
             if max_time > avg_time * 3.0 {
                 bottlenecks.push(BottleneckReport {
                     bottleneck_type: "Execution Time Variance".to_string(),
                     detected_at: now,
                     severity: "Medium".to_string(),
-                    description: format!("High variance in execution times detected. Max: {:.2}ms, Avg: {:.2}ms", max_time, avg_time),
+                    description: format!(
+                        "High variance in execution times detected. Max: {:.2}ms, Avg: {:.2}ms",
+                        max_time, avg_time
+                    ),
                     suggested_actions: vec![
                         "Analyze slow tasks for optimization opportunities".to_string(),
                         "Consider task timeout adjustments".to_string(),
@@ -609,7 +640,15 @@ where
 {
     let manager = CONCURRENCY_MANAGER.read().await;
     if let Some(manager) = manager.as_ref() {
-        manager.submit_task(name, priority, estimated_duration, resource_requirements, function).await
+        manager
+            .submit_task(
+                name,
+                priority,
+                estimated_duration,
+                resource_requirements,
+                function,
+            )
+            .await
     } else {
         Err(anyhow::anyhow!("Concurrency manager not initialized"))
     }
@@ -633,21 +672,24 @@ mod tests {
     async fn test_concurrency_manager() {
         let config = ConcurrencyConfig::default();
         let manager = ConcurrencyManager::new(config);
-        
+
         // Submit a test task
-        let task_id = manager.submit_task(
-            "test_task".to_string(),
-            TaskPriority::Normal,
-            Some(Duration::from_millis(100)),
-            ResourceRequirements::default(),
-            || async { Ok(()) }
-        ).await.unwrap();
-        
+        let task_id = manager
+            .submit_task(
+                "test_task".to_string(),
+                TaskPriority::Normal,
+                Some(Duration::from_millis(100)),
+                ResourceRequirements::default(),
+                || async { Ok(()) },
+            )
+            .await
+            .unwrap();
+
         assert!(!task_id.is_nil());
-        
+
         // Wait for task completion
         tokio::time::sleep(Duration::from_millis(200)).await;
-        
+
         let stats = manager.get_stats().await;
         assert!(stats.completed_tasks > 0 || stats.active_tasks > 0);
     }
@@ -656,25 +698,27 @@ mod tests {
     async fn test_bottleneck_detection() {
         let config = ConcurrencyConfig::default();
         let manager = ConcurrencyManager::new(config);
-        
+
         // Submit tasks with varying execution times to trigger bottleneck detection
         for i in 0..10 {
             let duration = Duration::from_millis(if i % 3 == 0 { 500 } else { 50 });
-            let _ = manager.submit_task(
-                format!("task_{}", i),
-                TaskPriority::Normal,
-                Some(duration),
-                ResourceRequirements::default(),
-                move || async move {
-                    tokio::time::sleep(duration).await;
-                    Ok(())
-                }
-            ).await;
+            let _ = manager
+                .submit_task(
+                    format!("task_{}", i),
+                    TaskPriority::Normal,
+                    Some(duration),
+                    ResourceRequirements::default(),
+                    move || async move {
+                        tokio::time::sleep(duration).await;
+                        Ok(())
+                    },
+                )
+                .await;
         }
-        
+
         // Wait for tasks to complete
         tokio::time::sleep(Duration::from_secs(2)).await;
-        
+
         let bottlenecks = manager.detect_bottlenecks().await;
         // Bottlenecks may or may not be detected depending on timing
         assert!(bottlenecks.len() >= 0);

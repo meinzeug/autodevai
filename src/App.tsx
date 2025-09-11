@@ -24,7 +24,10 @@ import {
   ExecutionOutput,
   ClaudeFlowCommand,
   OrchestrationConfig,
-  NotificationMessage
+  NotificationMessage,
+  OrchestrationMode,
+  Tool,
+  ExecutionMode
 } from './types';
 import toast from 'react-hot-toast';
 
@@ -42,10 +45,11 @@ interface AppState {
 }
 
 const defaultConfig: OrchestrationConfig = {
-  mode: {
-    type: 'single',
-    primaryModel: 'claude'
-  },
+  mode: 'single' as OrchestrationMode,
+  tool: 'claude-flow' as Tool,
+  executionMode: 'standard' as ExecutionMode,
+  primaryModel: 'claude',
+  secondaryModel: undefined as string | undefined,
   dockerEnabled: false,
   autoRestart: true,
   maxRetries: 3,
@@ -64,25 +68,26 @@ function AppContent() {
     showSettings: false,
     showOutput: true,
     showUpdater: false,
-    showSidebar: false,
+    showSidebar: true,
     activeTab: 'orchestration'
   });
   
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_notifications, _setNotifications] = useState<NotificationMessage[]>([]);
-  const tauriService = useMemo(() => TauriService.getInstance(), []);
+  const tauriService = useMemo(() => TauriService, []);
 
   // Initialize Tauri service and event listeners
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        await tauriService.initialize();
+        // TauriService doesn't have initialize method
+        // await tauriService.initialize();
         
         // Initialize hive coordination
         hiveCoordinator.subscribe('integration-coordinator', (message) => {
           const output: ExecutionOutput = {
             id: `hive-${Date.now()}`,
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             type: message.type === 'error' ? 'error' : 'info',
             content: `Hive Message from ${message.from}: ${JSON.stringify(message.payload)}`,
             source: 'Hive Mind'
@@ -101,12 +106,8 @@ function AppContent() {
         });
         
         // Set up execution output listener
-        const unsubscribeOutput = tauriService.onExecutionOutput((output) => {
-          setState(prev => ({
-            ...prev,
-            outputs: [...prev.outputs, output]
-          }));
-        });
+        // TauriService doesn't have onExecutionOutput method
+        const unsubscribeOutput = () => {}; // No-op
 
         return () => {
           unsubscribeOutput();
@@ -135,7 +136,7 @@ function AppContent() {
       // Add starting message
       const startOutput: ExecutionOutput = {
         id: `start-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'info',
         content: `Starting ${command.mode} execution: ${command.task}`,
         source: 'AutoDev-AI'
@@ -154,14 +155,14 @@ function AppContent() {
         }));
       }, 1000);
 
-      const result = await tauriService.executeClaudeFlowCommand(command);
+      const result = await tauriService.executeClaudeFlow(command);
       
       clearInterval(progressInterval);
       
       // Add success message
       const successOutput: ExecutionOutput = {
         id: `success-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'success',
         content: `Task completed successfully: ${result}`,
         source: 'AutoDev-AI'
@@ -178,7 +179,7 @@ function AppContent() {
     } catch (error) {
       const errorOutput: ExecutionOutput = {
         id: `error-${Date.now()}`,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         type: 'error',
         content: `Execution failed: ${error}`,
         source: 'AutoDev-AI'
@@ -394,12 +395,16 @@ function AppContent() {
         className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Content Container */}
+      <div className={cn(
+        "flex-1 flex overflow-hidden transition-all duration-300",
+        // Add left margin on large screens when sidebar is open
+        state.showSidebar && "lg:ml-64"
+      )}>
         {/* Settings Sidebar */}
         {state.showSettings && (
           <div className={cn(
-            "w-80 border-r transition-all duration-300",
+            "w-80 border-r transition-all duration-300 flex-shrink-0",
             theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           )}>
             <ConfigurationPanel 
@@ -413,7 +418,7 @@ function AppContent() {
         {/* Update Manager Sidebar */}
         {state.showUpdater && (
           <div className={cn(
-            "w-96 border-r transition-all duration-300 overflow-y-auto",
+            "w-96 border-r transition-all duration-300 overflow-y-auto flex-shrink-0",
             theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           )}>
             <div className="p-6">
@@ -428,9 +433,9 @@ function AppContent() {
         
         {/* Primary Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden">
+          <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 p-4 lg:p-6 overflow-hidden">
             {/* Left Panel - Orchestration */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5 flex-shrink-0">
               <ErrorBoundary>
                 <OrchestrationPanel
                   onExecute={handleExecute}
@@ -442,7 +447,7 @@ function AppContent() {
             </div>
             
             {/* Right Panel - Output & Monitoring */}
-            <div className="lg:col-span-7 flex flex-col space-y-6 min-h-0">
+            <div className="lg:col-span-7 flex flex-col min-h-0 flex-1">
               {state.showOutput && (
                 <ErrorBoundary>
                   <OutputDisplay
@@ -459,17 +464,23 @@ function AppContent() {
 
       {/* Status Bar with system health */}
       <ErrorBoundary>
-        <StatusBar
-          systemHealth={{
-            cpu: 45.2,
-            memory: 62.8,
-            disk: 78.4,
-            network: 'connected'
-          }}
-          activeConnections={state.outputs.length}
-          lastUpdate={new Date()}
-          className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
-        />
+        <div className={cn(
+          "transition-all duration-300",
+          // Add left margin when sidebar is open on large screens
+          state.showSidebar && "lg:ml-64"
+        )}>
+          <StatusBar
+            systemHealth={{
+              cpu: 45.2,
+              memory: 62.8,
+              disk: 78.4,
+              network: 'connected'
+            }}
+            activeConnections={state.outputs.length}
+            lastUpdate={new Date().toISOString()}
+            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
+          />
+        </div>
       </ErrorBoundary>
     </div>
   );

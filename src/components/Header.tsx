@@ -5,15 +5,15 @@ const StatusIndicatorComponent: React.FC<{ indicator: StatusIndicator }> = ({ in
   const getStatusColor = (status: StatusIndicator['status']) => {
     switch (status) {
       case 'online':
-        return 'text-green-500 bg-green-100';
+        return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/20';
       case 'warning':
-        return 'text-yellow-500 bg-yellow-100';
+        return 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/20';
       case 'error':
-        return 'text-red-500 bg-red-100';
+        return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20';
       case 'offline':
-        return 'text-gray-500 bg-gray-100';
+        return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800';
       default:
-        return 'text-gray-500 bg-gray-100';
+        return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800';
     }
   };
 
@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header 
-      className={`bg-white shadow-sm border-b border-gray-200 ${className}`}
+      className={`bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 ${className}`}
       role="banner"
     >
       <div className="flex items-center justify-between px-4 py-3">
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 lg:hidden"
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 lg:hidden text-gray-700 dark:text-gray-300"
               aria-label="Open navigation menu"
               type="button"
             >
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
                 AD
               </span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
               {title}
             </h1>
           </div>
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
           {children}
           
           {/* Time Display */}
-          <div className="hidden sm:block text-sm text-gray-500">
+          <div className="hidden sm:block text-sm text-gray-500 dark:text-gray-400">
             {new Date().toLocaleTimeString([], { 
               hour: '2-digit', 
               minute: '2-digit',
@@ -131,13 +131,13 @@ export const Header: React.FC<HeaderProps> = ({
           {/* User Menu */}
           <div className="relative">
             <button
-              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label="User menu"
               type="button"
             >
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
                 <svg 
-                  className="w-4 h-4 text-gray-600" 
+                  className="w-4 h-4 text-gray-600 dark:text-gray-300" 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"

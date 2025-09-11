@@ -3,7 +3,7 @@
  * Tests the complete integration between OpenRouter, Claude-Flow, and Codex services
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
+import { describe, test, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { OpenRouterClient, OpenRouterConfig } from '../../src/services/openrouter';
 import { ClaudeFlowOrchestrator } from '../../src/services/claude-flow';
 import { CodexIntegration } from '../../src/services/codex';

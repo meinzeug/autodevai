@@ -3,15 +3,12 @@
 //! Handles application initialization, window state restoration,
 //! and initial configuration setup.
 
-use crate::security::{
-    ipc_security::IpcSecurity,
-    enhanced_ipc_security::EnhancedIpcSecurity,
-};
+use crate::security::{enhanced_ipc_security::EnhancedIpcSecurity, ipc_security::IpcSecurity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use tauri::{App, Manager, Window, WindowEvent, Position, Size};
+use tauri::{App, Manager, Position, Size, Window, WindowEvent};
 use tokio::fs;
 use tokio::time::{interval, Duration};
 
@@ -162,7 +159,7 @@ impl SetupManager {
         // Initialize basic IPC security for backward compatibility
         let basic_security = IpcSecurity::default();
         app.manage(basic_security);
-        
+
         // Initialize enhanced IPC security for advanced features
         let enhanced_security = EnhancedIpcSecurity::new().await;
         app.manage(enhanced_security);
@@ -180,7 +177,10 @@ impl SetupManager {
                     let mut states_guard = self.window_states.write().unwrap();
                     *states_guard = states;
                 }
-                log::info!("Loaded {} window states", self.window_states.read().unwrap().len());
+                log::info!(
+                    "Loaded {} window states",
+                    self.window_states.read().unwrap().len()
+                );
             } else {
                 log::warn!("Failed to parse window states, starting with empty states");
             }
@@ -213,11 +213,11 @@ impl SetupManager {
     async fn setup_window_restoration(&self, app: &App) -> Result<(), Box<dyn std::error::Error>> {
         // Get all current windows
         let windows: Vec<Window> = app.webview_windows().values().cloned().collect();
-        
+
         for window in windows {
             self.restore_window_state(&window).await;
         }
-        
+
         log::info!("Window state restoration completed");
         Ok(())
     }
@@ -225,54 +225,65 @@ impl SetupManager {
     /// Restore individual window state
     pub async fn restore_window_state(&self, window: &Window) {
         let window_label = window.label();
-        
+
         if let Some(state) = self.get_window_state(window_label) {
             log::info!("Restoring state for window '{}'", window_label);
-            
+
             // Restore position and size
             let _ = window.set_position(Position::Physical(tauri::PhysicalPosition {
                 x: state.x,
                 y: state.y,
             }));
-            
+
             let _ = window.set_size(Size::Physical(tauri::PhysicalSize {
                 width: state.width,
                 height: state.height,
             }));
-            
+
             // Restore window state flags
             if state.maximized {
                 let _ = window.maximize();
             } else if state.minimized {
                 let _ = window.minimize();
             }
-            
+
             if state.fullscreen {
                 let _ = window.set_fullscreen(true);
             }
-            
+
             if !state.visible {
                 let _ = window.hide();
             } else {
                 let _ = window.show();
             }
-            
+
             if state.focused {
                 let _ = window.set_focus();
             }
         } else {
-            log::debug!("No saved state found for window '{}', using defaults", window_label);
+            log::debug!(
+                "No saved state found for window '{}', using defaults",
+                window_label
+            );
         }
     }
 
     /// Save current window state
-    pub async fn save_current_window_state(&self, window: &Window) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn save_current_window_state(
+        &self,
+        window: &Window,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let window_label = window.label().to_string();
-        
+
         // Get current window properties
-        let position = window.outer_position().unwrap_or(tauri::PhysicalPosition { x: 100, y: 100 });
-        let size = window.outer_size().unwrap_or(tauri::PhysicalSize { width: 1200, height: 800 });
-        
+        let position = window
+            .outer_position()
+            .unwrap_or(tauri::PhysicalPosition { x: 100, y: 100 });
+        let size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+            width: 1200,
+            height: 800,
+        });
+
         let state = WindowState {
             x: position.x,
             y: position.y,
@@ -284,18 +295,18 @@ impl SetupManager {
             focused: window.is_focused().unwrap_or(false),
             visible: window.is_visible().unwrap_or(true),
         };
-        
+
         // Save to memory
         {
             let mut states_guard = self.window_states.write().unwrap();
             states_guard.insert(window_label.clone(), state);
         }
-        
+
         // Save to disk if auto-save is enabled
         if *self.auto_save_enabled.read().unwrap() {
             self.save_window_states().await?;
         }
-        
+
         log::debug!("Saved state for window '{}'", window_label);
         Ok(())
     }
@@ -307,30 +318,31 @@ impl SetupManager {
         let window_states_path = self.window_states_path.clone();
         let config_path = self.config_path.clone();
         let auto_save_enabled = self.auto_save_enabled.clone();
-        
+
         tokio::spawn(async move {
             let auto_save_interval = {
                 let config_guard = config.read().unwrap();
                 Duration::from_secs(config_guard.auto_save_interval)
             };
-            
+
             let mut interval_timer = interval(auto_save_interval);
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 if !*auto_save_enabled.read().unwrap() {
                     continue;
                 }
-                
+
                 // Save all current window states
                 let windows: Vec<Window> = app_handle.webview_windows().values().cloned().collect();
-                
+
                 for window in &windows {
                     let window_label = window.label().to_string();
-                    
+
                     // Get current window properties
-                    if let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) {
+                    if let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size())
+                    {
                         let state = WindowState {
                             x: position.x,
                             y: position.y,
@@ -342,7 +354,7 @@ impl SetupManager {
                             focused: window.is_focused().unwrap_or(false),
                             visible: window.is_visible().unwrap_or(true),
                         };
-                        
+
                         // Save to memory
                         {
                             let mut states_guard = window_states.write().unwrap();
@@ -350,47 +362,49 @@ impl SetupManager {
                         }
                     }
                 }
-                
+
                 // Save window states to disk
                 {
                     let states = {
                         let states_guard = window_states.read().unwrap();
                         states_guard.clone()
                     };
-                    
+
                     if let Some(parent) = window_states_path.parent() {
                         let _ = fs::create_dir_all(parent).await;
                     }
-                    
+
                     let content = serde_json::to_string_pretty(&states).unwrap_or_default();
                     if let Err(e) = fs::write(&window_states_path, content).await {
                         log::error!("Failed to save window states: {}", e);
                     }
                 }
-                
+
                 // Save configuration
                 {
                     let config_clone = {
                         let config_guard = config.read().unwrap();
                         config_guard.clone()
                     };
-                    
+
                     if let Some(parent) = config_path.parent() {
                         let _ = fs::create_dir_all(parent).await;
                     }
-                    
+
                     let content = serde_json::to_string_pretty(&config_clone).unwrap_or_default();
                     if let Err(e) = fs::write(&config_path, content).await {
                         log::error!("Failed to save configuration: {}", e);
                     }
                 }
-                
+
                 log::debug!("Auto-save completed for {} windows", windows.len());
             }
         });
-        
-        log::info!("Auto-save system started with interval: {} seconds", 
-                   config.read().unwrap().auto_save_interval);
+
+        log::info!(
+            "Auto-save system started with interval: {} seconds",
+            config.read().unwrap().auto_save_interval
+        );
     }
 
     /// Update configuration (thread-safe)

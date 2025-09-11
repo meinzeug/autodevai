@@ -2,13 +2,76 @@
  * Workflow Validator utility for testing GitHub workflow configurations
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import yaml from 'yaml';
+// Utility for validating GitHub workflow configurations
+
+interface WorkflowStep {
+  name?: string;
+  uses?: string;
+  run?: string;
+  with?: Record<string, any>;
+}
+
+interface WorkflowJob {
+  'runs-on': string;
+  if?: string;
+  steps: WorkflowStep[];
+  needs?: string | string[];
+  permissions?: Record<string, string>;
+}
+
+interface WorkflowDefinition {
+  name: string;
+  on: Record<string, any>;
+  jobs: Record<string, WorkflowJob>;
+}
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  workflowName: string;
+  triggers: string[];
+  jobs: string[];
+  security: {
+    hasSecurityScanning: boolean;
+    hasDependencyChecks: boolean;
+    hasSecretScanning: boolean;
+  };
+  performance: {
+    estimatedRuntime: number;
+    parallelJobs: number;
+    resourceUsage: string;
+  };
+}
+
+interface WebhookValidation {
+  isAccessible: boolean;
+  responseTime: number;
+  statusCode: number;
+  error: string | null;
+  endpoint: string;
+}
+
+interface SecurityValidation {
+  isSecure: boolean;
+  errors: string[];
+  warnings: string[];
+  recommendations: string[];
+  securityScore: number;
+}
+
+interface PerformanceValidation {
+  isOptimized: boolean;
+  estimatedRuntime: number;
+  parallelization: number;
+  resourceEfficiency: string;
+  bottlenecks: string[];
+  optimizations: string[];
+}
 
 export class WorkflowValidator {
-  private workflowDefinitions: Map<string, any> = new Map();
-  private validationResults: Map<string, any> = new Map();
+  private workflowDefinitions: Map<string, WorkflowDefinition> = new Map();
+  private validationResults: Map<string, ValidationResult> = new Map();
   
   async setup(): Promise<void> {
     // Load sample workflow definitions
@@ -71,24 +134,37 @@ export class WorkflowValidator {
     this.validationResults.clear();
   }
   
-  async validateWorkflow(workflowName: string): Promise<any> {
+  async validateWorkflow(workflowName: string): Promise<ValidationResult> {
     const workflow = this.workflowDefinitions.get(workflowName);
     
     if (!workflow) {
       return {
         isValid: false,
         errors: ['Workflow file not found'],
-        workflowName
+        warnings: [],
+        workflowName,
+        triggers: [],
+        jobs: [],
+        security: {
+          hasSecurityScanning: false,
+          hasDependencyChecks: false,
+          hasSecretScanning: false
+        },
+        performance: {
+          estimatedRuntime: 0,
+          parallelJobs: 0,
+          resourceUsage: 'unknown'
+        }
       };
     }
     
-    const validation = {
+    const validation: ValidationResult = {
       isValid: true,
-      errors: [],
-      warnings: [],
+      errors: [] as string[],
+      warnings: [] as string[],
       workflowName,
-      triggers: [],
-      jobs: [],
+      triggers: [] as string[],
+      jobs: [] as string[],
       security: {
         hasSecurityScanning: false,
         hasDependencyChecks: false,
@@ -106,7 +182,7 @@ export class WorkflowValidator {
       validation.triggers = Object.keys(workflow.on);
       
       // Check for common trigger patterns
-      if (!workflow.on.push && !workflow.on.pull_request) {
+      if (!workflow.on['push'] && !workflow.on['pull_request']) {
         validation.warnings.push('No push or pull_request triggers found');
       }
     } else {
@@ -119,7 +195,7 @@ export class WorkflowValidator {
       validation.jobs = Object.keys(workflow.jobs);
       validation.performance.parallelJobs = validation.jobs.length;
       
-      for (const [jobName, jobConfig] of Object.entries(workflow.jobs)) {
+      for (const [jobName, jobConfig] of Object.entries(workflow.jobs) as [string, WorkflowJob][]) {
         // Check job configuration
         if (!jobConfig['runs-on']) {
           validation.errors.push(`Job '${jobName}' missing runs-on`);
@@ -189,8 +265,8 @@ export class WorkflowValidator {
     return validation;
   }
   
-  async validateWebhookEndpoint(endpointUrl: string): Promise<any> {
-    const validation = {
+  async validateWebhookEndpoint(endpointUrl: string): Promise<WebhookValidation> {
+    const validation: WebhookValidation = {
       isAccessible: false,
       responseTime: 0,
       statusCode: 0,
@@ -202,15 +278,20 @@ export class WorkflowValidator {
       const fetch = (await import('node-fetch')).default;
       const startTime = Date.now();
       
-      const response = await fetch(endpointUrl.replace('/webhooks/github', '/health'), {
-        method: 'GET',
-        timeout: 5000
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const fetchPromise = fetch(endpointUrl.replace('/webhooks/github', '/health'), {
+        method: 'GET'
       });
       
-      validation.responseTime = Date.now() - startTime;
-      validation.statusCode = response.status;
-      validation.isAccessible = response.ok;
-      
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        validation.responseTime = Date.now() - startTime;
+        validation.statusCode = response.status;
+        validation.isAccessible = response.ok;
+        
     } catch (error: any) {
       validation.error = error.message;
       validation.isAccessible = false;
@@ -219,27 +300,30 @@ export class WorkflowValidator {
     return validation;
   }
   
-  async validateWorkflowSecurity(workflowName: string): Promise<any> {
+  async validateWorkflowSecurity(workflowName: string): Promise<SecurityValidation> {
     const workflow = this.workflowDefinitions.get(workflowName);
     
     if (!workflow) {
       return {
         isSecure: false,
-        errors: ['Workflow not found']
+        errors: ['Workflow not found'],
+        warnings: [],
+        recommendations: [],
+        securityScore: 0
       };
     }
     
-    const securityValidation = {
+    const securityValidation: SecurityValidation = {
       isSecure: true,
-      errors: [],
-      warnings: [],
-      recommendations: [],
+      errors: [] as string[],
+      warnings: [] as string[],
+      recommendations: [] as string[],
       securityScore: 100
     };
     
     // Check for security best practices
     if (workflow.jobs) {
-      for (const [jobName, jobConfig] of Object.entries(workflow.jobs)) {
+      for (const [jobName, jobConfig] of Object.entries(workflow.jobs) as [string, WorkflowJob][]) {
         // Check for hardcoded secrets
         const jobString = JSON.stringify(jobConfig);
         if (/['"][A-Za-z0-9+/]{20,}['"]/.test(jobString)) {
@@ -301,23 +385,27 @@ export class WorkflowValidator {
     return securityValidation;
   }
   
-  async validateWorkflowPerformance(workflowName: string): Promise<any> {
+  async validateWorkflowPerformance(workflowName: string): Promise<PerformanceValidation> {
     const workflow = this.workflowDefinitions.get(workflowName);
     
     if (!workflow) {
       return {
         isOptimized: false,
-        errors: ['Workflow not found']
+        estimatedRuntime: 0,
+        parallelization: 0,
+        resourceEfficiency: 'poor',
+        bottlenecks: ['Workflow not found'],
+        optimizations: []
       };
     }
     
-    const performanceValidation = {
+    const performanceValidation: PerformanceValidation = {
       isOptimized: true,
       estimatedRuntime: 0,
       parallelization: 0,
       resourceEfficiency: 'good',
-      bottlenecks: [],
-      optimizations: []
+      bottlenecks: [] as string[],
+      optimizations: [] as string[]
     };
     
     if (workflow.jobs) {
@@ -326,7 +414,7 @@ export class WorkflowValidator {
       
       // Analyze job dependencies
       const dependencies = new Map();
-      for (const [jobName, jobConfig] of Object.entries(workflow.jobs)) {
+      for (const [jobName, jobConfig] of Object.entries(workflow.jobs) as [string, WorkflowJob][]) {
         if (jobConfig.needs) {
           dependencies.set(jobName, Array.isArray(jobConfig.needs) ? jobConfig.needs : [jobConfig.needs]);
         }
@@ -348,7 +436,7 @@ export class WorkflowValidator {
       }
       
       // Check for caching opportunities
-      for (const [jobName, jobConfig] of Object.entries(workflow.jobs)) {
+      for (const [jobName, jobConfig] of Object.entries(workflow.jobs) as [string, WorkflowJob][]) {
         let hasCache = false;
         if (jobConfig.steps) {
           for (const step of jobConfig.steps) {

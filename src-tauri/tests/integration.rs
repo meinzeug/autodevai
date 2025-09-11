@@ -1,5 +1,5 @@
 //! Comprehensive Integration Tests for Tauri AutoDev-AI Neural Bridge Platform
-//! 
+//!
 //! This module contains comprehensive integration tests covering all Tauri features:
 //! - Window management and state persistence
 //! - System tray functionality
@@ -9,12 +9,12 @@
 //! - Cross-platform compatibility
 //! - Performance and stress testing
 
+use serde_json::json;
 use std::env;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tempfile::TempDir;
 use tokio::time::timeout;
-use serde_json::json;
 
 #[test]
 fn test_app_creation() {
