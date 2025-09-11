@@ -149,7 +149,7 @@
   *,
   *::before,
   *::after {
-    @apply border-border;
+    border-color: var(--border-primary);
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -169,7 +169,8 @@
 
   /* Body with enhanced typography */
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     height: 100%;
     font-family:
       'Inter',
