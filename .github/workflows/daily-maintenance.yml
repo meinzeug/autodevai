@@ -89,7 +89,6 @@ jobs:
               ### Planned Activities
               - ✅ Merge safe Dependabot PRs
               - 🔒 Security vulnerability scan & fixes
-              - 🔄 Local sync trigger
               
               This issue will be updated with progress and closed upon completion.`,
               labels: ['maintenance', 'automated', 'daily-pipeline']
@@ -427,7 +426,7 @@ jobs:
 
   rollback-check:
     name: 🔄 Rollback Mechanism
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local]
+    needs: [initialize, merge-dependabot-prs, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: failure()
@@ -481,7 +480,7 @@ jobs:
 
   status-dashboard:
     name: 📊 Update Status Dashboard
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local]
+    needs: [initialize, merge-dependabot-prs, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: always()
@@ -510,9 +509,6 @@ jobs:
                 "vulnerabilitiesFound": ${{ needs.security-scan.outputs.vulnerabilities-found || 0 }},
                 "fixesApplied": ${{ needs.security-scan.outputs.fixes-applied || 0 }}
               },
-              "sync": {
-                "triggered": ${{ needs.sync-local.outputs.sync-triggered || false }}
-              }
             }
           }
           EOF
@@ -622,7 +618,7 @@ jobs:
 
   notifications:
     name: 📢 Send Notifications
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local, status-dashboard]
+    needs: [initialize, merge-dependabot-prs, security-scan, status-dashboard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -739,7 +735,6 @@ jobs:
               
               ### Links
               - [📊 Dashboard](./docs/dashboard/maintenance-dashboard.html)
-              - [🔄 Sync Script](./.github/sync-local.sh)
               - [📝 Full Run Details](${runUrl})`;
               
               await github.rest.issues.update({
