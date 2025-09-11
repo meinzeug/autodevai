@@ -5,7 +5,7 @@ on:
     types: [opened]
     branches: [main]
   schedule:
-    - cron: '0 9 * * MON' # Weekly security check on Mondays
+    - cron: '0 1 * * MON' # Weekly security check on Mondays at 1 AM
   workflow_dispatch:
 
 permissions:

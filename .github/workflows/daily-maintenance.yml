@@ -87,155 +87,15 @@ jobs:
               **Mode:** ${{ inputs.dry-run == 'true' && 'DRY RUN' || 'LIVE' }}
               
               ### Planned Activities
-              - ✅ Merge safe Dependabot PRs
               - 🔒 Security vulnerability scan & fixes
               
               This issue will be updated with progress and closed upon completion.`,
               labels: ['maintenance', 'automated', 'daily-pipeline']
             });
 
-  merge-dependabot-prs:
-    name: 🤖 Auto-merge Dependabot PRs
-    needs: initialize
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      merged-count: ${{ steps.merge.outputs.merged-count }}
-      failed-count: ${{ steps.merge.outputs.failed-count }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Dependabot PRs
-        id: get-prs
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const prs = await github.rest.pulls.list({
-              owner,
-              repo,
-              state: 'open',
-              sort: 'created',
-              direction: 'asc'
-            });
-
-            const dependabotPRs = prs.data.filter(pr => 
-              pr.user.login === 'dependabot[bot]' && 
-              pr.labels.some(label => label.name === 'dependencies')
-            );
-
-            console.log(`Found ${dependabotPRs.length} Dependabot PRs`);
-            return dependabotPRs;
-
-      - name: Analyze and merge safe PRs
-        id: merge
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const dependabotPRs = ${{ steps.get-prs.outputs.result }};
-            const dryRun = '${{ needs.initialize.outputs.dry-run }}' === 'true';
-            const forceMerge = '${{ inputs.force-merge }}' === 'true';
-
-            let mergedCount = 0;
-            let failedCount = 0;
-            const mergeResults = [];
-
-            for (const pr of dependabotPRs) {
-              try {
-                console.log(`Processing PR #${pr.number}: ${pr.title}`);
-                
-                // Safety checks
-                const isSafeMerge = await checkPRSafety(pr, github, context, forceMerge);
-                
-                if (isSafeMerge) {
-                  if (!dryRun) {
-                    // Check if CI is passing
-                    const checks = await github.rest.checks.listForRef({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      ref: pr.head.sha
-                    });
-                    
-                    const allPassed = checks.data.check_runs.every(check => 
-                      check.status === 'completed' && check.conclusion === 'success'
-                    );
-                    
-                    if (allPassed || forceMerge) {
-                      await github.rest.pulls.merge({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        pull_number: pr.number,
-                        commit_title: `Auto-merge: ${pr.title}`,
-                        commit_message: `Automatically merged by daily maintenance pipeline.\n\nRun: ${context.runId}`,
-                        merge_method: 'squash'
-                      });
-                      mergedCount++;
-                      mergeResults.push(`✅ Merged PR #${pr.number}: ${pr.title}`);
-                    } else {
-                      failedCount++;
-                      mergeResults.push(`❌ Failed PR #${pr.number}: CI not passing`);
-                    }
-                  } else {
-                    mergedCount++;
-                    mergeResults.push(`🔍 DRY RUN - Would merge PR #${pr.number}: ${pr.title}`);
-                  }
-                } else {
-                  failedCount++;
-                  mergeResults.push(`⚠️ Skipped PR #${pr.number}: Safety check failed`);
-                }
-              } catch (error) {
-                failedCount++;
-                mergeResults.push(`💥 Error processing PR #${pr.number}: ${error.message}`);
-              }
-            }
-
-            console.log(`Merge summary: ${mergedCount} merged, ${failedCount} failed`);
-            core.setOutput('merged-count', mergedCount);
-            core.setOutput('failed-count', failedCount);
-            core.setOutput('results', mergeResults.join('\n'));
-
-            // Helper function to check PR safety
-            async function checkPRSafety(pr, github, context, forceMerge) {
-              if (forceMerge) return true;
-              
-              // Check for breaking changes in title/body
-              const breakingKeywords = ['breaking', 'major', 'incompatible', 'migration'];
-              const text = (pr.title + ' ' + pr.body).toLowerCase();
-              
-              if (breakingKeywords.some(keyword => text.includes(keyword))) {
-                return false;
-              }
-              
-              // Check for major version updates (more than patch)
-              const majorUpdatePattern = /bump.*from.*\d+\.\d+\.\d+.*to.*(\d+)\./;
-              const match = pr.title.match(majorUpdatePattern);
-              if (match) {
-                const newMajor = parseInt(match[1]);
-                // Allow minor/patch updates only
-                return false; // Be conservative for now
-              }
-              
-              // Check PR size (files changed)
-              const files = await github.rest.pulls.listFiles({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number
-              });
-              
-              // Skip if too many files changed (potential security issue)
-              if (files.data.length > 10) {
-                return false;
-              }
-              
-              return true;
-            }
-
   security-scan:
     name: 🔒 Security Scan & Fix
-    needs: [initialize, merge-dependabot-prs]
+    needs: [initialize]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: inputs.skip-security != 'true'
@@ -366,7 +226,7 @@ jobs:
 
   rollback-check:
     name: 🔄 Rollback Mechanism
-    needs: [initialize, merge-dependabot-prs, security-scan]
+    needs: [initialize, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: failure()
@@ -420,7 +280,7 @@ jobs:
 
   status-dashboard:
     name: 📊 Update Status Dashboard
-    needs: [initialize, merge-dependabot-prs, security-scan]
+    needs: [initialize, security-scan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: always()
@@ -442,8 +302,8 @@ jobs:
             "dryRun": ${{ needs.initialize.outputs.dry-run }},
             "summary": {
               "dependabotPRs": {
-                "merged": ${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }},
-                "failed": ${{ needs.merge-dependabot-prs.outputs.failed-count || 0 }}
+                "merged": 0,
+                "failed": 0
               },
               "security": {
                 "vulnerabilitiesFound": ${{ needs.security-scan.outputs.vulnerabilities-found || 0 }},
@@ -558,7 +418,7 @@ jobs:
 
   notifications:
     name: 📢 Send Notifications
-    needs: [initialize, merge-dependabot-prs, security-scan, status-dashboard]
+    needs: [initialize, security-scan, status-dashboard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -567,7 +427,7 @@ jobs:
         id: prepare
         run: |
           STATUS="${{ job.status }}"
-          MERGED_PRS="${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }}"
+          MERGED_PRS="0"
           SECURITY_FIXES="${{ needs.security-scan.outputs.fixes-applied || 0 }}"
           DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
 
@@ -612,7 +472,7 @@ jobs:
                     },
                     {
                       \"type\": \"mrkdwn\",
-                      \"text\": \"*PRs Merged:* ${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }}\"
+                      \"text\": \"*PRs Merged:* 0\"
                     },
                     {
                       \"type\": \"mrkdwn\",
@@ -669,7 +529,7 @@ jobs:
               **Completion Time:** ${new Date().toISOString()}
               
               ### Final Results
-              - **Dependabot PRs Merged:** ${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }}
+              - **Dependabot PRs Merged:** 0
               - **Security Fixes Applied:** ${{ needs.security-scan.outputs.fixes-applied || 0 }}
               - **Mode:** ${{ needs.initialize.outputs.dry-run == 'true' && 'DRY RUN' || 'LIVE' }
               
