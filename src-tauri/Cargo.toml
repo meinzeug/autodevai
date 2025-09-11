@@ -100,7 +100,7 @@ wiremock = "0.5"
 sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls", "macros", "chrono"] }  # Dev dependency only - not critical
 test-log = "0.2"
 rstest = "0.18"
-rstest_reuse = "0.5"
+rstest_reuse = "0.7"
 fake = { version = "2.5", features = ["derive", "chrono"] }
 # Security testing
 secrecy = "0.8"
