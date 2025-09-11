@@ -364,66 +364,6 @@ jobs:
 
           git push origin main
 
-  sync-local:
-    name: 🔄 Trigger Local Sync
-    needs: [initialize, security-scan]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: always() && !cancelled()
-    outputs:
-      sync-triggered: ${{ steps.trigger.outputs.sync-triggered }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Trigger local environment sync
-        id: trigger
-        run: |
-          DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-
-          # Create sync script for local environments
-          cat > .github/sync-local.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          echo "🔄 Local Environment Sync - $(date)"
-          echo "📋 Working on main branch"
-
-          # Pull latest changes
-          if git remote get-url origin >/dev/null 2>&1; then
-            echo "📥 Pulling latest changes..."
-            git fetch origin
-            git checkout main
-            git pull origin main
-            
-            # Update dependencies
-            echo "📦 Updating dependencies..."
-            npm ci
-            cd src-tauri && cargo build --release && cd ..
-            
-            echo "✅ Local sync completed successfully!"
-          else
-            echo "❌ Not in a git repository"
-            exit 1
-          fi
-          EOF
-
-          chmod +x .github/sync-local.sh
-
-          if [ "$DRY_RUN" = "false" ]; then
-            # Commit sync script
-            git config user.name "AutoDev-AI Sync Bot"
-            git config user.email "sync@autodev-ai.github.io"
-            git add .github/sync-local.sh
-            git commit -m "🔄 Add local sync script for maintenance pipeline" || true
-            git push origin main
-            
-            echo "sync-triggered=true" >> $GITHUB_OUTPUT
-          else
-            echo "🔍 DRY RUN - Would create and commit sync script"
-            echo "sync-triggered=false" >> $GITHUB_OUTPUT
-          fi
-
   rollback-check:
     name: 🔄 Rollback Mechanism
     needs: [initialize, merge-dependabot-prs, security-scan]
