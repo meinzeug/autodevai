@@ -662,7 +662,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
   git push origin main
 
   echo "🎉 PUSH COMPLETE - GitHub workflows will now trigger"
-  echo "📡 Callback expected at: http://tekkfm.mooo.com:19000/githubisdone"
 
 else
   echo "⚠️ PUSH BLOCKED - Work not complete:"
