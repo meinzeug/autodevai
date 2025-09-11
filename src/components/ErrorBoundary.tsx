@@ -4,8 +4,8 @@ import { cn } from '../utils/cn';
 
 interface ErrorBoundaryState {
   hasError: boolean;
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
+  error?: Error | undefined;
+  errorInfo?: React.ErrorInfo | undefined;
 }
 
 interface ErrorBoundaryProps {
@@ -17,7 +17,7 @@ interface ErrorBoundaryProps {
 
 interface ErrorFallbackProps {
   error: Error;
-  errorInfo?: React.ErrorInfo;
+  errorInfo?: React.ErrorInfo | undefined;
   resetError: () => void;
 }
 
@@ -119,10 +119,14 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    this.setState({ error, errorInfo });
+    this.setState((prevState) => ({ 
+      ...prevState, 
+      error, 
+      errorInfo 
+    }));
     
     // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env['NODE_ENV'] === 'development') {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
@@ -132,13 +136,17 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
     }
 
     // Report to monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env['NODE_ENV'] === 'production') {
       // Example: Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
     }
   }
 
   resetError = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    this.setState({ 
+      hasError: false, 
+      error: undefined, 
+      errorInfo: undefined 
+    });
   };
 
   render() {
@@ -148,7 +156,7 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
       return (
         <div className={cn("error-boundary", this.props.className)}>
           <FallbackComponent
-            error={this.state.error!}
+            error={this.state.error || new Error('Unknown error')}
             errorInfo={this.state.errorInfo}
             resetError={this.resetError}
           />

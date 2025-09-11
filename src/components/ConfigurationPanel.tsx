@@ -109,15 +109,15 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (cfg.timeout < 10 || cfg.timeout > 3600) {
-      newErrors.timeout = 'Timeout must be between 10 and 3600 seconds';
+      newErrors['timeout'] = 'Timeout must be between 10 and 3600 seconds';
     }
 
     if (cfg.maxRetries < 0 || cfg.maxRetries > 10) {
-      newErrors.maxRetries = 'Max retries must be between 0 and 10';
+      newErrors['maxRetries'] = 'Max retries must be between 0 and 10';
     }
 
-    if (cfg.mode.type === 'dual' && !cfg.mode.secondaryModel) {
-      newErrors.secondaryModel = 'Secondary model is required for dual mode';
+    if (cfg.mode.type === 'dual' && !cfg.mode['secondaryModel']) {
+      newErrors['secondaryModel'] = 'Secondary model is required for dual mode';
     }
 
     setErrors(newErrors);
@@ -236,22 +236,22 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             Secondary Model
           </label>
           <select
-            value={tempConfig.mode.secondaryModel || ''}
+            value={tempConfig.mode['secondaryModel'] || ''}
             onChange={(e) => setTempConfig(prev => ({
               ...prev,
               mode: { ...prev.mode, secondaryModel: e.target.value as 'claude' | 'codex' }
             }))}
             className={cn(
               "w-full bg-white dark:bg-gray-800 border rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500",
-              errors.secondaryModel ? "border-red-500" : "border-gray-200 dark:border-gray-700"
+              errors['secondaryModel'] ? "border-red-500" : "border-gray-200 dark:border-gray-700"
             )}
           >
             <option value="">Select secondary model...</option>
             <option value="claude">Claude (Anthropic)</option>
             <option value="codex">Codex (OpenAI)</option>
           </select>
-          {errors.secondaryModel && (
-            <p className="text-sm text-red-500">{errors.secondaryModel}</p>
+          {errors['secondaryModel'] && (
+            <p className="text-sm text-red-500">{errors['secondaryModel']}</p>
           )}
         </div>
       )}
@@ -350,11 +350,11 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           }))}
           className={cn(
             "w-full bg-white dark:bg-gray-800 border rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500",
-            errors.timeout ? "border-red-500" : "border-gray-200 dark:border-gray-700"
+            errors['timeout'] ? "border-red-500" : "border-gray-200 dark:border-gray-700"
           )}
         />
-        {errors.timeout && (
-          <p className="text-sm text-red-500">{errors.timeout}</p>
+        {errors['timeout'] && (
+          <p className="text-sm text-red-500">{errors['timeout']}</p>
         )}
         <p className="text-xs text-gray-500">
           Maximum time to wait for task completion
@@ -377,11 +377,11 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           }))}
           className={cn(
             "w-full bg-white dark:bg-gray-800 border rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500",
-            errors.maxRetries ? "border-red-500" : "border-gray-200 dark:border-gray-700"
+            errors['maxRetries'] ? "border-red-500" : "border-gray-200 dark:border-gray-700"
           )}
         />
-        {errors.maxRetries && (
-          <p className="text-sm text-red-500">{errors.maxRetries}</p>
+        {errors['maxRetries'] && (
+          <p className="text-sm text-red-500">{errors['maxRetries']}</p>
         )}
         <p className="text-xs text-gray-500">
           Number of times to retry failed operations
@@ -414,7 +414,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           <div className="relative">
             <input
               type={showApiKeys ? 'text' : 'password'}
-              value={apiKeys.anthropic}
+              value={apiKeys['anthropic']}
               onChange={(e) => setApiKeys(prev => ({ ...prev, anthropic: e.target.value }))}
               placeholder="sk-ant-..."
               className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -431,7 +431,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           <div className="relative">
             <input
               type={showApiKeys ? 'text' : 'password'}
-              value={apiKeys.openai}
+              value={apiKeys['openai']}
               onChange={(e) => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
               placeholder="sk-..."
               className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -448,7 +448,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           <div className="relative">
             <input
               type={showApiKeys ? 'text' : 'password'}
-              value={apiKeys.openrouter}
+              value={apiKeys['openrouter']}
               onChange={(e) => setApiKeys(prev => ({ ...prev, openrouter: e.target.value }))}
               placeholder="sk-or-..."
               className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"

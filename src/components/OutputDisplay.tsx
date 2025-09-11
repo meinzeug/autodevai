@@ -150,7 +150,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             <Filter className="w-4 h-4 text-gray-400" />
             <select
               value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
+              onChange={(e) => setFilter(e.target.value as typeof filter)}
               className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Types</option>
@@ -250,7 +250,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             Success: {outputs.filter(o => o.type === 'success').length}
           </span>
           <span>
-            Last update: {outputs.length > 0 ? outputs[outputs.length - 1].timestamp.toLocaleTimeString() : 'Never'}
+            Last update: {outputs.length > 0 ? outputs[outputs.length - 1]?.timestamp.toLocaleTimeString() : 'Never'}
           </span>
         </div>
       </div>

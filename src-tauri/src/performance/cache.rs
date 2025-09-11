@@ -640,7 +640,7 @@ impl HighPerformanceCache {
 
 // Global cache instance
 lazy_static::lazy_static! {
-    static ref GLOBAL_CACHE: tokio::sync::RwLock<Option<HighPerformanceCache>> = tokio::sync::RwLock::new(None);
+    pub static ref GLOBAL_CACHE: tokio::sync::RwLock<Option<HighPerformanceCache>> = tokio::sync::RwLock::new(None);
 }
 
 pub async fn initialize_cache(config: CacheConfig) -> anyhow::Result<()> {

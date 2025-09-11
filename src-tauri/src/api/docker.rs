@@ -2,8 +2,8 @@
 //! Docker API integration for container management
 
 use crate::{
-    // commands::DockerContainer,
     errors::Result,
+    types::DockerContainer,
 };
 use bollard::{Docker, API_DEFAULT_VERSION};
 use bollard::container::{

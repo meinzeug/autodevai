@@ -84,7 +84,7 @@ export const IconButton: React.FC<{
   size?: ButtonProps['size'];
   disabled?: boolean;
   loading?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick?: ((event: React.MouseEvent<HTMLButtonElement>) => void) | undefined;
   className?: string;
   'aria-label': string;
 }> = ({
@@ -139,9 +139,9 @@ export const ButtonGroup: React.FC<{
           const isFirst = index === 0;
           const isLast = index === React.Children.count(children) - 1;
           
-          return React.cloneElement(child as React.ReactElement<any>, {
+          return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
             className: `
-              ${(child.props as any).className || ''}
+              ${(child.props as Record<string, unknown>)['className'] || ''}
               ${!isFirst ? '-ml-px' : ''}
               ${isFirst ? 'rounded-r-none' : isLast ? 'rounded-l-none' : 'rounded-none'}
               focus:z-10

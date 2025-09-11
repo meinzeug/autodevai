@@ -267,6 +267,46 @@ pub struct DockerConfig {
     pub labels: HashMap<String, String>,
 }
 
+/// Docker container information structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerContainer {
+    /// Container ID
+    pub id: String,
+    /// Container name
+    pub name: String,
+    /// Container image
+    pub image: String,
+    /// Container status
+    pub status: String,
+    /// Port mappings
+    pub ports: Vec<String>,
+    /// Container creation timestamp
+    pub created: chrono::DateTime<chrono::Utc>,
+}
+
+/// Log entry structure for logging system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LogEntry {
+    /// Log entry ID
+    pub id: String,
+    /// Log level (trace, debug, info, warn, error)
+    pub level: String,
+    /// Log message content
+    pub message: String,
+    /// Source module or component
+    pub source: String,
+    /// Log target (optional)
+    pub target: Option<String>,
+    /// Log fields/metadata
+    pub fields: Option<HashMap<String, serde_json::Value>>,
+    /// Additional metadata
+    pub metadata: Option<HashMap<String, serde_json::Value>>,
+    /// Log timestamp
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+}
+
 /// Performance metrics structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

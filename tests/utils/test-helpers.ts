@@ -75,7 +75,7 @@ export class TestHelpers {
     });
     
     const swarmId = await page.textContent('[data-testid="swarm-id"]');
-    return swarmId || '';
+    return swarmId ?? '';
   }
 
   async spawnAgent(page: Page, config: AgentConfig): Promise<string> {
@@ -95,7 +95,7 @@ export class TestHelpers {
     await page.waitForSelector(`[data-testid="agent-${config.name}"]`);
     
     const agentId = await page.getAttribute(`[data-testid="agent-${config.name}"]`, 'data-agent-id');
-    return agentId || '';
+    return agentId ?? '';
   }
 
   async removeAgent(page: Page, agentName: string): Promise<void> {
@@ -135,11 +135,26 @@ export class TestHelpers {
     const endTime = Date.now();
     const executionTime = endTime - startTime;
     
-    const output = await page.textContent('[data-testid="execution-output"]') || '';
-    const error = await page.textContent('[data-testid="execution-error"]') || undefined;
-    const status = await page.getAttribute('[data-testid="execution-status"]', 'data-status') || 'unknown';
+    const output = await page.textContent('[data-testid="execution-output"]') ?? '';
+    const errorText = await page.textContent('[data-testid="execution-error"]');
+    const status = await page.getAttribute('[data-testid="execution-status"]', 'data-status') ?? 'unknown';
     
-    return { output, error, executionTime, status };
+    const result: {
+      output: string;
+      error?: string;
+      executionTime: number;
+      status: string;
+    } = { 
+      output, 
+      executionTime, 
+      status 
+    };
+    
+    if (errorText) {
+      result.error = errorText;
+    }
+    
+    return result;
   }
 
   // Docker Management Helpers
@@ -172,7 +187,7 @@ export class TestHelpers {
     });
     
     const containerId = await page.getAttribute(`[data-testid="container-${config.name}"]`, 'data-container-id');
-    return containerId || '';
+    return containerId ?? '';
   }
 
   async stopContainer(page: Page, containerName: string): Promise<void> {
@@ -222,7 +237,7 @@ export class TestHelpers {
     await page.waitForSelector('[data-testid^="task-"]');
     
     const taskId = await page.getAttribute('[data-testid^="task-"]', 'data-task-id');
-    return taskId || '';
+    return taskId ?? '';
   }
 
   async executeTask(page: Page, taskId: string): Promise<void> {
@@ -320,22 +335,22 @@ export class TestHelpers {
       }),
       
       agent: () => ({
-        type: ['researcher', 'coder', 'tester', 'reviewer', 'optimizer'][Math.floor(Math.random() * 5)],
+        type: ['researcher', 'coder', 'tester', 'reviewer', 'optimizer'][Math.floor(Math.random() * 5)] as 'researcher' | 'coder' | 'tester' | 'reviewer' | 'optimizer',
         name: `test-agent-${Math.random().toString(36).substr(2, 9)}`,
-        capabilities: ['analysis', 'implementation', 'testing'][Math.floor(Math.random() * 3)]
+        capabilities: [['analysis', 'implementation', 'testing'][Math.floor(Math.random() * 3)]]
       }),
       
       container: () => ({
         name: `test-container-${Math.random().toString(36).substr(2, 9)}`,
         image: ['node:18-alpine', 'python:3.11-alpine', 'nginx:alpine'][Math.floor(Math.random() * 3)],
         ports: { '3000': '3000' },
-        environment: { NODE_ENV: 'test' }
+        environment: { 'NODE_ENV': 'test' }
       }),
       
       task: () => ({
         description: `Test task ${Math.random().toString(36).substr(2, 9)}`,
-        strategy: ['parallel', 'sequential', 'adaptive'][Math.floor(Math.random() * 3)],
-        priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)],
+        strategy: ['parallel', 'sequential', 'adaptive'][Math.floor(Math.random() * 3)] as 'parallel' | 'sequential' | 'adaptive',
+        priority: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
         maxAgents: Math.floor(Math.random() * 5) + 1
       })
     };

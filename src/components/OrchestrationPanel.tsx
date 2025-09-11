@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Settings, RefreshCw, Container } from 'lucide-react';
 import { TauriService } from '../services/tauri';
 import { ExecutionMode, ClaudeFlowCommand, OrchestrationConfig, DockerContainer } from '../types';
@@ -26,11 +26,7 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
 
   const tauriService = TauriService.getInstance();
 
-  useEffect(() => {
-    initializePanel();
-  }, []);
-
-  const initializePanel = async () => {
+  const initializePanel = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -48,7 +44,11 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [config.dockerEnabled, tauriService]);
+
+  useEffect(() => {
+    initializePanel();
+  }, [initializePanel]);
 
   const handleExecute = async () => {
     if (!taskInput.trim()) return;

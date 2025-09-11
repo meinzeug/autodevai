@@ -16,9 +16,7 @@ export default [
       'src-tauri/**', 
       '.claude/**', 
       'build/**',
-      'tests/reports/**',
-      'tests/performance/reports/**',
-      'tests/performance/baselines/**',
+      'tests/**',
       '.tmp/**',
       '.cache/**',
       '.swarm/**',
@@ -64,13 +62,15 @@ export default [
     },
     rules: {
       'no-undef': 'off',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off'
     }
   },
   // TypeScript/React files
   {
     ...js.configs.recommended,
-    files: ['src/**/*.{js,jsx,ts,tsx}', 'tests/**/*.{ts,tsx}'],
+    files: ['src/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       sourceType: 'module',

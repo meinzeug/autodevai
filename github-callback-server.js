@@ -101,7 +101,7 @@ function handleWebhookEvent(eventType, payload) {
 // Handle workflow run events
 function handleWorkflowRun(payload) {
   const { action, workflow_run } = payload;
-  const { id, name, status, conclusion, _head_sha } = workflow_run;
+  const { id, name, status, conclusion } = workflow_run;
   
   console.log(`🚀 Workflow: ${name}`);
   console.log(`  ID: ${id}`);
@@ -163,7 +163,7 @@ function restartClaudeAI() {
         --verbose > /tmp/claude-ai.log 2>&1 &
       `;
       
-      exec(command, (error, stdout, stderr) => {
+      exec(command, (error, _stdout, _stderr) => {
         if (error) {
           console.error('❌ Failed to start Claude AI:', error.message);
         } else {
@@ -288,7 +288,7 @@ app.get('/claude/status', (req, res) => {
       try {
         process.kill(pid, 0);
         status.claude = status.isRateLimited ? 'rate_limited' : 'running';
-      } catch (e) {
+      } catch {
         status.claude = 'stopped';
       }
     }

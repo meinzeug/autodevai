@@ -2,11 +2,12 @@
 //! Advanced logging system with search and analysis capabilities
 
 use crate::errors::{NeuralBridgeError, Result};
-// use crate::commands::LogEntry;
+use crate::types::LogEntry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;
 use tracing::{error, info, warn};
+use uuid;
 
 /// Log configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -342,18 +343,24 @@ async fn read_log_files() -> Result<Vec<LogEntry>> {
     // Placeholder implementation
     Ok(vec![
         LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: chrono::Utc::now(),
             level: "info".to_string(),
             message: "Application started".to_string(),
-            target: "neural_bridge_platform".to_string(),
-            fields: HashMap::new(),
+            source: "neural_bridge_platform".to_string(),
+            target: Some("neural_bridge_platform".to_string()),
+            fields: Some(HashMap::new()),
+            metadata: Some(HashMap::new()),
         },
         LogEntry {
+            id: uuid::Uuid::new_v4().to_string(),
             timestamp: chrono::Utc::now(),
             level: "warn".to_string(),
             message: "High memory usage detected".to_string(),
-            target: "monitor".to_string(),
-            fields: HashMap::new(),
+            source: "monitor".to_string(),
+            target: Some("monitor".to_string()),
+            fields: Some(HashMap::new()),
+            metadata: Some(HashMap::new()),
         },
     ])
 }

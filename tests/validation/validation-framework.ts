@@ -5,8 +5,8 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import fs from 'fs/promises';
-import path from 'path';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -55,17 +55,18 @@ export class ValidationFramework {
     try {
       const auditResult = await this.runCommand('npm audit --json');
       const audit = JSON.parse(auditResult.stdout);
+      const vulnerabilities = audit.metadata?.vulnerabilities;
       
       phaseResults.push({
         phase,
         testType: 'SECURITY_AUDIT',
-        status: audit.metadata.vulnerabilities.total === 0 ? 'PASS' : 'WARNING',
-        details: `Found ${audit.metadata.vulnerabilities.total} vulnerabilities`,
+        status: vulnerabilities?.total === 0 ? 'PASS' : 'WARNING',
+        details: `Found ${vulnerabilities?.total ?? 'unknown'} vulnerabilities`,
         timestamp: new Date().toISOString(),
         metrics: {
-          vulnerabilities: audit.metadata.vulnerabilities.total,
-          critical: audit.metadata.vulnerabilities.critical || 0,
-          high: audit.metadata.vulnerabilities.high || 0
+          vulnerabilities: vulnerabilities?.total ?? 0,
+          critical: vulnerabilities?.critical ?? 0,
+          high: vulnerabilities?.high ?? 0
         }
       });
     } catch (error) {
@@ -152,11 +153,12 @@ export class ValidationFramework {
     // Test coverage validation
     try {
       const coverage = await this.analyzeCoverage();
+      const overallCoverage = coverage['overall'] ?? 0;
       phaseResults.push({
         phase,
         testType: 'COVERAGE',
-        status: coverage.overall >= 80 ? 'PASS' : 'WARNING',
-        details: `Overall coverage: ${coverage.overall}%`,
+        status: overallCoverage >= 80 ? 'PASS' : 'WARNING',
+        details: `Overall coverage: ${overallCoverage}%`,
         timestamp: new Date().toISOString(),
         metrics: coverage
       });
@@ -208,11 +210,12 @@ export class ValidationFramework {
     // Bundle size analysis
     try {
       const bundleAnalysis = await this.analyzeBundleSize();
+      const totalSize = bundleAnalysis['totalSize'] ?? 0;
       phaseResults.push({
         phase,
         testType: 'BUNDLE_SIZE',
-        status: bundleAnalysis.totalSize < 10 * 1024 * 1024 ? 'PASS' : 'WARNING',
-        details: `Bundle size: ${this.formatBytes(bundleAnalysis.totalSize)}`,
+        status: totalSize < 10 * 1024 * 1024 ? 'PASS' : 'WARNING',
+        details: `Bundle size: ${this.formatBytes(totalSize)}`,
         timestamp: new Date().toISOString(),
         metrics: bundleAnalysis
       });
@@ -240,13 +243,14 @@ export class ValidationFramework {
     // Unit tests
     try {
       const testResult = await this.runCommand('npm test -- --run --reporter=json');
-      const testData = JSON.parse(testResult.stdout.split('\n').find(line => 
+      const testLine = testResult.stdout.split('\n').find(line => 
         line.startsWith('{') && line.includes('testResults')
-      ) || '{}');
+      );
+      const testData = JSON.parse(testLine ?? '{}');
       
-      const totalTests = testData.numTotalTests || 0;
-      const passedTests = testData.numPassedTests || 0;
-      const failedTests = testData.numFailedTests || 0;
+      const totalTests = testData.numTotalTests ?? 0;
+      const passedTests = testData.numPassedTests ?? 0;
+      const failedTests = testData.numFailedTests ?? 0;
 
       phaseResults.push({
         phase,
@@ -371,11 +375,11 @@ export class ValidationFramework {
       const coverage = JSON.parse(await fs.readFile(coverageFile, 'utf-8'));
       
       return {
-        overall: coverage.total.lines.pct,
-        statements: coverage.total.statements.pct,
-        branches: coverage.total.branches.pct,
-        functions: coverage.total.functions.pct,
-        lines: coverage.total.lines.pct
+        overall: coverage.total?.lines?.pct ?? 0,
+        statements: coverage.total?.statements?.pct ?? 0,
+        branches: coverage.total?.branches?.pct ?? 0,
+        functions: coverage.total?.functions?.pct ?? 0,
+        lines: coverage.total?.lines?.pct ?? 0
       };
     } catch {
       return { overall: 0 };
@@ -389,14 +393,16 @@ export class ValidationFramework {
       let totalSize = 0;
       
       for (const file of files) {
-        const filePath = path.join(distPath, file.toString());
-        try {
-          const stats = await fs.stat(filePath);
-          if (stats.isFile()) {
-            totalSize += stats.size;
+        if (typeof file === 'string') {
+          const filePath = path.join(distPath, file);
+          try {
+            const stats = await fs.stat(filePath);
+            if (stats.isFile()) {
+              totalSize += stats.size;
+            }
+          } catch {
+            continue;
           }
-        } catch {
-          continue;
         }
       }
       
@@ -479,7 +485,8 @@ export class ValidationFramework {
 }
 
 // CLI interface for standalone execution
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Note: import.meta.url check removed for compatibility
+if (require.main === module) {
   const validator = new ValidationFramework();
   validator.runFullValidation().then(summary => {
     process.exit(summary.overallStatus === 'FAIL' ? 1 : 0);

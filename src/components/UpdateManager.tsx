@@ -99,42 +99,7 @@ export const UpdateManager: React.FC<UpdateManagerProps> = ({ onClose }) => {
     loadData();
   }, []);
 
-  // Listen for update events
-  useEffect(() => {
-    const unsubscribes: Array<() => void> = [];
-
-    const setupListeners = async () => {
-      const events = [
-        'update-checking',
-        'update-available',
-        'update-downloading',
-        'update-download-progress',
-        'update-download-complete',
-        'update-installing',
-        'update-progress',
-        'update-ready',
-        'update-rolling-back',
-        'update-rollback-complete',
-        'update-error',
-        'update-cleared'
-      ];
-
-      for (const eventName of events) {
-        const unlisten = await listen(eventName, (event) => {
-          handleUpdateEvent(eventName, event.payload);
-        });
-        unsubscribes.push(unlisten);
-      }
-    };
-
-    setupListeners();
-
-    return () => {
-      unsubscribes.forEach(unsub => unsub());
-    };
-  }, []);
-
-  const handleUpdateEvent = (eventName: string, payload: any) => {
+  const handleUpdateEvent = useCallback((eventName: string, payload: any) => {
     switch (eventName) {
       case 'update-checking':
         setStatus({ type: 'Checking' });
@@ -210,7 +175,42 @@ export const UpdateManager: React.FC<UpdateManagerProps> = ({ onClose }) => {
         setStatus({ type: 'Idle' });
         break;
     }
-  };
+  }, [status]);
+
+  // Listen for update events
+  useEffect(() => {
+    const unsubscribes: Array<() => void> = [];
+
+    const setupListeners = async () => {
+      const events = [
+        'update-checking',
+        'update-available',
+        'update-downloading',
+        'update-download-progress',
+        'update-download-complete',
+        'update-installing',
+        'update-progress',
+        'update-ready',
+        'update-rolling-back',
+        'update-rollback-complete',
+        'update-error',
+        'update-cleared'
+      ];
+
+      for (const eventName of events) {
+        const unlisten = await listen(eventName, (event) => {
+          handleUpdateEvent(eventName, event.payload);
+        });
+        unsubscribes.push(unlisten);
+      }
+    };
+
+    setupListeners();
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [handleUpdateEvent]);
 
   const handleCheckForUpdates = useCallback(async () => {
     try {

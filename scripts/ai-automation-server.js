@@ -84,7 +84,7 @@ app.post('/github-webhook', express.raw({type: 'application/json'}), (req, res) 
 // Handle workflow run events
 function handleWorkflowEvent(payload) {
   const { workflow_run } = payload;
-  const { id, name, status, conclusion, head_sha } = workflow_run;
+  const { id, name, status, conclusion } = workflow_run;
   
   console.log(`🔄 Workflow: ${name} (${id}) - Status: ${status}, Conclusion: ${conclusion}`);
   

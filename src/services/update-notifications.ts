@@ -236,7 +236,7 @@ export class UpdateNotificationManager {
       audio.play().catch(() => {
         // Ignore audio play errors
       });
-    } catch (error) {
+    } catch {
       // Ignore audio errors
     }
   }

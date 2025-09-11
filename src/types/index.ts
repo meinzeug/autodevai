@@ -179,7 +179,7 @@ export interface ButtonProps extends ComponentProps {
   disabled?: boolean;
   loading?: boolean;
   type?: 'button' | 'submit' | 'reset';
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick?: ((event: React.MouseEvent<HTMLButtonElement>) => void) | undefined;
 }
 
 // Enhanced component types

@@ -113,7 +113,7 @@ fn create_tray_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         let reload = MenuItem::with_id(app, "tray_reload_app", "Reload Application", true, Some("Ctrl+R"))?;
         let debug_sep = PredefinedMenuItem::separator(app)?;
         menu_items.extend_from_slice(&[&devtools, &reload, &debug_sep]);
-        (Some(devtools), Some(reload), Some(debug_sep))
+        (Some(devtools.clone()), Some(reload.clone()), Some(debug_sep.clone()))
     } else {
         (None, None, None)
     };

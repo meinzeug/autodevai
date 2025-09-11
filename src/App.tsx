@@ -114,6 +114,7 @@ function AppContent() {
       } catch (error) {
         console.error('Failed to initialize app:', error);
         toast.error('Failed to initialize AutoDev-AI system');
+        return undefined; // Ensure all code paths return a value
       }
     };
 
@@ -329,7 +330,7 @@ function AppContent() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleClearOutput, toggleFullscreen, toggleSettings]);
+  }, [handleClearOutput, toggleFullscreen, toggleSettings, toggleUpdater]);
 
   return (
     <div className={cn(

@@ -328,9 +328,10 @@ impl NetworkOptimizer {
         })
     }
 
-    fn extract_host(&self, url: &str) -> anyhow::Result<&str> {
+    fn extract_host(&self, url: &str) -> anyhow::Result<String> {
         let parsed_url = url::Url::parse(url)?;
         parsed_url.host_str()
+            .map(|s| s.to_string())
             .ok_or_else(|| anyhow::anyhow!("Invalid URL: no host"))
     }
 

@@ -22,11 +22,11 @@ class PerformanceMonitor {
     }
 
     const endTime = endMark ? this.marks.get(endMark) : performance.now();
-    if (endMark && !endTime) {
+    if (endMark && endTime === undefined) {
       throw new Error(`End mark "${endMark}" not found`);
     }
 
-    const duration = (endTime || performance.now()) - startTime;
+    const duration = (endTime ?? performance.now()) - startTime;
     this.measures.set(name, duration);
     return duration;
   }
@@ -197,9 +197,13 @@ describe('Performance Tests', () => {
 
       // Each doubling of size should roughly double the time (within tolerance)
       for (let i = 1; i < durations.length; i++) {
-        const ratio = durations[i] / durations[i - 1];
-        expect(ratio).toBeLessThan(3); // Allow for some variance, but should be roughly linear
-        expect(ratio).toBeGreaterThan(0.5);
+        const current = durations[i];
+        const previous = durations[i - 1];
+        if (current !== undefined && previous !== undefined && previous > 0) {
+          const ratio = current / previous;
+          expect(ratio).toBeLessThan(3); // Allow for some variance, but should be roughly linear
+          expect(ratio).toBeGreaterThan(0.5);
+        }
       }
     });
   });
@@ -222,8 +226,8 @@ describe('Performance Tests', () => {
       );
 
       expect(Object.keys(result)).toHaveLength(10000);
-      expect(result.key0).toBe('VALUE0'); // String should be uppercased
-      expect(result.key1).toBe(2); // Number should be doubled
+      expect(result['key0']).toBe('VALUE0'); // String should be uppercased
+      expect(result['key1']).toBe(2); // Number should be doubled
       expect(duration).toBeLessThan(200); // Should complete within 200ms
     });
 

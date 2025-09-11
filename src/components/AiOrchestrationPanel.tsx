@@ -4,7 +4,7 @@
  * SPARC methodology, hive-mind communication, and memory persistence.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -56,7 +56,7 @@ export const AiOrchestrationPanel: React.FC<AiOrchestrationPanelProps> = ({ clas
   
   const [swarmMetrics, setSwarmMetrics] = useState<SwarmMetrics | null>(null);
   const [memoryState, setMemoryState] = useState<MemoryState | null>(null);
-  const [sessionId, _setSessionId] = useState<string>('');
+  const [sessionId] = useState<string>('');
   const [isSwarmActive, setIsSwarmActive] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -114,40 +114,34 @@ export const AiOrchestrationPanel: React.FC<AiOrchestrationPanelProps> = ({ clas
     };
   }, [orchestrationService]);
 
-  // Initialize component
-  useEffect(() => {
-    loadOrchestrationInfo();
-    refreshMemoryState();
-  }, []);
-
   const clearMessages = () => {
     setError('');
     setSuccess('');
   };
 
-  const handleError = (error: unknown, context: string) => {
+  const handleError = useCallback((error: unknown, context: string) => {
     const message = error instanceof Error ? error.message : String(error);
     setError(`${context}: ${message}`);
     console.error(`${context}:`, error);
-  };
+  }, []);
 
-  const loadOrchestrationInfo = async () => {
+  const loadOrchestrationInfo = useCallback(async () => {
     try {
       const info = await orchestrationService.getOrchestrationInfo();
       console.log('AI Orchestration Info:', info);
     } catch (error) {
       handleError(error, 'Failed to load orchestration info');
     }
-  };
+  }, [orchestrationService, handleError]);
 
-  const refreshMemoryState = async () => {
+  const refreshMemoryState = useCallback(async () => {
     try {
       const state = await orchestrationService.getMemoryState();
       setMemoryState(state);
     } catch (error) {
       console.error('Failed to refresh memory state:', error);
     }
-  };
+  }, [orchestrationService]);
 
   const refreshSwarmMetrics = async () => {
     if (!sessionId) return;
@@ -159,6 +153,12 @@ export const AiOrchestrationPanel: React.FC<AiOrchestrationPanelProps> = ({ clas
       console.error('Failed to refresh swarm metrics:', error);
     }
   };
+
+  // Initialize component
+  useEffect(() => {
+    loadOrchestrationInfo();
+    refreshMemoryState();
+  }, [loadOrchestrationInfo, refreshMemoryState]);
 
   // Swarm Management Functions
   const initializeSwarm = async () => {
@@ -304,7 +304,7 @@ export const AiOrchestrationPanel: React.FC<AiOrchestrationPanelProps> = ({ clas
         `comprehensive_${Date.now()}`
       );
       
-      setSuccess(`Comprehensive AI workflow completed with session ${result.session_id}`);
+      setSuccess(`Comprehensive AI workflow completed with session ${result['session_id']}`);
       console.log('Comprehensive workflow result:', result);
       
       // Refresh all states

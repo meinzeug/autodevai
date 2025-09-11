@@ -641,7 +641,7 @@ impl MetricsCollector {
 
 // Convenience macro for creating hash maps
 macro_rules! hashmap {
-    ($( $key: expr, $val: expr ),*), {{
+    ($( $key: expr => $val: expr ),*) => {{
         let mut map = HashMap::new();
         $( map.insert($key, $val); )*
         map
