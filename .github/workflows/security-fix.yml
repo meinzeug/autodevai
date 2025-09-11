@@ -32,13 +32,13 @@ jobs:
     
     steps:
     - name: 🔍 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
 
     - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '18'
         cache: 'npm'
@@ -196,7 +196,7 @@ jobs:
 
     - name: 🔧 Create Auto-Fix PR
       if: steps.apply-fixes.outputs.has-fixes == 'true'
-      uses: peter-evans/create-pull-request@v5
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: |
@@ -259,10 +259,10 @@ jobs:
     
     steps:
     - name: 🔍 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 📥 Download Security Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: security-audit-results
 
@@ -397,7 +397,7 @@ jobs:
     
     steps:
     - name: 🔍 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🔄 Auto-close resolved security issues
       run: |
@@ -443,10 +443,10 @@ jobs:
     
     steps:
     - name: 🔍 Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 📥 Download Security Artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: security-audit-results
       continue-on-error: true
