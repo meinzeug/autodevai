@@ -9,4 +9,12 @@ src-tauri/gen
 *.lock
 package-lock.json
 yarn.lock
-pnpm-lock.yaml.github/workflows/release.yml
+pnpm-lock.yaml
+.github/workflows/release.yml
+
+# Large documentation files that might cause issues
+docs/roadmap.md
+docs/konzept.md
+
+# Code that might have special formatting
+code_github.md
