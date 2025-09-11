@@ -42,7 +42,10 @@ impl CommandResponse {
 
 #[command]
 pub fn greet(name: &str) -> String {
-    format!("Hello, {}! Welcome to AutoDev-AI Neural Bridge Platform!", name)
+    format!(
+        "Hello, {}! Welcome to AutoDev-AI Neural Bridge Platform!",
+        name
+    )
 }
 
 #[command]
@@ -53,7 +56,7 @@ pub fn get_app_version() -> CommandResponse {
             "version": env!("CARGO_PKG_VERSION"),
             "name": env!("CARGO_PKG_NAME"),
             "description": env!("CARGO_PKG_DESCRIPTION")
-        })
+        }),
     )
 }
 
@@ -66,7 +69,7 @@ pub fn check_system_status() -> CommandResponse {
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "platform": std::env::consts::OS,
             "arch": std::env::consts::ARCH
-        })
+        }),
     )
 }
 

@@ -1,15 +1,15 @@
 //! Enhanced AI Orchestration Commands (Phase 3) - Complete Implementation Stubs
-//! 
+//!
 //! Advanced Tauri commands for the enhanced AI orchestration capabilities including
 //! OpenRouter routing, adaptive workflows, performance tracking, and recovery systems.
 
 use crate::orchestration::{
-    EnhancedOrchestrationConfig, ExecutionRequest, ClaudeFlowService, CodexService, 
-    OrchestrationService, get_enhanced_orchestration_info
+    get_enhanced_orchestration_info, ClaudeFlowService, CodexService, EnhancedOrchestrationConfig,
+    ExecutionRequest, OrchestrationService,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tauri::{command, State};
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ pub struct ModelRoutingPreferences {
     pub avoid_models: Vec<String>,
     pub cost_limit: Option<f64>,
     pub latency_requirement: Option<u64>, // milliseconds
-    pub quality_preference: String, // "speed", "accuracy", "cost", "balanced"
+    pub quality_preference: String,       // "speed", "accuracy", "cost", "balanced"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,12 +71,12 @@ pub struct EnhancedAiState {
 impl Default for EnhancedAiState {
     fn default() -> Self {
         let config = EnhancedOrchestrationConfig::default();
-        
+
         // Create base orchestration service
         let claude_flow = ClaudeFlowService::new();
         let codex = CodexService::new();
         let orchestration = OrchestrationService::new(claude_flow, codex);
-        
+
         Self {
             orchestration: Arc::new(Mutex::new(orchestration)),
             config,
@@ -97,7 +97,7 @@ pub async fn execute_enhanced_ai_request(
 ) -> Result<serde_json::Value, String> {
     let orchestration = state.orchestration.lock().map_err(|e| e.to_string())?;
     let session_id = Uuid::new_v4().to_string();
-    
+
     let base_request = ExecutionRequest {
         id: session_id.clone(),
         command: "Enhanced AI Request".to_string(),
@@ -110,24 +110,22 @@ pub async fn execute_enhanced_ai_request(
         hive_mind_commands: Vec::new(),
         memory_context: Some(format!("enhanced_request_{}", session_id)),
     };
-    
+
     match orchestration.claude_flow.execute(base_request).await {
-        Ok(response) => {
-            Ok(serde_json::json!({
-                "success": response.success,
-                "result": response.result,
-                "execution_time": response.execution_time,
-                "enhanced_features": {
-                    "routing_preferences": routing_preferences.is_some(),
-                    "context_optimization": context_optimization.map(|c| c.enabled).unwrap_or(false),
-                    "performance_requirements": performance_requirements.is_some(),
-                    "recovery_options": recovery_options.map(|r| r.auto_retry).unwrap_or(false),
-                },
-                "orchestration_version": "3.0.0",
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        }
-        Err(e) => Err(format!("Enhanced AI request failed: {}", e))
+        Ok(response) => Ok(serde_json::json!({
+            "success": response.success,
+            "result": response.result,
+            "execution_time": response.execution_time,
+            "enhanced_features": {
+                "routing_preferences": routing_preferences.is_some(),
+                "context_optimization": context_optimization.map(|c| c.enabled).unwrap_or(false),
+                "performance_requirements": performance_requirements.is_some(),
+                "recovery_options": recovery_options.map(|r| r.auto_retry).unwrap_or(false),
+            },
+            "orchestration_version": "3.0.0",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+        Err(e) => Err(format!("Enhanced AI request failed: {}", e)),
     }
 }
 
@@ -136,13 +134,19 @@ pub async fn initialize_enhanced_orchestration(
     state: State<'_, EnhancedAiState>,
 ) -> Result<String, String> {
     let orchestration = state.orchestration.lock().map_err(|e| e.to_string())?;
-    
+
     match orchestration.health_check().await {
         Ok(health) => {
             let healthy_services: usize = health.values().filter(|&&v| v).count();
-            Ok(format!("Enhanced AI orchestration initialized successfully. {} services healthy.", healthy_services))
+            Ok(format!(
+                "Enhanced AI orchestration initialized successfully. {} services healthy.",
+                healthy_services
+            ))
         }
-        Err(e) => Err(format!("Failed to initialize enhanced orchestration: {}", e))
+        Err(e) => Err(format!(
+            "Failed to initialize enhanced orchestration: {}",
+            e
+        )),
     }
 }
 
@@ -158,7 +162,10 @@ pub async fn execute_adaptive_workflow(
         result: format!("Adaptive workflow executed for task: {}", task_description),
         metrics: HashMap::from([
             ("task_complexity".to_string(), serde_json::json!("medium")),
-            ("adaptive_features_used".to_string(), serde_json::json!(true)),
+            (
+                "adaptive_features_used".to_string(),
+                serde_json::json!(true),
+            ),
         ]),
     })
 }
@@ -168,7 +175,7 @@ pub async fn get_enhanced_system_status(
     state: State<'_, EnhancedAiState>,
 ) -> Result<serde_json::Value, String> {
     let orchestration = state.orchestration.lock().map_err(|e| e.to_string())?;
-    
+
     match orchestration.health_check().await {
         Ok(health) => {
             let mut status = get_enhanced_orchestration_info();
@@ -177,7 +184,7 @@ pub async fn get_enhanced_system_status(
             status["timestamp"] = serde_json::json!(chrono::Utc::now().to_rfc3339());
             Ok(status)
         }
-        Err(e) => Err(format!("Failed to get system status: {}", e))
+        Err(e) => Err(format!("Failed to get system status: {}", e)),
     }
 }
 
@@ -210,7 +217,7 @@ pub async fn execute_with_smart_routing(
     state: State<'_, EnhancedAiState>,
 ) -> Result<serde_json::Value, String> {
     let orchestration = state.orchestration.lock().map_err(|e| e.to_string())?;
-    
+
     let request = ExecutionRequest {
         id: Uuid::new_v4().to_string(),
         command: "Smart Routing Request".to_string(),
@@ -223,21 +230,19 @@ pub async fn execute_with_smart_routing(
         hive_mind_commands: Vec::new(),
         memory_context: None,
     };
-    
+
     match orchestration.claude_flow.execute(request).await {
-        Ok(response) => {
-            Ok(serde_json::json!({
-                "success": response.success,
-                "result": response.result,
-                "selected_model": "claude-3.5-sonnet",
-                "routing_reason": format!("Selected based on {} preference", quality_preference),
-                "cost_limit": cost_limit,
-                "max_response_time": max_response_time_seconds,
-                "execution_time": response.execution_time,
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        }
-        Err(e) => Err(format!("Smart routing execution failed: {}", e))
+        Ok(response) => Ok(serde_json::json!({
+            "success": response.success,
+            "result": response.result,
+            "selected_model": "claude-3.5-sonnet",
+            "routing_reason": format!("Selected based on {} preference", quality_preference),
+            "cost_limit": cost_limit,
+            "max_response_time": max_response_time_seconds,
+            "execution_time": response.execution_time,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+        Err(e) => Err(format!("Smart routing execution failed: {}", e)),
     }
 }
 
@@ -316,7 +321,7 @@ pub async fn get_openrouter_models(
             },
             {
                 "id": "gpt-4o",
-                "provider": "openai", 
+                "provider": "openai",
                 "cost_per_token": 0.000005,
                 "context_window": 128000
             }
@@ -330,7 +335,7 @@ pub async fn test_enhanced_orchestration(
     state: State<'_, EnhancedAiState>,
 ) -> Result<serde_json::Value, String> {
     let orchestration = state.orchestration.lock().map_err(|e| e.to_string())?;
-    
+
     let test_prompt = format!("Test enhanced orchestration - type: {}", test_type);
     let request = ExecutionRequest {
         id: Uuid::new_v4().to_string(),
@@ -344,17 +349,15 @@ pub async fn test_enhanced_orchestration(
         hive_mind_commands: Vec::new(),
         memory_context: Some("test_context".to_string()),
     };
-    
+
     match orchestration.claude_flow.execute(request).await {
-        Ok(response) => {
-            Ok(serde_json::json!({
-                "test_type": test_type,
-                "success": response.success,
-                "enhanced_features_tested": true,
-                "execution_time": response.execution_time,
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        }
-        Err(e) => Err(format!("Enhanced orchestration test failed: {}", e))
+        Ok(response) => Ok(serde_json::json!({
+            "test_type": test_type,
+            "success": response.success,
+            "enhanced_features_tested": true,
+            "execution_time": response.execution_time,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+        Err(e) => Err(format!("Enhanced orchestration test failed: {}", e)),
     }
 }

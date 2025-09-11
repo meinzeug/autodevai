@@ -1,12 +1,12 @@
 // Advanced memory optimization for Rust applications
 // Implements memory pooling, allocation tracking, and garbage collection hints
 
+use serde::{Deserialize, Serialize};
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::collections::HashMap;
 use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
 use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,10 +24,10 @@ impl Default for MemoryConfig {
         Self {
             pool_enabled: true,
             tracking_enabled: true,
-            pool_initial_size: 1024 * 1024, // 1MB
-            pool_max_size: 100 * 1024 * 1024, // 100MB
+            pool_initial_size: 1024 * 1024,        // 1MB
+            pool_max_size: 100 * 1024 * 1024,      // 100MB
             large_allocation_threshold: 64 * 1024, // 64KB
-            gc_hint_threshold: 10 * 1024 * 1024, // 10MB
+            gc_hint_threshold: 10 * 1024 * 1024,   // 10MB
         }
     }
 }
@@ -101,7 +101,7 @@ impl AtomicStats {
     fn to_memory_stats(&self) -> MemoryStats {
         let current = self.current_usage.load(Ordering::Relaxed);
         let total_allocated = self.total_allocated.load(Ordering::Relaxed);
-        
+
         MemoryStats {
             total_allocated,
             total_deallocated: self.total_deallocated.load(Ordering::Relaxed),
@@ -124,15 +124,18 @@ impl AtomicStats {
 impl MemoryPool {
     pub fn new(config: MemoryConfig) -> Self {
         let mut pools = HashMap::new();
-        
+
         // Pre-allocate pools for common sizes
         let common_sizes = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192];
         for &size in &common_sizes {
             pools.insert(size, Vec::new());
         }
 
-        info!("Memory pool initialized with {} common sizes", common_sizes.len());
-        
+        info!(
+            "Memory pool initialized with {} common sizes",
+            common_sizes.len()
+        );
+
         Self {
             config,
             pools,
@@ -147,15 +150,20 @@ impl MemoryPool {
 
         // Find the appropriate pool size (next power of 2 or exact match)
         let pool_size = self.find_pool_size(size);
-        
+
         if let Some(pool) = self.pools.get_mut(&pool_size) {
             if let Some(buffer) = pool.pop() {
                 self.stats.pool_hits.fetch_add(1, Ordering::Relaxed);
                 self.stats.allocation_count.fetch_add(1, Ordering::Relaxed);
-                self.stats.total_allocated.fetch_add(size as u64, Ordering::Relaxed);
+                self.stats
+                    .total_allocated
+                    .fetch_add(size as u64, Ordering::Relaxed);
                 self.update_current_usage(size as i64);
-                
-                debug!("Pool hit for size {}, allocated from pool size {}", size, pool_size);
+
+                debug!(
+                    "Pool hit for size {}, allocated from pool size {}",
+                    size, pool_size
+                );
                 return Some(buffer);
             }
         }
@@ -176,19 +184,27 @@ impl MemoryPool {
             // Only return to pool if we haven't exceeded the max size
             if pool.len() < self.config.pool_max_size / pool_size {
                 pool.push(buffer);
-                
-                self.stats.deallocation_count.fetch_add(1, Ordering::Relaxed);
-                self.stats.total_deallocated.fetch_add(size as u64, Ordering::Relaxed);
+
+                self.stats
+                    .deallocation_count
+                    .fetch_add(1, Ordering::Relaxed);
+                self.stats
+                    .total_deallocated
+                    .fetch_add(size as u64, Ordering::Relaxed);
                 self.update_current_usage(-(size as i64));
-                
+
                 debug!("Buffer returned to pool, size: {}", size);
                 return;
             }
         }
 
         // Buffer dropped here if not returned to pool
-        self.stats.deallocation_count.fetch_add(1, Ordering::Relaxed);
-        self.stats.total_deallocated.fetch_add(size as u64, Ordering::Relaxed);
+        self.stats
+            .deallocation_count
+            .fetch_add(1, Ordering::Relaxed);
+        self.stats
+            .total_deallocated
+            .fetch_add(size as u64, Ordering::Relaxed);
         self.update_current_usage(-(size as i64));
     }
 
@@ -198,7 +214,7 @@ impl MemoryPool {
         while pool_size < requested_size {
             pool_size *= 2;
         }
-        
+
         // Cap at reasonable maximum
         pool_size.min(8192)
     }
@@ -210,9 +226,9 @@ impl MemoryPool {
         } else {
             old_usage.saturating_sub((-delta) as u64)
         };
-        
+
         self.stats.current_usage.store(new_usage, Ordering::Relaxed);
-        
+
         // Update peak usage if necessary
         let current_peak = self.stats.peak_usage.load(Ordering::Relaxed);
         if new_usage > current_peak {
@@ -235,7 +251,10 @@ impl MemoryPool {
             debug!("Cleaned {} buffers from size {} pool", count, size);
         }
 
-        info!("Memory pool cleanup: freed {} buffers from {} pools", freed_buffers, initial_pools);
+        info!(
+            "Memory pool cleanup: freed {} buffers from {} pools",
+            freed_buffers, initial_pools
+        );
     }
 
     pub async fn suggest_optimizations(&self) -> Vec<MemoryOptimization> {
@@ -266,7 +285,9 @@ impl MemoryPool {
         if stats.large_allocations > stats.allocation_count / 4 {
             optimizations.push(MemoryOptimization {
                 category: "Allocation Pattern".to_string(),
-                description: "High frequency of large allocations. Consider streaming or chunked processing.".to_string(),
+                description:
+                    "High frequency of large allocations. Consider streaming or chunked processing."
+                        .to_string(),
                 priority: "Medium".to_string(),
                 estimated_savings: "10-25% allocation reduction".to_string(),
             });
@@ -306,16 +327,18 @@ impl TrackingAllocator {
 unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ptr = self.inner.alloc(layout);
-        
+
         if !ptr.is_null() {
             let size = layout.size() as u64;
-            self.stats.total_allocated.fetch_add(size, Ordering::Relaxed);
+            self.stats
+                .total_allocated
+                .fetch_add(size, Ordering::Relaxed);
             self.stats.allocation_count.fetch_add(1, Ordering::Relaxed);
-            
+
             let old_usage = self.stats.current_usage.load(Ordering::Relaxed);
             let new_usage = old_usage.saturating_add(size);
             self.stats.current_usage.store(new_usage, Ordering::Relaxed);
-            
+
             // Update peak usage
             let current_peak = self.stats.peak_usage.load(Ordering::Relaxed);
             if new_usage > current_peak {
@@ -327,19 +350,23 @@ unsafe impl GlobalAlloc for TrackingAllocator {
                 self.stats.large_allocations.fetch_add(1, Ordering::Relaxed);
             }
         }
-        
+
         ptr
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         let size = layout.size() as u64;
-        self.stats.total_deallocated.fetch_add(size, Ordering::Relaxed);
-        self.stats.deallocation_count.fetch_add(1, Ordering::Relaxed);
-        
+        self.stats
+            .total_deallocated
+            .fetch_add(size, Ordering::Relaxed);
+        self.stats
+            .deallocation_count
+            .fetch_add(1, Ordering::Relaxed);
+
         let old_usage = self.stats.current_usage.load(Ordering::Relaxed);
         let new_usage = old_usage.saturating_sub(size);
         self.stats.current_usage.store(new_usage, Ordering::Relaxed);
-        
+
         self.inner.dealloc(ptr, layout);
     }
 }
@@ -353,11 +380,8 @@ pub struct MemoryOptimizer {
 impl MemoryOptimizer {
     pub fn new(config: MemoryConfig) -> Self {
         let pool = Arc::new(RwLock::new(MemoryPool::new(config.clone())));
-        
-        Self {
-            pool,
-            config,
-        }
+
+        Self { pool, config }
     }
 
     pub async fn allocate_optimized(&self, size: usize) -> Vec<u8> {
@@ -399,7 +423,10 @@ impl MemoryOptimizer {
     async fn suggest_gc(&self) {
         let stats = self.get_memory_stats().await;
         if stats.current_usage > self.config.gc_hint_threshold as u64 {
-            info!("Suggesting garbage collection - current usage: {} bytes", stats.current_usage);
+            info!(
+                "Suggesting garbage collection - current usage: {} bytes",
+                stats.current_usage
+            );
             // In a real implementation, this might trigger more aggressive GC
         }
     }
@@ -457,14 +484,14 @@ mod tests {
     async fn test_memory_pool() {
         let config = MemoryConfig::default();
         let mut pool = MemoryPool::new(config);
-        
+
         // Test allocation and deallocation
         let buffer1 = vec![0u8; 1024];
         pool.deallocate(buffer1);
-        
+
         let buffer2 = pool.allocate(1024);
         assert!(buffer2.is_some());
-        
+
         let stats = pool.get_stats();
         assert!(stats.pool_hits > 0);
     }
@@ -473,12 +500,12 @@ mod tests {
     async fn test_memory_optimizer() {
         let config = MemoryConfig::default();
         let optimizer = MemoryOptimizer::new(config);
-        
+
         let buffer = optimizer.allocate_optimized(1024).await;
         assert_eq!(buffer.len(), 1024);
-        
+
         optimizer.deallocate_optimized(buffer).await;
-        
+
         let stats = optimizer.get_memory_stats().await;
         assert!(stats.allocation_count > 0 || stats.pool_hits > 0);
     }

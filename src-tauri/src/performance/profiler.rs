@@ -1,12 +1,12 @@
 // Advanced performance profiler for real-time bottleneck detection and optimization suggestions
 // Implements comprehensive profiling capabilities for Rust applications
 
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use tokio::sync::{RwLock, Mutex};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::{Duration, Instant};
-use serde::{Serialize, Deserialize};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,7 +191,7 @@ impl BottleneckDetector {
         Self {
             cpu_threshold_percent: 80.0,
             memory_threshold_bytes: 100 * 1024 * 1024, // 100MB
-            io_threshold_ns: 1_000_000_000, // 1 second
+            io_threshold_ns: 1_000_000_000,            // 1 second
             detection_window: Duration::from_secs(60),
             recent_samples: VecDeque::new(),
         }
@@ -215,7 +215,10 @@ impl BottleneckDetector {
                 bottlenecks.push(PerformanceBottleneck {
                     bottleneck_type: BottleneckType::CPU,
                     function_name: function_name.clone(),
-                    description: format!("Function {} is consuming {:.1}% of CPU time", function_name, percentage),
+                    description: format!(
+                        "Function {} is consuming {:.1}% of CPU time",
+                        function_name, percentage
+                    ),
                     severity: if percentage > 95.0 {
                         BottleneckSeverity::Critical
                     } else if percentage > 85.0 {
@@ -237,7 +240,11 @@ impl BottleneckDetector {
                 bottlenecks.push(PerformanceBottleneck {
                     bottleneck_type: BottleneckType::Memory,
                     function_name: function_name.clone(),
-                    description: format!("Function {} is allocating {} MB of memory", function_name, memory_usage / (1024 * 1024)),
+                    description: format!(
+                        "Function {} is allocating {} MB of memory",
+                        function_name,
+                        memory_usage / (1024 * 1024)
+                    ),
                     severity: if memory_usage > 500 * 1024 * 1024 {
                         BottleneckSeverity::Critical
                     } else if memory_usage > 200 * 1024 * 1024 {
@@ -259,7 +266,11 @@ impl BottleneckDetector {
                 bottlenecks.push(PerformanceBottleneck {
                     bottleneck_type: BottleneckType::IO,
                     function_name: function_name.clone(),
-                    description: format!("Function {} is spending {:.2} seconds in I/O operations", function_name, io_time as f64 / 1_000_000_000.0),
+                    description: format!(
+                        "Function {} is spending {:.2} seconds in I/O operations",
+                        function_name,
+                        io_time as f64 / 1_000_000_000.0
+                    ),
                     severity: if io_time > 5_000_000_000 {
                         BottleneckSeverity::Critical
                     } else if io_time > 2_000_000_000 {
@@ -282,7 +293,9 @@ impl BottleneckDetector {
         let mut total_cpu_time = 0u64;
 
         for sample in &self.recent_samples {
-            let cpu_time = function_cpu_time.entry(sample.function_name.clone()).or_insert(0);
+            let cpu_time = function_cpu_time
+                .entry(sample.function_name.clone())
+                .or_insert(0);
             *cpu_time += sample.cpu_time_ns;
             total_cpu_time += sample.cpu_time_ns;
         }
@@ -308,7 +321,9 @@ impl BottleneckDetector {
         let mut function_memory: HashMap<String, u64> = HashMap::new();
 
         for sample in &self.recent_samples {
-            let memory = function_memory.entry(sample.function_name.clone()).or_insert(0);
+            let memory = function_memory
+                .entry(sample.function_name.clone())
+                .or_insert(0);
             *memory += sample.memory_allocated;
         }
 
@@ -323,7 +338,9 @@ impl BottleneckDetector {
         let mut function_io_time: HashMap<String, u64> = HashMap::new();
 
         for sample in &self.recent_samples {
-            let io_time = function_io_time.entry(sample.function_name.clone()).or_insert(0);
+            let io_time = function_io_time
+                .entry(sample.function_name.clone())
+                .or_insert(0);
             *io_time += sample.io_wait_time_ns;
         }
 
@@ -336,7 +353,10 @@ impl BottleneckDetector {
 
     fn generate_cpu_optimization_suggestions(&self, function_name: &str) -> Vec<String> {
         vec![
-            format!("Consider optimizing algorithm in function '{}'", function_name),
+            format!(
+                "Consider optimizing algorithm in function '{}'",
+                function_name
+            ),
             "Use more efficient data structures".to_string(),
             "Implement caching for expensive computations".to_string(),
             "Consider parallelization opportunities".to_string(),
@@ -367,7 +387,10 @@ impl BottleneckDetector {
 
 impl AdvancedProfiler {
     pub fn new(config: ProfilerConfig) -> Self {
-        info!("Advanced profiler initialized with sampling rate: {} Hz", config.sampling_rate_hz);
+        info!(
+            "Advanced profiler initialized with sampling rate: {} Hz",
+            config.sampling_rate_hz
+        );
 
         Self {
             config,
@@ -411,7 +434,7 @@ impl AdvancedProfiler {
                     {
                         let mut profiles_write = profiles.write().await;
                         profiles_write.push_back(sample.clone());
-                        
+
                         // Keep only recent samples (last 10000)
                         if profiles_write.len() > 10000 {
                             profiles_write.drain(0..5000);
@@ -445,11 +468,12 @@ impl AdvancedProfiler {
                     {
                         let mut detector = bottleneck_detector.lock().await;
                         detector.recent_samples.push_back(sample);
-                        
+
                         // Keep samples within detection window
                         let cutoff = Instant::now() - detector.detection_window;
                         detector.recent_samples.retain(|s| {
-                            let sample_time = Instant::now() - Duration::from_nanos(s.timestamp as u64);
+                            let sample_time =
+                                Instant::now() - Duration::from_nanos(s.timestamp as u64);
                             sample_time > cutoff
                         });
                     }
@@ -492,17 +516,18 @@ impl AdvancedProfiler {
             "network_request",
         ];
 
-        let function_name = function_names[rand::random::<usize>() % function_names.len()].to_string();
-        
+        let function_name =
+            function_names[rand::random::<usize>() % function_names.len()].to_string();
+
         Ok(ProfileData {
             timestamp: chrono::Utc::now().timestamp(),
             function_name,
             module_path: "autodev_ai::performance".to_string(),
             execution_time_ns: 1_000_000 + (rand::random::<u64>() % 10_000_000), // 1-11 ms
-            memory_allocated: (rand::random::<u64>() % 1_000_000) + 1024, // 1KB - 1MB
-            memory_deallocated: (rand::random::<u64>() % 500_000) + 512, // 512B - 500KB
-            cpu_time_ns: 500_000 + (rand::random::<u64>() % 5_000_000), // 0.5-5.5 ms
-            io_wait_time_ns: rand::random::<u64>() % 100_000_000, // 0-100ms
+            memory_allocated: (rand::random::<u64>() % 1_000_000) + 1024,        // 1KB - 1MB
+            memory_deallocated: (rand::random::<u64>() % 500_000) + 512,         // 512B - 500KB
+            cpu_time_ns: 500_000 + (rand::random::<u64>() % 5_000_000),          // 0.5-5.5 ms
+            io_wait_time_ns: rand::random::<u64>() % 100_000_000,                // 0-100ms
             call_count: 1,
             stack_trace: vec![
                 "autodev_ai::performance::profiler::collect_sample".to_string(),
@@ -514,9 +539,12 @@ impl AdvancedProfiler {
     pub async fn generate_report(&self) -> anyhow::Result<ProfileReport> {
         let aggregated = self.aggregated_data.read().await;
         let mut detector = self.bottleneck_detector.lock().await;
-        
+
         let total_samples = aggregated.values().map(|data| data.call_count).sum();
-        let total_execution_time_ns = aggregated.values().map(|data| data.total_execution_time_ns).sum();
+        let total_execution_time_ns = aggregated
+            .values()
+            .map(|data| data.total_execution_time_ns)
+            .sum();
 
         // Generate hot paths
         let mut hot_paths: Vec<HotPath> = aggregated
@@ -540,12 +568,19 @@ impl AdvancedProfiler {
                     call_count: data.call_count,
                     average_time_ns,
                     percentage_of_total,
-                    optimization_suggestions: self.generate_optimization_suggestions(&data.function_name, percentage_of_total),
+                    optimization_suggestions: self.generate_optimization_suggestions(
+                        &data.function_name,
+                        percentage_of_total,
+                    ),
                 }
             })
             .collect();
 
-        hot_paths.sort_by(|a, b| b.percentage_of_total.partial_cmp(&a.percentage_of_total).unwrap_or(std::cmp::Ordering::Equal));
+        hot_paths.sort_by(|a, b| {
+            b.percentage_of_total
+                .partial_cmp(&a.percentage_of_total)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         hot_paths.truncate(10); // Top 10 hot paths
 
         // Detect bottlenecks
@@ -568,16 +603,24 @@ impl AdvancedProfiler {
         })
     }
 
-    fn generate_optimization_suggestions(&self, function_name: &str, percentage: f64) -> Vec<String> {
+    fn generate_optimization_suggestions(
+        &self,
+        function_name: &str,
+        percentage: f64,
+    ) -> Vec<String> {
         let mut suggestions = Vec::new();
 
         if percentage > 20.0 {
-            suggestions.push(format!("Function '{}' is a performance hotspot ({}% of execution time)", function_name, percentage));
+            suggestions.push(format!(
+                "Function '{}' is a performance hotspot ({}% of execution time)",
+                function_name, percentage
+            ));
             suggestions.push("Consider algorithmic optimizations".to_string());
         }
 
         if function_name.contains("database") {
-            suggestions.push("Optimize database queries and consider connection pooling".to_string());
+            suggestions
+                .push("Optimize database queries and consider connection pooling".to_string());
             suggestions.push("Implement query result caching".to_string());
         }
 
@@ -588,16 +631,23 @@ impl AdvancedProfiler {
 
         if function_name.contains("memory") {
             suggestions.push("Review memory allocation patterns".to_string());
-            suggestions.push("Consider object pooling for frequently allocated objects".to_string());
+            suggestions
+                .push("Consider object pooling for frequently allocated objects".to_string());
         }
 
         suggestions
     }
 
-    async fn generate_memory_stats(&self, aggregated: &HashMap<String, AggregatedProfileData>) -> MemoryProfileStats {
+    async fn generate_memory_stats(
+        &self,
+        aggregated: &HashMap<String, AggregatedProfileData>,
+    ) -> MemoryProfileStats {
         let total_allocations = aggregated.values().map(|data| data.call_count).sum();
-        let total_allocated_memory = aggregated.values().map(|data| data.total_memory_allocated).sum();
-        
+        let total_allocated_memory = aggregated
+            .values()
+            .map(|data| data.total_memory_allocated)
+            .sum();
+
         let mut largest_allocations: Vec<AllocationInfo> = aggregated
             .values()
             .map(|data| AllocationInfo {
@@ -616,15 +666,19 @@ impl AdvancedProfiler {
             total_allocations,
             total_deallocations: total_allocations - (rand::random::<u64>() % 100), // Simulate some outstanding allocations
             peak_memory_usage: total_allocated_memory,
-            current_memory_usage: total_allocated_memory - (rand::random::<u64>() % (total_allocated_memory / 2)),
+            current_memory_usage: total_allocated_memory
+                - (rand::random::<u64>() % (total_allocated_memory / 2)),
             allocation_rate_per_second: total_allocated_memory as f64 / 60.0, // Assume 1 minute of profiling
             largest_allocations,
         }
     }
 
-    async fn generate_cpu_stats(&self, aggregated: &HashMap<String, AggregatedProfileData>) -> CpuProfileStats {
+    async fn generate_cpu_stats(
+        &self,
+        aggregated: &HashMap<String, AggregatedProfileData>,
+    ) -> CpuProfileStats {
         let total_cpu_time_ns = aggregated.values().map(|data| data.total_cpu_time_ns).sum();
-        
+
         let mut most_cpu_intensive: Vec<CpuUsageInfo> = aggregated
             .values()
             .map(|data| {
@@ -643,7 +697,11 @@ impl AdvancedProfiler {
             })
             .collect();
 
-        most_cpu_intensive.sort_by(|a, b| b.percentage_of_total.partial_cmp(&a.percentage_of_total).unwrap_or(std::cmp::Ordering::Equal));
+        most_cpu_intensive.sort_by(|a, b| {
+            b.percentage_of_total
+                .partial_cmp(&a.percentage_of_total)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         most_cpu_intensive.truncate(10);
 
         CpuProfileStats {
@@ -655,10 +713,13 @@ impl AdvancedProfiler {
         }
     }
 
-    async fn generate_io_stats(&self, aggregated: &HashMap<String, AggregatedProfileData>) -> IoProfileStats {
+    async fn generate_io_stats(
+        &self,
+        aggregated: &HashMap<String, AggregatedProfileData>,
+    ) -> IoProfileStats {
         let total_io_time_ns = aggregated.values().map(|data| data.total_io_time_ns).sum();
         let total_io_operations = aggregated.values().map(|data| data.call_count).sum();
-        
+
         let mut slowest_operations: Vec<IoOperationInfo> = aggregated
             .values()
             .filter(|data| data.total_io_time_ns > 0)
@@ -719,7 +780,7 @@ impl AdvancedProfiler {
         }
 
         let aggregated = self.aggregated_data.read().await;
-        
+
         // Generate simplified flame graph data
         let mut flame_graph_data = String::new();
         flame_graph_data.push_str("# Flame Graph Data\n");
@@ -783,12 +844,12 @@ mod tests {
     async fn test_profiler_initialization() {
         let config = ProfilerConfig::default();
         let profiler = AdvancedProfiler::new(config);
-        
+
         let start_result = profiler.start_profiling().await;
         assert!(start_result.is_ok());
-        
+
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         let stop_result = profiler.stop_profiling().await;
         assert!(stop_result.is_ok());
     }
@@ -797,11 +858,11 @@ mod tests {
     async fn test_profile_report_generation() {
         let config = ProfilerConfig::default();
         let profiler = AdvancedProfiler::new(config);
-        
+
         profiler.start_profiling().await.unwrap();
         tokio::time::sleep(Duration::from_millis(200)).await;
         profiler.stop_profiling().await.unwrap();
-        
+
         let report = profiler.generate_report().await.unwrap();
         assert!(report.total_samples >= 0);
         assert!(!report.hot_paths.is_empty() || report.total_samples == 0);

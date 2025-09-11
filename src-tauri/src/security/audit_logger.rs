@@ -197,12 +197,19 @@ impl SecurityAuditLogger {
             source_ip: None,
             command: None,
             details: HashMap::from([
-                ("action".to_string(), serde_json::Value::String("audit_logger_initialized".to_string())),
-                ("log_file".to_string(), serde_json::Value::String(self.config.log_file_path.display().to_string())),
+                (
+                    "action".to_string(),
+                    serde_json::Value::String("audit_logger_initialized".to_string()),
+                ),
+                (
+                    "log_file".to_string(),
+                    serde_json::Value::String(self.config.log_file_path.display().to_string()),
+                ),
             ]),
             outcome: SecurityOutcome::Success,
             risk_score: 0,
-        }).await;
+        })
+        .await;
 
         Ok(())
     }
@@ -232,13 +239,14 @@ impl SecurityAuditLogger {
     }
 
     /// Log authentication events
-    pub async fn log_authentication(&self, 
-        event_type: SecurityEventType, 
+    pub async fn log_authentication(
+        &self,
+        event_type: SecurityEventType,
         session_id: Option<String>,
         user_id: Option<String>,
         details: HashMap<String, serde_json::Value>,
-        outcome: SecurityOutcome) {
-        
+        outcome: SecurityOutcome,
+    ) {
         let severity = match outcome {
             SecurityOutcome::Failure => SecuritySeverity::Warning,
             SecurityOutcome::Blocked => SecuritySeverity::Error,
@@ -270,13 +278,14 @@ impl SecurityAuditLogger {
     }
 
     /// Log IPC security events
-    pub async fn log_ipc_security(&self,
+    pub async fn log_ipc_security(
+        &self,
         command: &str,
         session_id: &str,
         window_label: &str,
         outcome: SecurityOutcome,
-        details: HashMap<String, serde_json::Value>) {
-        
+        details: HashMap<String, serde_json::Value>,
+    ) {
         let severity = match outcome {
             SecurityOutcome::Blocked => SecuritySeverity::Warning,
             SecurityOutcome::Sanitized => SecuritySeverity::Info,
@@ -313,11 +322,12 @@ impl SecurityAuditLogger {
     }
 
     /// Log input validation events
-    pub async fn log_input_validation(&self,
+    pub async fn log_input_validation(
+        &self,
         input_type: &str,
         validation_result: &str,
-        details: HashMap<String, serde_json::Value>) {
-        
+        details: HashMap<String, serde_json::Value>,
+    ) {
         let (severity, outcome, risk_score) = match validation_result {
             "blocked" => (SecuritySeverity::Warning, SecurityOutcome::Blocked, 40),
             "sanitized" => (SecuritySeverity::Info, SecurityOutcome::Sanitized, 20),
@@ -333,7 +343,10 @@ impl SecurityAuditLogger {
         };
 
         let mut event_details = details;
-        event_details.insert("input_type".to_string(), serde_json::Value::String(input_type.to_string()));
+        event_details.insert(
+            "input_type".to_string(),
+            serde_json::Value::String(input_type.to_string()),
+        );
 
         let event = SecurityEvent {
             id: String::new(),
@@ -427,9 +440,11 @@ impl SecurityAuditLogger {
     /// Send real-time alert for high-priority events
     async fn send_alert(&self, event: &SecurityEvent) {
         // In a real implementation, this would send alerts via email, webhooks, etc.
-        println!("🚨 SECURITY ALERT: {:?} - {} (Risk Score: {})", 
-                 event.severity, event.event_type, event.risk_score);
-        
+        println!(
+            "🚨 SECURITY ALERT: {:?} - {} (Risk Score: {})",
+            event.severity, event.event_type, event.risk_score
+        );
+
         if let Some(details) = serde_json::to_string_pretty(&event.details).ok() {
             println!("Details: {}", details);
         }
@@ -459,20 +474,23 @@ impl SecurityAuditLogger {
     }
 
     /// Query events by criteria
-    pub async fn query_events(&self, 
+    pub async fn query_events(
+        &self,
         start_time: Option<DateTime<Utc>>,
         end_time: Option<DateTime<Utc>>,
         event_types: Option<Vec<SecurityEventType>>,
         severity_filter: Option<SecuritySeverity>,
-        session_id: Option<String>) -> Vec<SecurityEvent> {
-        
+        session_id: Option<String>,
+    ) -> Vec<SecurityEvent> {
         // In a production system, this would read from the log file or database
         // For now, return empty vector as this would require parsing the log file
         Vec::new()
     }
 
     /// Perform log rotation if needed
-    pub async fn rotate_logs_if_needed(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn rotate_logs_if_needed(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if !self.config.log_rotation_enabled {
             return Ok(());
         }
@@ -490,9 +508,15 @@ impl SecurityAuditLogger {
 
             // Rotate log file
             let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
-            let rotated_name = format!("{}.{}.log", 
-                self.config.log_file_path.file_stem().unwrap().to_string_lossy(),
-                timestamp);
+            let rotated_name = format!(
+                "{}.{}.log",
+                self.config
+                    .log_file_path
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy(),
+                timestamp
+            );
             let rotated_path = self.config.log_file_path.with_file_name(rotated_name);
 
             tokio::fs::rename(&self.config.log_file_path, rotated_path).await?;
@@ -529,14 +553,14 @@ mod tests {
     async fn test_audit_logger_creation() {
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test_audit.log");
-        
+
         let config = AuditConfig {
             log_file_path: log_path.clone(),
             ..Default::default()
         };
 
         let logger = SecurityAuditLogger::with_config(config).await;
-        
+
         // Logger should be created successfully
         assert!(log_path.exists());
     }
@@ -545,7 +569,7 @@ mod tests {
     async fn test_event_logging() {
         let temp_dir = TempDir::new().unwrap();
         let log_path = temp_dir.path().join("test_audit.log");
-        
+
         let config = AuditConfig {
             log_file_path: log_path.clone(),
             ..Default::default()

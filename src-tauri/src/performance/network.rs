@@ -1,12 +1,12 @@
 // Network optimization for request handling, compression, and bandwidth management
 // Implements advanced networking strategies for high-performance applications
 
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tokio::sync::{RwLock, Mutex};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::{Duration, Instant};
-use serde::{Serialize, Deserialize};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,8 +122,10 @@ impl NetworkOptimizer {
             retry_rate_percent: 0.0,
         };
 
-        info!("Network optimizer initialized with compression: {}, pooling: {}", 
-              config.compression_enabled, config.connection_pooling);
+        info!(
+            "Network optimizer initialized with compression: {}, pooling: {}",
+            config.compression_enabled, config.connection_pooling
+        );
 
         Self {
             config,
@@ -143,7 +145,7 @@ impl NetworkOptimizer {
         method: &str,
         url: &str,
         body: Option<&[u8]>,
-        headers: Option<&HashMap<String, String>>
+        headers: Option<&HashMap<String, String>>,
     ) -> anyhow::Result<NetworkResponse> {
         let request_id = Uuid::new_v4();
         let start_time = Instant::now();
@@ -193,24 +195,31 @@ impl NetworkOptimizer {
         for attempt in 0..=self.config.retry_configuration.max_retries {
             request_metrics.retry_count = attempt;
 
-            match self.execute_single_request(
-                &connection,
-                method,
-                url,
-                final_body.as_deref(),
-                headers,
-                compression_ratio
-            ).await {
+            match self
+                .execute_single_request(
+                    &connection,
+                    method,
+                    url,
+                    final_body.as_deref(),
+                    headers,
+                    compression_ratio,
+                )
+                .await
+            {
                 Ok(resp) => {
                     response = Some(resp);
                     request_metrics.success = true;
                     break;
-                },
+                }
                 Err(e) => {
                     last_error = Some(e);
                     if attempt < self.config.retry_configuration.max_retries {
                         let delay = self.calculate_retry_delay(attempt);
-                        debug!("Request failed, retrying in {:?} (attempt {})", delay, attempt + 1);
+                        debug!(
+                            "Request failed, retrying in {:?} (attempt {})",
+                            delay,
+                            attempt + 1
+                        );
                         tokio::time::sleep(delay).await;
                     }
                 }
@@ -219,7 +228,7 @@ impl NetworkOptimizer {
 
         // Complete request metrics
         request_metrics.completed_at = Some(Instant::now());
-        
+
         if let Some(error) = &last_error {
             request_metrics.error_message = Some(error.to_string());
         }
@@ -234,10 +243,10 @@ impl NetworkOptimizer {
         {
             let mut active_requests = self.active_requests.write().await;
             active_requests.remove(&request_id);
-            
+
             let mut history = self.request_history.write().await;
             history.push(request_metrics);
-            
+
             // Keep only recent history (last 10000 requests)
             if history.len() > 10000 {
                 history.drain(0..5000);
@@ -246,7 +255,10 @@ impl NetworkOptimizer {
 
         match response {
             Some(resp) => Ok(resp),
-            None => Err(last_error.unwrap_or_else(|| anyhow::anyhow!("Request failed after all retries"))),
+            None => {
+                Err(last_error
+                    .unwrap_or_else(|| anyhow::anyhow!("Request failed after all retries")))
+            }
         }
     }
 
@@ -284,7 +296,10 @@ impl NetworkOptimizer {
         };
 
         host_pool.push(new_connection.clone());
-        info!("Created new connection {} for {}", new_connection.id, pool_key);
+        info!(
+            "Created new connection {} for {}",
+            new_connection.id, pool_key
+        );
         Ok(new_connection)
     }
 
@@ -299,7 +314,7 @@ impl NetworkOptimizer {
 
         let pool_key = format!("{}:{}", connection.host, connection.port);
         let mut pool = self.connection_pool.write().await;
-        
+
         if let Some(host_pool) = pool.get_mut(&pool_key) {
             for conn in host_pool.iter_mut() {
                 if conn.id == connection.id {
@@ -330,24 +345,26 @@ impl NetworkOptimizer {
 
     fn extract_host(&self, url: &str) -> anyhow::Result<String> {
         let parsed_url = url::Url::parse(url)?;
-        parsed_url.host_str()
+        parsed_url
+            .host_str()
             .map(|s| s.to_string())
             .ok_or_else(|| anyhow::anyhow!("Invalid URL: no host"))
     }
 
     fn extract_port(&self, url: &str) -> anyhow::Result<u16> {
         let parsed_url = url::Url::parse(url)?;
-        Ok(parsed_url.port().unwrap_or_else(|| {
-            match parsed_url.scheme() {
+        Ok(parsed_url
+            .port()
+            .unwrap_or_else(|| match parsed_url.scheme() {
                 "https" => 443,
                 "http" => 80,
                 _ => 80,
-            }
-        }))
+            }))
     }
 
     async fn compress_data(&self, data: &[u8]) -> anyhow::Result<(Option<Vec<u8>>, f64)> {
-        if !self.config.compression_enabled || data.len() < self.config.compression_threshold_bytes {
+        if !self.config.compression_enabled || data.len() < self.config.compression_threshold_bytes
+        {
             return Ok((Some(data.to_vec()), 1.0));
         }
 
@@ -356,8 +373,12 @@ impl NetworkOptimizer {
         let compressed_data = vec![0u8; compressed_size];
         let compression_ratio = data.len() as f64 / compressed_size as f64;
 
-        debug!("Compressed {} bytes to {} bytes (ratio: {:.2})", 
-               data.len(), compressed_size, compression_ratio);
+        debug!(
+            "Compressed {} bytes to {} bytes (ratio: {:.2})",
+            data.len(),
+            compressed_size,
+            compression_ratio
+        );
 
         Ok((Some(compressed_data), compression_ratio))
     }
@@ -373,10 +394,11 @@ impl NetworkOptimizer {
     ) -> anyhow::Result<NetworkResponse> {
         // Simulate network request execution
         let execution_time = self.simulate_network_request(method, url).await?;
-        
+
         // Check bandwidth limit
         if let Some(limit_mbps) = self.config.bandwidth_limit_mbps {
-            self.enforce_bandwidth_limit(limit_mbps, body.map_or(0, |b| b.len())).await?;
+            self.enforce_bandwidth_limit(limit_mbps, body.map_or(0, |b| b.len()))
+                .await?;
         }
 
         // Simulate response
@@ -388,7 +410,8 @@ impl NetworkOptimizer {
         };
 
         // Update bandwidth tracking
-        self.update_bandwidth_tracking(body.map_or(0, |b| b.len()) + response_body.len()).await;
+        self.update_bandwidth_tracking(body.map_or(0, |b| b.len()) + response_body.len())
+            .await;
 
         Ok(NetworkResponse {
             status_code: 200,
@@ -431,10 +454,14 @@ impl NetworkOptimizer {
         Duration::from_millis(delay.min(max_delay) as u64)
     }
 
-    async fn enforce_bandwidth_limit(&self, limit_mbps: f64, data_size: usize) -> anyhow::Result<()> {
+    async fn enforce_bandwidth_limit(
+        &self,
+        limit_mbps: f64,
+        data_size: usize,
+    ) -> anyhow::Result<()> {
         let bytes_per_second = limit_mbps * 1024.0 * 1024.0 / 8.0; // Convert Mbps to bytes/sec
         let required_time_seconds = data_size as f64 / bytes_per_second;
-        
+
         if required_time_seconds > 0.001 {
             tokio::time::sleep(Duration::from_secs_f64(required_time_seconds)).await;
         }
@@ -445,24 +472,32 @@ impl NetworkOptimizer {
     async fn update_bandwidth_tracking(&self, bytes_transferred: usize) {
         let mut tracker = self.bandwidth_tracker.lock().await;
         let now = Instant::now();
-        
-        tracker.bytes_per_second_history.push((now, bytes_transferred as u64));
-        
+
+        tracker
+            .bytes_per_second_history
+            .push((now, bytes_transferred as u64));
+
         // Keep only last 60 seconds of history
         let cutoff = now - Duration::from_secs(60);
-        tracker.bytes_per_second_history.retain(|(timestamp, _)| *timestamp > cutoff);
-        
+        tracker
+            .bytes_per_second_history
+            .retain(|(timestamp, _)| *timestamp > cutoff);
+
         // Calculate current bandwidth utilization
-        let total_bytes: u64 = tracker.bytes_per_second_history.iter().map(|(_, bytes)| *bytes).sum();
+        let total_bytes: u64 = tracker
+            .bytes_per_second_history
+            .iter()
+            .map(|(_, bytes)| *bytes)
+            .sum();
         let time_window = 60.0; // seconds
         tracker.current_bytes_per_second = total_bytes as f64 / time_window;
     }
 
     async fn update_request_metrics(&self, request_metrics: &RequestMetrics) {
         let mut metrics = self.metrics.lock().await;
-        
+
         metrics.total_requests += 1;
-        
+
         if request_metrics.success {
             metrics.successful_requests += 1;
         } else {
@@ -471,21 +506,26 @@ impl NetworkOptimizer {
 
         // Update average response time
         if let Some(completed_at) = request_metrics.completed_at {
-            let response_time = completed_at.duration_since(request_metrics.started_at).as_millis() as f64;
-            
+            let response_time = completed_at
+                .duration_since(request_metrics.started_at)
+                .as_millis() as f64;
+
             // Simple moving average
             let total_requests = metrics.total_requests as f64;
-            metrics.average_response_time_ms = 
-                (metrics.average_response_time_ms * (total_requests - 1.0) + response_time) / total_requests;
+            metrics.average_response_time_ms =
+                (metrics.average_response_time_ms * (total_requests - 1.0) + response_time)
+                    / total_requests;
         }
 
         // Update bandwidth metrics
         let tracker = self.bandwidth_tracker.lock().await;
-        metrics.bandwidth_utilization_mbps = (tracker.current_bytes_per_second * 8.0) / (1024.0 * 1024.0);
+        metrics.bandwidth_utilization_mbps =
+            (tracker.current_bytes_per_second * 8.0) / (1024.0 * 1024.0);
 
         // Update retry rate
         if request_metrics.retry_count > 0 {
-            let retry_requests = (metrics.total_requests as f64 * metrics.retry_rate_percent / 100.0) + 1.0;
+            let retry_requests =
+                (metrics.total_requests as f64 * metrics.retry_rate_percent / 100.0) + 1.0;
             metrics.retry_rate_percent = (retry_requests / metrics.total_requests as f64) * 100.0;
         }
 
@@ -494,23 +534,26 @@ impl NetworkOptimizer {
 
     pub async fn get_metrics(&self) -> NetworkMetrics {
         let mut metrics = self.metrics.lock().await;
-        
+
         // Update active connections
         let pool = self.connection_pool.read().await;
-        let active_connections: u32 = pool.values()
+        let active_connections: u32 = pool
+            .values()
             .flat_map(|connections| connections.iter())
             .filter(|conn| conn.is_active)
             .count() as u32;
-        
+
         metrics.active_connections = active_connections;
-        
+
         // Calculate connection pool efficiency
-        let total_connections: u32 = pool.values()
+        let total_connections: u32 = pool
+            .values()
             .flat_map(|connections| connections.iter())
             .count() as u32;
-        
+
         if total_connections > 0 {
-            metrics.connection_pool_efficiency = (active_connections as f64 / total_connections as f64) * 100.0;
+            metrics.connection_pool_efficiency =
+                (active_connections as f64 / total_connections as f64) * 100.0;
         }
 
         metrics.clone()
@@ -519,7 +562,7 @@ impl NetworkOptimizer {
     pub async fn optimize_network(&self) -> anyhow::Result<NetworkOptimizationReport> {
         let metrics = self.get_metrics().await;
         let request_history = self.request_history.read().await;
-        
+
         let mut report = NetworkOptimizationReport {
             timestamp: chrono::Utc::now().timestamp(),
             current_metrics: metrics.clone(),
@@ -537,15 +580,17 @@ impl NetworkOptimizer {
         // Analyze compression efficiency
         if metrics.compression_ratio < 1.5 {
             report.optimization_recommendations.push(
-                "Low compression ratio. Review compression settings or thresholds.".to_string()
+                "Low compression ratio. Review compression settings or thresholds.".to_string(),
             );
         }
 
         // Analyze failure rate
-        let failure_rate = (metrics.failed_requests as f64 / metrics.total_requests.max(1) as f64) * 100.0;
+        let failure_rate =
+            (metrics.failed_requests as f64 / metrics.total_requests.max(1) as f64) * 100.0;
         if failure_rate > 5.0 {
             report.optimization_recommendations.push(
-                "High failure rate detected. Review retry configuration and error handling.".to_string()
+                "High failure rate detected. Review retry configuration and error handling."
+                    .to_string(),
             );
         }
 
@@ -561,10 +606,22 @@ impl NetworkOptimizer {
 
         // Estimate improvements
         report.estimated_improvements = EstimatedNetworkImprovements {
-            response_time_improvement: if metrics.average_response_time_ms > 300.0 { 25.0 } else { 10.0 },
-            bandwidth_efficiency_improvement: if metrics.compression_ratio < 2.0 { 20.0 } else { 5.0 },
+            response_time_improvement: if metrics.average_response_time_ms > 300.0 {
+                25.0
+            } else {
+                10.0
+            },
+            bandwidth_efficiency_improvement: if metrics.compression_ratio < 2.0 {
+                20.0
+            } else {
+                5.0
+            },
             reliability_improvement: if failure_rate > 3.0 { 15.0 } else { 5.0 },
-            connection_efficiency_improvement: if metrics.connection_pool_efficiency < 70.0 { 30.0 } else { 10.0 },
+            connection_efficiency_improvement: if metrics.connection_pool_efficiency < 70.0 {
+                30.0
+            } else {
+                10.0
+            },
         };
 
         Ok(report)
@@ -573,11 +630,11 @@ impl NetworkOptimizer {
     pub async fn cleanup_connections(&self) -> anyhow::Result<usize> {
         let mut pool = self.connection_pool.write().await;
         let mut cleaned_count = 0;
-        
+
         for (host, connections) in pool.iter_mut() {
             let initial_count = connections.len();
             let cutoff = Instant::now() - Duration::from_secs(300); // 5 minutes
-            
+
             connections.retain(|conn| {
                 if !conn.is_active && conn.last_used < cutoff {
                     debug!("Cleaning up inactive connection {} for {}", conn.id, host);
@@ -586,7 +643,7 @@ impl NetworkOptimizer {
                     true
                 }
             });
-            
+
             cleaned_count += initial_count - connections.len();
         }
 
@@ -654,7 +711,7 @@ pub async fn execute_optimized_request(
     method: &str,
     url: &str,
     body: Option<&[u8]>,
-    headers: Option<&HashMap<String, String>>
+    headers: Option<&HashMap<String, String>>,
 ) -> anyhow::Result<NetworkResponse> {
     let optimizer = NETWORK_OPTIMIZER.read().await;
     if let Some(optimizer) = optimizer.as_ref() {
@@ -682,14 +739,12 @@ mod tests {
     async fn test_network_optimizer() {
         let config = NetworkConfig::default();
         let optimizer = NetworkOptimizer::new(config);
-        
-        let response = optimizer.execute_request(
-            "GET",
-            "https://api.example.com/test",
-            None,
-            None
-        ).await.unwrap();
-        
+
+        let response = optimizer
+            .execute_request("GET", "https://api.example.com/test", None, None)
+            .await
+            .unwrap();
+
         assert_eq!(response.status_code, 200);
         assert!(!response.body.is_empty());
     }
@@ -698,17 +753,15 @@ mod tests {
     async fn test_connection_pooling() {
         let config = NetworkConfig::default();
         let optimizer = NetworkOptimizer::new(config);
-        
+
         // Execute multiple requests to the same host
         for _ in 0..3 {
-            let _response = optimizer.execute_request(
-                "GET",
-                "https://api.example.com/test",
-                None,
-                None
-            ).await.unwrap();
+            let _response = optimizer
+                .execute_request("GET", "https://api.example.com/test", None, None)
+                .await
+                .unwrap();
         }
-        
+
         let metrics = optimizer.get_metrics().await;
         assert!(metrics.total_requests >= 3);
     }

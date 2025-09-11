@@ -4,9 +4,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, Mutex};
-use tokio::time::{Duration, Instant, interval};
-use tracing::{info, warn, debug, error};
+use tokio::sync::{Mutex, RwLock};
+use tokio::time::{interval, Duration, Instant};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,8 +176,11 @@ impl PerformanceMonitor {
             None
         };
 
-        info!("Performance monitor initialized with Prometheus: {}, Grafana: {}", 
-              prometheus_client.is_some(), grafana_client.is_some());
+        info!(
+            "Performance monitor initialized with Prometheus: {}, Grafana: {}",
+            prometheus_client.is_some(),
+            grafana_client.is_some()
+        );
 
         Self {
             config,
@@ -198,7 +201,10 @@ impl PerformanceMonitor {
             return Ok(());
         }
 
-        info!("Starting performance monitoring with {}s interval", self.config.collection_interval_seconds);
+        info!(
+            "Starting performance monitoring with {}s interval",
+            self.config.collection_interval_seconds
+        );
 
         let system_metrics = Arc::clone(&self.system_metrics);
         let application_metrics = Arc::clone(&self.application_metrics);
@@ -217,34 +223,46 @@ impl PerformanceMonitor {
                 if let Ok(sys_metrics) = Self::collect_system_metrics().await {
                     let mut metrics = system_metrics.write().await;
                     metrics.push(sys_metrics.clone());
-                    
+
                     // Limit buffer size
                     if metrics.len() > config.metrics_buffer_size {
                         metrics.drain(0..config.metrics_buffer_size / 2);
                     }
 
                     // Check system alerts
-                    Self::check_system_alerts(&sys_metrics, &config.alert_thresholds, &active_alerts, &alert_history).await;
+                    Self::check_system_alerts(
+                        &sys_metrics,
+                        &config.alert_thresholds,
+                        &active_alerts,
+                        &alert_history,
+                    )
+                    .await;
                 }
 
                 // Collect application metrics
                 if let Ok(app_metrics) = Self::collect_application_metrics().await {
                     let mut metrics = application_metrics.write().await;
                     metrics.push(app_metrics.clone());
-                    
+
                     if metrics.len() > config.metrics_buffer_size {
                         metrics.drain(0..config.metrics_buffer_size / 2);
                     }
 
                     // Check application alerts
-                    Self::check_application_alerts(&app_metrics, &config.alert_thresholds, &active_alerts, &alert_history).await;
+                    Self::check_application_alerts(
+                        &app_metrics,
+                        &config.alert_thresholds,
+                        &active_alerts,
+                        &alert_history,
+                    )
+                    .await;
                 }
 
                 // Collect AI metrics
                 if let Ok(ai_metrics_data) = Self::collect_ai_metrics().await {
                     let mut metrics = ai_metrics.write().await;
                     metrics.push(ai_metrics_data);
-                    
+
                     if metrics.len() > config.metrics_buffer_size {
                         metrics.drain(0..config.metrics_buffer_size / 2);
                     }
@@ -268,9 +286,9 @@ impl PerformanceMonitor {
     async fn collect_system_metrics() -> anyhow::Result<SystemMetrics> {
         // In a real implementation, this would use system APIs
         // For now, we'll return mock data with some realistic variations
-        
+
         let timestamp = chrono::Utc::now().timestamp();
-        
+
         Ok(SystemMetrics {
             timestamp,
             cpu_usage_percent: 45.0 + (timestamp % 30) as f64,
@@ -288,7 +306,7 @@ impl PerformanceMonitor {
 
     async fn collect_application_metrics() -> anyhow::Result<ApplicationMetrics> {
         let timestamp = chrono::Utc::now().timestamp();
-        
+
         Ok(ApplicationMetrics {
             timestamp,
             requests_per_second: 50.0 + (timestamp % 20) as f64,
@@ -306,7 +324,7 @@ impl PerformanceMonitor {
 
     async fn collect_ai_metrics() -> anyhow::Result<AIMetrics> {
         let timestamp = chrono::Utc::now().timestamp();
-        
+
         Ok(AIMetrics {
             timestamp,
             ai_requests_per_second: 10.0 + (timestamp % 15) as f64,
@@ -331,10 +349,16 @@ impl PerformanceMonitor {
             let alert = Alert {
                 id: Uuid::new_v4(),
                 alert_type: AlertType::SystemResource,
-                severity: if metrics.cpu_usage_percent > 90.0 { AlertSeverity::Critical } else { AlertSeverity::Warning },
+                severity: if metrics.cpu_usage_percent > 90.0 {
+                    AlertSeverity::Critical
+                } else {
+                    AlertSeverity::Warning
+                },
                 title: "High CPU Usage".to_string(),
-                description: format!("CPU usage is {}%, exceeding threshold of {}%", 
-                                   metrics.cpu_usage_percent, thresholds.cpu_threshold_percent),
+                description: format!(
+                    "CPU usage is {}%, exceeding threshold of {}%",
+                    metrics.cpu_usage_percent, thresholds.cpu_threshold_percent
+                ),
                 triggered_at: metrics.timestamp,
                 resolved_at: None,
                 metric_value: metrics.cpu_usage_percent,
@@ -344,23 +368,30 @@ impl PerformanceMonitor {
 
             let mut alerts = active_alerts.write().await;
             alerts.insert(alert.id, alert.clone());
-            
+
             let mut history = alert_history.write().await;
             history.push(alert);
-            
+
             warn!("CPU usage alert triggered: {}%", metrics.cpu_usage_percent);
         }
 
         // Memory usage alert
-        let memory_usage_percent = (metrics.memory_usage_mb as f64 / metrics.memory_total_mb as f64) * 100.0;
+        let memory_usage_percent =
+            (metrics.memory_usage_mb as f64 / metrics.memory_total_mb as f64) * 100.0;
         if memory_usage_percent > thresholds.memory_threshold_percent {
             let alert = Alert {
                 id: Uuid::new_v4(),
                 alert_type: AlertType::SystemResource,
-                severity: if memory_usage_percent > 95.0 { AlertSeverity::Critical } else { AlertSeverity::Warning },
+                severity: if memory_usage_percent > 95.0 {
+                    AlertSeverity::Critical
+                } else {
+                    AlertSeverity::Warning
+                },
                 title: "High Memory Usage".to_string(),
-                description: format!("Memory usage is {:.1}%, exceeding threshold of {}%", 
-                                   memory_usage_percent, thresholds.memory_threshold_percent),
+                description: format!(
+                    "Memory usage is {:.1}%, exceeding threshold of {}%",
+                    memory_usage_percent, thresholds.memory_threshold_percent
+                ),
                 triggered_at: metrics.timestamp,
                 resolved_at: None,
                 metric_value: memory_usage_percent,
@@ -370,10 +401,10 @@ impl PerformanceMonitor {
 
             let mut alerts = active_alerts.write().await;
             alerts.insert(alert.id, alert.clone());
-            
+
             let mut history = alert_history.write().await;
             history.push(alert);
-            
+
             warn!("Memory usage alert triggered: {:.1}%", memory_usage_percent);
         }
     }
@@ -389,10 +420,16 @@ impl PerformanceMonitor {
             let alert = Alert {
                 id: Uuid::new_v4(),
                 alert_type: AlertType::Performance,
-                severity: if metrics.average_response_time_ms > 2000.0 { AlertSeverity::Critical } else { AlertSeverity::Warning },
+                severity: if metrics.average_response_time_ms > 2000.0 {
+                    AlertSeverity::Critical
+                } else {
+                    AlertSeverity::Warning
+                },
                 title: "High Response Time".to_string(),
-                description: format!("Average response time is {:.1}ms, exceeding threshold of {}ms", 
-                                   metrics.average_response_time_ms, thresholds.response_time_threshold_ms),
+                description: format!(
+                    "Average response time is {:.1}ms, exceeding threshold of {}ms",
+                    metrics.average_response_time_ms, thresholds.response_time_threshold_ms
+                ),
                 triggered_at: metrics.timestamp,
                 resolved_at: None,
                 metric_value: metrics.average_response_time_ms,
@@ -402,11 +439,14 @@ impl PerformanceMonitor {
 
             let mut alerts = active_alerts.write().await;
             alerts.insert(alert.id, alert.clone());
-            
+
             let mut history = alert_history.write().await;
             history.push(alert);
-            
-            warn!("Response time alert triggered: {:.1}ms", metrics.average_response_time_ms);
+
+            warn!(
+                "Response time alert triggered: {:.1}ms",
+                metrics.average_response_time_ms
+            );
         }
 
         // Error rate alert
@@ -414,10 +454,16 @@ impl PerformanceMonitor {
             let alert = Alert {
                 id: Uuid::new_v4(),
                 alert_type: AlertType::Application,
-                severity: if metrics.error_rate_percent > 10.0 { AlertSeverity::Critical } else { AlertSeverity::Warning },
+                severity: if metrics.error_rate_percent > 10.0 {
+                    AlertSeverity::Critical
+                } else {
+                    AlertSeverity::Warning
+                },
                 title: "High Error Rate".to_string(),
-                description: format!("Error rate is {:.1}%, exceeding threshold of {}%", 
-                                   metrics.error_rate_percent, thresholds.error_rate_threshold_percent),
+                description: format!(
+                    "Error rate is {:.1}%, exceeding threshold of {}%",
+                    metrics.error_rate_percent, thresholds.error_rate_threshold_percent
+                ),
                 triggered_at: metrics.timestamp,
                 resolved_at: None,
                 metric_value: metrics.error_rate_percent,
@@ -427,11 +473,14 @@ impl PerformanceMonitor {
 
             let mut alerts = active_alerts.write().await;
             alerts.insert(alert.id, alert.clone());
-            
+
             let mut history = alert_history.write().await;
             history.push(alert);
-            
-            warn!("Error rate alert triggered: {:.1}%", metrics.error_rate_percent);
+
+            warn!(
+                "Error rate alert triggered: {:.1}%",
+                metrics.error_rate_percent
+            );
         }
     }
 
@@ -443,11 +492,13 @@ impl PerformanceMonitor {
 
         // Calculate health scores
         let system_health_score = Self::calculate_system_health_score(&system_metrics);
-        let application_performance_score = Self::calculate_application_performance_score(&application_metrics);
+        let application_performance_score =
+            Self::calculate_application_performance_score(&application_metrics);
         let ai_efficiency_score = Self::calculate_ai_efficiency_score(&ai_metrics);
 
         // Get recent alerts (last 10)
-        let recent_alerts: Vec<Alert> = active_alerts.values()
+        let recent_alerts: Vec<Alert> = active_alerts
+            .values()
             .cloned()
             .collect::<Vec<_>>()
             .into_iter()
@@ -457,36 +508,49 @@ impl PerformanceMonitor {
 
         // Build key metrics map
         let mut key_metrics = HashMap::new();
-        
+
         if let Some(latest_sys) = system_metrics.last() {
             key_metrics.insert("cpu_usage".to_string(), latest_sys.cpu_usage_percent);
-            key_metrics.insert("memory_usage".to_string(), 
-                              (latest_sys.memory_usage_mb as f64 / latest_sys.memory_total_mb as f64) * 100.0);
+            key_metrics.insert(
+                "memory_usage".to_string(),
+                (latest_sys.memory_usage_mb as f64 / latest_sys.memory_total_mb as f64) * 100.0,
+            );
         }
-        
+
         if let Some(latest_app) = application_metrics.last() {
-            key_metrics.insert("response_time".to_string(), latest_app.average_response_time_ms);
-            key_metrics.insert("requests_per_second".to_string(), latest_app.requests_per_second);
+            key_metrics.insert(
+                "response_time".to_string(),
+                latest_app.average_response_time_ms,
+            );
+            key_metrics.insert(
+                "requests_per_second".to_string(),
+                latest_app.requests_per_second,
+            );
             key_metrics.insert("error_rate".to_string(), latest_app.error_rate_percent);
         }
 
         if let Some(latest_ai) = ai_metrics.last() {
-            key_metrics.insert("ai_response_time".to_string(), latest_ai.ai_response_time_ms);
+            key_metrics.insert(
+                "ai_response_time".to_string(),
+                latest_ai.ai_response_time_ms,
+            );
             key_metrics.insert("ai_success_rate".to_string(), latest_ai.ai_success_rate);
             key_metrics.insert("cost_per_hour".to_string(), latest_ai.cost_per_hour_usd);
         }
 
         // Build performance trends (last 100 data points)
         let mut performance_trends = HashMap::new();
-        
-        let cpu_trend: Vec<(i64, f64)> = system_metrics.iter()
+
+        let cpu_trend: Vec<(i64, f64)> = system_metrics
+            .iter()
             .rev()
             .take(100)
             .map(|m| (m.timestamp, m.cpu_usage_percent))
             .collect();
         performance_trends.insert("cpu_usage".to_string(), cpu_trend);
 
-        let response_trend: Vec<(i64, f64)> = application_metrics.iter()
+        let response_trend: Vec<(i64, f64)> = application_metrics
+            .iter()
             .rev()
             .take(100)
             .map(|m| (m.timestamp, m.average_response_time_ms))
@@ -509,11 +573,21 @@ impl PerformanceMonitor {
         }
 
         let recent_metrics: Vec<_> = metrics.iter().rev().take(10).collect();
-        let avg_cpu = recent_metrics.iter().map(|m| m.cpu_usage_percent).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_memory = recent_metrics.iter()
+        let avg_cpu = recent_metrics
+            .iter()
+            .map(|m| m.cpu_usage_percent)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_memory = recent_metrics
+            .iter()
             .map(|m| (m.memory_usage_mb as f64 / m.memory_total_mb as f64) * 100.0)
-            .sum::<f64>() / recent_metrics.len() as f64;
-        let avg_disk = recent_metrics.iter().map(|m| m.disk_usage_percent).sum::<f64>() / recent_metrics.len() as f64;
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_disk = recent_metrics
+            .iter()
+            .map(|m| m.disk_usage_percent)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
 
         // Simple scoring: 100 - weighted average of resource usage
         let score = 100.0 - (avg_cpu * 0.4 + avg_memory * 0.4 + avg_disk * 0.2);
@@ -526,9 +600,18 @@ impl PerformanceMonitor {
         }
 
         let recent_metrics: Vec<_> = metrics.iter().rev().take(10).collect();
-        let avg_response_time = recent_metrics.iter().map(|m| m.average_response_time_ms).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_error_rate = recent_metrics.iter().map(|m| m.error_rate_percent).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_cache_hit_rate = recent_metrics.iter().map(|m| m.cache_hit_rate).sum::<f64>() / recent_metrics.len() as f64;
+        let avg_response_time = recent_metrics
+            .iter()
+            .map(|m| m.average_response_time_ms)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_error_rate = recent_metrics
+            .iter()
+            .map(|m| m.error_rate_percent)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_cache_hit_rate = recent_metrics.iter().map(|m| m.cache_hit_rate).sum::<f64>()
+            / recent_metrics.len() as f64;
 
         // Score based on response time (lower is better), error rate (lower is better), cache hit rate (higher is better)
         let response_score = (1000.0 - avg_response_time.min(1000.0)) / 10.0; // Scale to 0-100
@@ -545,9 +628,21 @@ impl PerformanceMonitor {
         }
 
         let recent_metrics: Vec<_> = metrics.iter().rev().take(10).collect();
-        let avg_response_time = recent_metrics.iter().map(|m| m.ai_response_time_ms).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_success_rate = recent_metrics.iter().map(|m| m.ai_success_rate).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_cost = recent_metrics.iter().map(|m| m.cost_per_hour_usd).sum::<f64>() / recent_metrics.len() as f64;
+        let avg_response_time = recent_metrics
+            .iter()
+            .map(|m| m.ai_response_time_ms)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_success_rate = recent_metrics
+            .iter()
+            .map(|m| m.ai_success_rate)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_cost = recent_metrics
+            .iter()
+            .map(|m| m.cost_per_hour_usd)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
 
         // Score based on response time, success rate, and cost efficiency
         let response_score = (2000.0 - avg_response_time.min(2000.0)) / 20.0; // Scale to 0-100
@@ -560,23 +655,17 @@ impl PerformanceMonitor {
 
     pub async fn export_metrics_prometheus(&self) -> anyhow::Result<String> {
         let dashboard = self.get_current_dashboard().await;
-        
+
         let mut prometheus_metrics = String::new();
-        
+
         // Export key metrics in Prometheus format
         for (metric_name, value) in dashboard.key_metrics {
             prometheus_metrics.push_str(&format!(
                 "# HELP autodevai_{} AutoDev-AI {} metric\n",
                 metric_name, metric_name
             ));
-            prometheus_metrics.push_str(&format!(
-                "# TYPE autodevai_{} gauge\n",
-                metric_name
-            ));
-            prometheus_metrics.push_str(&format!(
-                "autodevai_{} {}\n",
-                metric_name, value
-            ));
+            prometheus_metrics.push_str(&format!("# TYPE autodevai_{} gauge\n", metric_name));
+            prometheus_metrics.push_str(&format!("autodevai_{} {}\n", metric_name, value));
         }
 
         // Add health scores
@@ -599,8 +688,9 @@ impl PerformanceMonitor {
     pub async fn create_grafana_dashboard(&self) -> anyhow::Result<String> {
         if let Some(grafana) = &self.grafana_client {
             let dashboard_json = self.generate_grafana_dashboard_json().await?;
-            
-            let response = grafana.client
+
+            let response = grafana
+                .client
                 .post(&format!("{}/api/dashboards/db", grafana.endpoint))
                 .header("Authorization", format!("Bearer {}", grafana.api_key))
                 .header("Content-Type", "application/json")
@@ -613,7 +703,10 @@ impl PerformanceMonitor {
                 Ok("Dashboard created".to_string())
             } else {
                 let error_text = response.text().await?;
-                Err(anyhow::anyhow!("Failed to create Grafana dashboard: {}", error_text))
+                Err(anyhow::anyhow!(
+                    "Failed to create Grafana dashboard: {}",
+                    error_text
+                ))
             }
         } else {
             Err(anyhow::anyhow!("Grafana client not configured"))
@@ -681,13 +774,13 @@ impl PerformanceMonitor {
 
     pub async fn resolve_alert(&self, alert_id: Uuid) -> anyhow::Result<()> {
         let mut active_alerts = self.active_alerts.write().await;
-        
+
         if let Some(mut alert) = active_alerts.remove(&alert_id) {
             alert.resolved_at = Some(chrono::Utc::now().timestamp());
-            
+
             let mut history = self.alert_history.write().await;
             history.push(alert);
-            
+
             info!("Alert {} resolved", alert_id);
             Ok(())
         } else {
@@ -697,8 +790,9 @@ impl PerformanceMonitor {
 
     pub async fn get_alerts(&self, severity: Option<AlertSeverity>) -> Vec<Alert> {
         let active_alerts = self.active_alerts.read().await;
-        
-        active_alerts.values()
+
+        active_alerts
+            .values()
             .filter(|alert| {
                 severity.as_ref().map_or(true, |s| {
                     std::mem::discriminant(&alert.severity) == std::mem::discriminant(s)
@@ -717,10 +811,10 @@ lazy_static::lazy_static! {
 pub async fn initialize_performance_monitor(config: MonitoringConfig) -> anyhow::Result<()> {
     let mut monitor = PerformanceMonitor::new(config);
     monitor.start_monitoring().await?;
-    
+
     let mut global_monitor = PERFORMANCE_MONITOR.write().await;
     *global_monitor = Some(monitor);
-    
+
     info!("Global performance monitor initialized and started");
     Ok(())
 }
@@ -752,7 +846,7 @@ mod tests {
     async fn test_performance_monitor() {
         let config = MonitoringConfig::default();
         let monitor = PerformanceMonitor::new(config);
-        
+
         let dashboard = monitor.get_current_dashboard().await;
         assert!(dashboard.system_health_score >= 0.0);
         assert!(dashboard.system_health_score <= 100.0);
@@ -763,8 +857,10 @@ mod tests {
         let sys_metrics = PerformanceMonitor::collect_system_metrics().await.unwrap();
         assert!(sys_metrics.cpu_usage_percent >= 0.0);
         assert!(sys_metrics.memory_usage_mb > 0);
-        
-        let app_metrics = PerformanceMonitor::collect_application_metrics().await.unwrap();
+
+        let app_metrics = PerformanceMonitor::collect_application_metrics()
+            .await
+            .unwrap();
         assert!(app_metrics.requests_per_second >= 0.0);
         assert!(app_metrics.average_response_time_ms >= 0.0);
     }

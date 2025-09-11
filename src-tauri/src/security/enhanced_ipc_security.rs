@@ -4,12 +4,12 @@
 //! without breaking backward compatibility.
 
 use super::{
-    input_sanitizer::{InputSanitizer, ValidationResult as InputValidationResult},
     audit_logger::{SecurityAuditLogger, SecurityEventType, SecurityOutcome},
+    command_validator::{CommandValidationResult, CommandWhitelist},
+    input_sanitizer::{InputSanitizer, ValidationResult as InputValidationResult},
+    ipc_security::{CommandValidation, IpcSecurity, SecurityContext},
     rate_limiter::{EnhancedRateLimiter, RateLimitResult},
     session_manager::{SecureSessionManager, SessionValidation},
-    command_validator::{CommandWhitelist, CommandValidationResult},
-    ipc_security::{IpcSecurity, SecurityContext, CommandValidation}
 };
 
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,9 @@ impl EnhancedIpcSecurity {
         session_id: &str,
     ) -> Result<bool, String> {
         // Get session context from basic security
-        let context = self.basic_security.get_session(session_id)
+        let context = self
+            .basic_security
+            .get_session(session_id)
             .ok_or("Invalid session")?;
 
         // 1. Input sanitization
@@ -61,10 +63,12 @@ impl EnhancedIpcSecurity {
                     session_id,
                     Some(command),
                     SecurityOutcome::Blocked,
-                    HashMap::from([
-                        ("reason".to_string(), serde_json::Value::String(reason.clone())),
-                    ])
-                ).await;
+                    HashMap::from([(
+                        "reason".to_string(),
+                        serde_json::Value::String(reason.clone()),
+                    )]),
+                )
+                .await;
                 return Err(format!("Input validation failed: {}", reason));
             }
             InputValidationResult::Sanitized { .. } => {
@@ -73,8 +77,9 @@ impl EnhancedIpcSecurity {
                     session_id,
                     Some(command),
                     SecurityOutcome::Sanitized,
-                    HashMap::new()
-                ).await;
+                    HashMap::new(),
+                )
+                .await;
             }
             InputValidationResult::Valid => {}
         }
@@ -84,7 +89,7 @@ impl EnhancedIpcSecurity {
             let rate_limiter = self.enhanced_rate_limiter.read().await;
             rate_limiter.check_rate_limit(session_id, command, 10).await
         };
-        
+
         match rate_limit_result {
             RateLimitResult::Limited { reason, .. } | RateLimitResult::Blocked { reason, .. } => {
                 self.log_security_event(
@@ -92,10 +97,12 @@ impl EnhancedIpcSecurity {
                     session_id,
                     Some(command),
                     SecurityOutcome::Blocked,
-                    HashMap::from([
-                        ("reason".to_string(), serde_json::Value::String(reason.clone())),
-                    ])
-                ).await;
+                    HashMap::from([(
+                        "reason".to_string(),
+                        serde_json::Value::String(reason.clone()),
+                    )]),
+                )
+                .await;
                 return Err(reason);
             }
             _ => {}
@@ -107,9 +114,9 @@ impl EnhancedIpcSecurity {
             command,
             args,
             user_permissions,
-            context.user_id.is_some() // Simple MFA check
+            context.user_id.is_some(), // Simple MFA check
         );
-        
+
         match command_result {
             CommandValidationResult::Allowed { .. } => {
                 // 4. Use basic security for final validation
@@ -120,8 +127,9 @@ impl EnhancedIpcSecurity {
                             session_id,
                             Some(command),
                             SecurityOutcome::Success,
-                            HashMap::new()
-                        ).await;
+                            HashMap::new(),
+                        )
+                        .await;
                         Ok(true)
                     }
                     CommandValidation::Deny(msg) => {
@@ -130,15 +138,15 @@ impl EnhancedIpcSecurity {
                             session_id,
                             Some(command),
                             SecurityOutcome::Blocked,
-                            HashMap::from([
-                                ("reason".to_string(), serde_json::Value::String(msg.clone())),
-                            ])
-                        ).await;
+                            HashMap::from([(
+                                "reason".to_string(),
+                                serde_json::Value::String(msg.clone()),
+                            )]),
+                        )
+                        .await;
                         Err(msg)
                     }
-                    CommandValidation::RequireAuth => {
-                        Err("Authentication required".to_string())
-                    }
+                    CommandValidation::RequireAuth => Err("Authentication required".to_string()),
                 }
             }
             CommandValidationResult::Denied { reason, .. } => {
@@ -147,15 +155,15 @@ impl EnhancedIpcSecurity {
                     session_id,
                     Some(command),
                     SecurityOutcome::Blocked,
-                    HashMap::from([
-                        ("reason".to_string(), serde_json::Value::String(reason.clone())),
-                    ])
-                ).await;
+                    HashMap::from([(
+                        "reason".to_string(),
+                        serde_json::Value::String(reason.clone()),
+                    )]),
+                )
+                .await;
                 Err(reason)
             }
-            CommandValidationResult::RequiresElevation { reason, .. } => {
-                Err(reason)
-            }
+            CommandValidationResult::RequiresElevation { reason, .. } => Err(reason),
             CommandValidationResult::ConditionallyAllowed { .. } => {
                 // For now, treat as allowed and defer to basic security
                 match self.basic_security.validate_command(command, &context) {
@@ -175,32 +183,42 @@ impl EnhancedIpcSecurity {
     /// Get comprehensive security statistics
     pub async fn get_enhanced_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
-        
+
         // Get basic security stats
         let basic_stats = self.basic_security.get_stats();
-        stats.insert("basic_security".to_string(), 
-                     serde_json::Value::Object(basic_stats.into_iter().collect()));
-        
+        stats.insert(
+            "basic_security".to_string(),
+            serde_json::Value::Object(basic_stats.into_iter().collect()),
+        );
+
         // Get enhanced component stats
         let audit_logger = self.audit_logger.read().await;
         let audit_stats = audit_logger.get_stats().await;
-        stats.insert("audit_stats".to_string(), 
-                     serde_json::to_value(audit_stats).unwrap_or_default());
-        
+        stats.insert(
+            "audit_stats".to_string(),
+            serde_json::to_value(audit_stats).unwrap_or_default(),
+        );
+
         let rate_limiter = self.enhanced_rate_limiter.read().await;
         let rate_stats = rate_limiter.get_stats().await;
-        stats.insert("rate_limiter_stats".to_string(), 
-                     serde_json::to_value(rate_stats).unwrap_or_default());
-        
+        stats.insert(
+            "rate_limiter_stats".to_string(),
+            serde_json::to_value(rate_stats).unwrap_or_default(),
+        );
+
         let session_manager = self.session_manager.read().await;
         let session_stats = session_manager.get_statistics();
-        stats.insert("session_stats".to_string(), 
-                     serde_json::Value::Object(session_stats.into_iter().collect()));
-        
+        stats.insert(
+            "session_stats".to_string(),
+            serde_json::Value::Object(session_stats.into_iter().collect()),
+        );
+
         let validator_stats = self.command_validator.get_security_stats();
-        stats.insert("command_validator_stats".to_string(), 
-                     serde_json::Value::Object(validator_stats.into_iter().collect()));
-        
+        stats.insert(
+            "command_validator_stats".to_string(),
+            serde_json::Value::Object(validator_stats.into_iter().collect()),
+        );
+
         stats
     }
 
@@ -213,10 +231,10 @@ impl EnhancedIpcSecurity {
     /// Clean up expired data
     pub async fn cleanup_expired(&self) {
         self.basic_security.cleanup_expired_sessions();
-        
+
         let mut session_manager = self.session_manager.write().await;
         session_manager.cleanup_expired();
-        
+
         let mut rate_limiter = self.enhanced_rate_limiter.write().await;
         rate_limiter.cleanup_expired_states().await;
     }
@@ -228,24 +246,32 @@ impl EnhancedIpcSecurity {
         session_id: &str,
         command: Option<&str>,
         outcome: SecurityOutcome,
-        details: HashMap<String, serde_json::Value>
+        details: HashMap<String, serde_json::Value>,
     ) {
         let audit_logger = self.audit_logger.read().await;
-        audit_logger.log_ipc_security(
-            command.unwrap_or("unknown"),
-            session_id,
-            "main", // Default window label
-            outcome,
-            details
-        ).await;
+        audit_logger
+            .log_ipc_security(
+                command.unwrap_or("unknown"),
+                session_id,
+                "main", // Default window label
+                outcome,
+                details,
+            )
+            .await;
     }
 
     /// Get sanitization statistics
     pub fn get_sanitization_stats(&self) -> HashMap<String, serde_json::Value> {
         // In a real implementation, the sanitizer would track statistics
         HashMap::from([
-            ("sanitization_enabled".to_string(), serde_json::Value::Bool(true)),
-            ("blocked_patterns".to_string(), serde_json::Value::Number(15.into())),
+            (
+                "sanitization_enabled".to_string(),
+                serde_json::Value::Bool(true),
+            ),
+            (
+                "blocked_patterns".to_string(),
+                serde_json::Value::Number(15.into()),
+            ),
         ])
     }
 }
@@ -259,7 +285,9 @@ pub async fn validate_ipc_command_enhanced(
     args: Option<serde_json::Value>,
 ) -> Result<bool, String> {
     let command_args = args.unwrap_or(serde_json::Value::Null);
-    security.validate_command_enhanced(&command, &command_args, &session_id).await
+    security
+        .validate_command_enhanced(&command, &command_args, &session_id)
+        .await
 }
 
 /// Tauri command for creating enhanced session
@@ -283,18 +311,14 @@ pub async fn get_enhanced_security_stats(
 
 /// Tauri command for flushing security logs
 #[tauri::command]
-pub async fn flush_security_logs(
-    security: State<'_, EnhancedIpcSecurity>,
-) -> Result<(), String> {
+pub async fn flush_security_logs(security: State<'_, EnhancedIpcSecurity>) -> Result<(), String> {
     security.flush_logs().await;
     Ok(())
 }
 
 /// Tauri command for cleanup operations
 #[tauri::command]
-pub async fn cleanup_security_data(
-    security: State<'_, EnhancedIpcSecurity>,
-) -> Result<(), String> {
+pub async fn cleanup_security_data(security: State<'_, EnhancedIpcSecurity>) -> Result<(), String> {
     security.cleanup_expired().await;
     Ok(())
 }
@@ -306,11 +330,11 @@ mod tests {
     #[tokio::test]
     async fn test_enhanced_security_creation() {
         let security = EnhancedIpcSecurity::new().await;
-        
+
         // Should be able to create sessions
         let session_id = security.create_session("test".to_string(), None);
         assert!(!session_id.is_empty());
-        
+
         // Should be able to get stats
         let stats = security.get_enhanced_stats().await;
         assert!(stats.contains_key("basic_security"));
@@ -320,26 +344,26 @@ mod tests {
     #[tokio::test]
     async fn test_enhanced_command_validation() {
         let security = EnhancedIpcSecurity::new().await;
-        
+
         // Create a session
         let session_id = security.create_session("test".to_string(), Some("user1".to_string()));
-        
+
         // Test valid command
-        let result = security.validate_command_enhanced(
-            "get_app_info",
-            &serde_json::json!({}),
-            &session_id
-        ).await;
-        
+        let result = security
+            .validate_command_enhanced("get_app_info", &serde_json::json!({}), &session_id)
+            .await;
+
         assert!(result.is_ok());
-        
+
         // Test command with potentially malicious input
-        let result = security.validate_command_enhanced(
-            "save_settings",
-            &serde_json::json!({"data": "<script>alert('xss')</script>"}),
-            &session_id
-        ).await;
-        
+        let result = security
+            .validate_command_enhanced(
+                "save_settings",
+                &serde_json::json!({"data": "<script>alert('xss')</script>"}),
+                &session_id,
+            )
+            .await;
+
         // Should be rejected due to input validation
         assert!(result.is_err());
     }
@@ -348,7 +372,7 @@ mod tests {
     async fn test_security_statistics() {
         let security = EnhancedIpcSecurity::new().await;
         let stats = security.get_enhanced_stats().await;
-        
+
         // Should contain all expected sections
         assert!(stats.contains_key("basic_security"));
         assert!(stats.contains_key("audit_stats"));
@@ -360,14 +384,14 @@ mod tests {
     #[tokio::test]
     async fn test_cleanup_operations() {
         let security = EnhancedIpcSecurity::new().await;
-        
+
         // Create some sessions
         let _session1 = security.create_session("test1".to_string(), None);
         let _session2 = security.create_session("test2".to_string(), Some("user1".to_string()));
-        
+
         // Cleanup should not fail
         security.cleanup_expired().await;
-        
+
         // Flush should not fail
         security.flush_logs().await;
     }
@@ -376,19 +400,21 @@ mod tests {
     async fn test_rate_limiting() {
         let security = EnhancedIpcSecurity::new().await;
         let session_id = security.create_session("test".to_string(), None);
-        
+
         // First few commands should work
         for i in 0..5 {
-            let result = security.validate_command_enhanced(
-                "get_app_info",
-                &serde_json::json!({"test": i}),
-                &session_id
-            ).await;
-            
+            let result = security
+                .validate_command_enhanced(
+                    "get_app_info",
+                    &serde_json::json!({"test": i}),
+                    &session_id,
+                )
+                .await;
+
             // Some might be rate limited, but shouldn't fail catastrophically
             match result {
-                Ok(_) => {},
-                Err(msg) if msg.contains("rate limit") => {},
+                Ok(_) => {}
+                Err(msg) if msg.contains("rate limit") => {}
                 Err(msg) => panic!("Unexpected error: {}", msg),
             }
         }

@@ -16,11 +16,9 @@ export default defineConfig({
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
     rollupOptions: {
-      external: ['@tauri-apps/api/tauri'],
       output: {
         globals: {
           __TAURI_INTERNALS__: '__TAURI_INTERNALS__',
-          '@tauri-apps/api/tauri': 'window.__TAURI__.tauri',
         },
       },
     },

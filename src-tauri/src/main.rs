@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 // Module declarations
 mod app;
@@ -82,7 +82,9 @@ fn main() {
                     // Restore window states for existing windows
                     for window in app.webview_windows().values() {
                         let label = window.label();
-                        if let Some(manager) = app_handle.try_state::<window_state::WindowStateManager>() {
+                        if let Some(manager) =
+                            app_handle.try_state::<window_state::WindowStateManager>()
+                        {
                             if let Err(e) = manager.restore_window_state(label, window).await {
                                 warn!("Failed to restore state for window '{}': {}", label, e);
                             } else {
@@ -133,9 +135,11 @@ fn main() {
             let window_label = window.label();
 
             // Handle window state management events
-            if let Err(e) = tauri::async_runtime::block_on(
-                window_state::handle_window_event(&app, event, window_label)
-            ) {
+            if let Err(e) = tauri::async_runtime::block_on(window_state::handle_window_event(
+                &app,
+                event,
+                window_label,
+            )) {
                 warn!("Failed to handle window state event: {}", e);
             }
 
@@ -171,17 +175,14 @@ fn main() {
             greet,
             get_system_info,
             emergency_shutdown,
-            
             // Development window commands
             dev_window::dev_toggle_devtools,
             dev_window::dev_window_info,
             dev_window::get_dev_window_config,
             dev_window::update_dev_window_config,
-            
             // Menu management commands
             menu::toggle_menu_visibility,
             menu::get_menu_info,
-            
             // System tray commands
             tray::show_from_tray,
             tray::hide_to_tray,
@@ -190,26 +191,22 @@ fn main() {
             tray::update_tray_tooltip,
             tray::get_tray_state,
             tray::update_tray_config,
-            
             // Settings management commands
             settings::manager::get_setting,
             settings::manager::set_setting,
             settings::manager::get_all_settings,
             settings::manager::save_settings,
             settings::manager::reset_settings,
-            
             // Basic security commands (3 commands)
             security::ipc_security::create_security_session,
             security::ipc_security::validate_ipc_command,
             security::ipc_security::get_security_stats,
-            
             // Enhanced security commands (5 commands)
             security::enhanced_ipc_security::validate_ipc_command_enhanced,
             security::enhanced_ipc_security::create_enhanced_security_session,
             security::enhanced_ipc_security::get_enhanced_security_stats,
             security::enhanced_ipc_security::flush_security_logs,
             security::enhanced_ipc_security::cleanup_security_data,
-            
             // App setup and window state commands
             app::setup::get_setup_config,
             app::setup::update_setup_config,
@@ -217,7 +214,6 @@ fn main() {
             app::setup::get_window_state,
             app::setup::restore_window_state,
             app::setup::set_auto_save_enabled,
-            
             // Enhanced updater commands
             app::updater::check_for_updates,
             app::updater::install_update,
@@ -226,7 +222,6 @@ fn main() {
             app::updater::update_update_config,
             app::updater::clear_pending_update,
             app::updater::restart_app,
-            
             // Event system commands
             events::emit_event,
             events::get_events,
@@ -234,7 +229,6 @@ fn main() {
             events::unsubscribe_from_events,
             events::get_event_stats,
             events::clear_events,
-            
             // Enhanced window state management commands
             window_state::save_current_window_state,
             window_state::get_window_states,
@@ -242,7 +236,6 @@ fn main() {
             window_state::restore_window_state_command,
             window_state::get_last_focused_window,
             window_state::cleanup_window_focus_tracker,
-            
             // AI Orchestration Commands - Roadmap Steps 327-330 (Basic)
             commands::initialize_swarm,
             commands::execute_sparc_mode,
@@ -255,7 +248,6 @@ fn main() {
             commands::ai_orchestration_health_check,
             commands::get_ai_orchestration_info,
             commands::execute_comprehensive_ai_workflow,
-            
             // Enhanced AI Orchestration Commands - Phase 3
             commands::enhanced_ai_commands::execute_enhanced_ai_request,
             commands::enhanced_ai_commands::initialize_enhanced_orchestration,

@@ -1,13 +1,12 @@
 //! AI Orchestration Tauri Commands
-//! 
+//!
 //! Rust command handlers for AI integration features including swarm coordination,
 //! SPARC methodology, hive-mind communication, and memory persistence.
 
 use crate::orchestration::{
-    ClaudeFlowService, CodexService, OrchestrationService,
-    EnhancedOrchestrationConfig, get_enhanced_orchestration_info,
-    SwarmConfig, SparcMode, HiveMindCommand, DualModeRequest, DualModeResponse,
-    ExecutionRequest, ExecutionResponse, MemoryState, SwarmMetrics,
+    get_enhanced_orchestration_info, ClaudeFlowService, CodexService, DualModeRequest,
+    DualModeResponse, EnhancedOrchestrationConfig, ExecutionRequest, ExecutionResponse,
+    HiveMindCommand, MemoryState, OrchestrationService, SparcMode, SwarmConfig, SwarmMetrics,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
@@ -33,9 +32,9 @@ impl Default for AiOrchestrationState {
         let claude_flow = ClaudeFlowService::new();
         let codex = CodexService::new();
         let orchestration = OrchestrationService::new(claude_flow, codex);
-        
+
         let config = EnhancedOrchestrationConfig::default();
-        
+
         Self {
             service: Arc::new(Mutex::new(orchestration)),
             memory_layer: Arc::new(Mutex::new(MemoryLayer {
@@ -56,7 +55,7 @@ pub async fn initialize_swarm(
 ) -> Result<String, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
     let session_id = Uuid::new_v4().to_string();
-    
+
     // Create a dummy request to initialize swarm through Claude Flow
     let request = ExecutionRequest {
         id: session_id.clone(),
@@ -70,16 +69,18 @@ pub async fn initialize_swarm(
         hive_mind_commands: Vec::new(),
         memory_context: Some(format!("swarm_init_{}", session_id)),
     };
-    
+
     match service.claude_flow.execute(request).await {
         Ok(response) => {
             if response.success {
                 Ok(format!("Swarm initialized with ID: {}", session_id))
             } else {
-                Err(response.error.unwrap_or("Swarm initialization failed".to_string()))
+                Err(response
+                    .error
+                    .unwrap_or("Swarm initialization failed".to_string()))
             }
-        },
-        Err(e) => Err(format!("Failed to initialize swarm: {}", e))
+        }
+        Err(e) => Err(format!("Failed to initialize swarm: {}", e)),
     }
 }
 
@@ -93,7 +94,7 @@ pub async fn execute_sparc_mode(
 ) -> Result<ExecutionResponse, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
     let session_id = Uuid::new_v4().to_string();
-    
+
     let swarm_config = if swarm_enabled {
         Some(SwarmConfig {
             topology: crate::orchestration::SwarmTopology::Hierarchical,
@@ -104,7 +105,7 @@ pub async fn execute_sparc_mode(
     } else {
         None
     };
-    
+
     let request = ExecutionRequest {
         id: session_id.clone(),
         command: format!("Execute SPARC {:?} mode", mode),
@@ -115,10 +116,17 @@ pub async fn execute_sparc_mode(
         swarm_config,
         sparc_mode: Some(mode),
         hive_mind_commands: Vec::new(),
-        memory_context: Some(format!("sparc_{}_{}", format!("{:?}", mode).to_lowercase(), session_id)),
+        memory_context: Some(format!(
+            "sparc_{}_{}",
+            format!("{:?}", mode).to_lowercase(),
+            session_id
+        )),
     };
-    
-    service.claude_flow.execute(request).await
+
+    service
+        .claude_flow
+        .execute(request)
+        .await
         .map_err(|e| format!("SPARC execution failed: {}", e))
 }
 
@@ -129,7 +137,7 @@ pub async fn process_hive_mind_command(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<String, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
+
     let request = ExecutionRequest {
         id: command.id.clone(),
         command: format!("Hive-mind {:?}", command.command_type),
@@ -142,16 +150,21 @@ pub async fn process_hive_mind_command(
         hive_mind_commands: vec![command.clone()],
         memory_context: Some(format!("hive_command_{}", command.id)),
     };
-    
+
     match service.claude_flow.execute(request).await {
         Ok(response) => {
             if response.success {
-                Ok(format!("Hive-mind command {:?} processed successfully", command.command_type))
+                Ok(format!(
+                    "Hive-mind command {:?} processed successfully",
+                    command.command_type
+                ))
             } else {
-                Err(response.error.unwrap_or("Hive-mind command failed".to_string()))
+                Err(response
+                    .error
+                    .unwrap_or("Hive-mind command failed".to_string()))
             }
-        },
-        Err(e) => Err(format!("Failed to process hive-mind command: {}", e))
+        }
+        Err(e) => Err(format!("Failed to process hive-mind command: {}", e)),
     }
 }
 
@@ -165,11 +178,11 @@ pub async fn store_memory(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<String, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
+
     // Use the internal memory store function
     match service.claude_flow.store_memory(&key, &value).await {
         Ok(_) => Ok(format!("Memory stored: {}", key)),
-        Err(e) => Err(format!("Failed to store memory: {}", e))
+        Err(e) => Err(format!("Failed to store memory: {}", e)),
     }
 }
 
@@ -180,10 +193,10 @@ pub async fn retrieve_memory(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<String, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
+
     match service.claude_flow.retrieve_memory(&key).await {
         Ok(value) => Ok(value),
-        Err(e) => Err(format!("Failed to retrieve memory: {}", e))
+        Err(e) => Err(format!("Failed to retrieve memory: {}", e)),
     }
 }
 
@@ -193,8 +206,10 @@ pub async fn get_memory_state(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<MemoryState, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
-    service.calculate_memory_state().await
+
+    service
+        .calculate_memory_state()
+        .await
         .map_err(|e| format!("Failed to get memory state: {}", e))
 }
 
@@ -208,15 +223,17 @@ pub async fn execute_ai_orchestrated_dual_mode(
 ) -> Result<DualModeResponse, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
     let session_id = Uuid::new_v4().to_string();
-    
+
     let request = DualModeRequest {
         id: session_id,
         command: prompt,
         swarm_config,
         sparc_mode,
     };
-    
-    service.execute_dual_mode(request).await
+
+    service
+        .execute_dual_mode(request)
+        .await
         .map_err(|e| format!("AI orchestrated dual mode failed: {}", e))
 }
 
@@ -227,8 +244,11 @@ pub async fn get_swarm_metrics(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<SwarmMetrics, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
-    service.claude_flow.collect_swarm_metrics(&session_id).await
+
+    service
+        .claude_flow
+        .collect_swarm_metrics(&session_id)
+        .await
         .map_err(|e| format!("Failed to collect swarm metrics: {}", e))
 }
 
@@ -238,7 +258,7 @@ pub async fn ai_orchestration_health_check(
     state: State<'_, AiOrchestrationState>,
 ) -> Result<serde_json::Value, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
-    
+
     match service.health_check().await {
         Ok(health_status) => {
             let health_json = serde_json::json!({
@@ -248,8 +268,8 @@ pub async fn ai_orchestration_health_check(
                 "timestamp": chrono::Utc::now().to_rfc3339()
             });
             Ok(health_json)
-        },
-        Err(e) => Err(format!("Health check failed: {}", e))
+        }
+        Err(e) => Err(format!("Health check failed: {}", e)),
     }
 }
 
@@ -297,7 +317,7 @@ pub async fn execute_comprehensive_ai_workflow(
 ) -> Result<serde_json::Value, String> {
     let service = state.service.lock().map_err(|e| e.to_string())?;
     let session_id = Uuid::new_v4().to_string();
-    
+
     let swarm_config = if enable_swarm {
         Some(SwarmConfig {
             topology: crate::orchestration::SwarmTopology::Adaptive,
@@ -308,7 +328,7 @@ pub async fn execute_comprehensive_ai_workflow(
     } else {
         None
     };
-    
+
     let request = ExecutionRequest {
         id: session_id.clone(),
         command: "Comprehensive AI Workflow".to_string(),
@@ -321,20 +341,18 @@ pub async fn execute_comprehensive_ai_workflow(
         hive_mind_commands: hive_commands,
         memory_context,
     };
-    
+
     match service.claude_flow.execute(request).await {
-        Ok(response) => {
-            Ok(serde_json::json!({
-                "session_id": session_id,
-                "success": response.success,
-                "result": response.result,
-                "execution_time": response.execution_time,
-                "swarm_metrics": response.swarm_metrics,
-                "memory_operations": response.memory_operations,
-                "ai_orchestration": "complete",
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            }))
-        },
-        Err(e) => Err(format!("Comprehensive AI workflow failed: {}", e))
+        Ok(response) => Ok(serde_json::json!({
+            "session_id": session_id,
+            "success": response.success,
+            "result": response.result,
+            "execution_time": response.execution_time,
+            "swarm_metrics": response.swarm_metrics,
+            "memory_operations": response.memory_operations,
+            "ai_orchestration": "complete",
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+        Err(e) => Err(format!("Comprehensive AI workflow failed: {}", e)),
     }
 }

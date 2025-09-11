@@ -522,10 +522,63 @@ Read("docs/konzept.md"), Read("docs/roadmap.md"), Read("docs/changelog.md"), Rea
 
 ## EXECUTION PHASES - STRICT ORDER:
 
-### Phase 1: **GitHub Issues Deep Analysis & Resolution** (FIRST PRIORITY)
+### Phase 1: **Pull Requests Analysis & Merging** (FIRST PRIORITY - PREVENT MERGE CONFLICTS)
 
 ```bash
-# CRITICAL: Analyze ALL open issues with complete context
+# CRITICAL: Handle ALL open PRs FIRST to prevent merge conflicts with later work
+echo "🚨 PHASE 1: Handling all open PRs first to prevent merge conflicts"
+
+gh pr list --state=open --json number,title,author,mergeable,draft --jq '.[]' | while read pr; do
+  PR_NUMBER=$(echo "$pr" | jq -r '.number')
+  PR_TITLE=$(echo "$pr" | jq -r '.title')
+  PR_AUTHOR=$(echo "$pr" | jq -r '.author.login')
+  IS_MERGEABLE=$(echo "$pr" | jq -r '.mergeable')
+  IS_DRAFT=$(echo "$pr" | jq -r '.draft')
+
+  echo "🔍 Analyzing PR #$PR_NUMBER: $PR_TITLE by $PR_AUTHOR"
+
+  if [[ "$IS_DRAFT" == "true" ]]; then
+    echo "⏭️ Skipping draft PR #$PR_NUMBER"
+    continue
+  fi
+
+  # Get detailed PR info for conflict analysis
+  gh pr view $PR_NUMBER --json conflicts,mergeable,mergeStateStatus
+
+  if [[ "$PR_AUTHOR" == "dependabot"* ]]; then
+    # Dependabot PRs - careful analysis needed
+    Task("Dependabot PR Handler: Analyze and merge PR #$PR_NUMBER - review dependency updates, check for breaking changes, run tests locally, handle any merge conflicts, if safe merge with: gh pr merge $PR_NUMBER --merge --delete-branch", "coder")
+  elif [[ "$IS_MERGEABLE" == "MERGEABLE" ]]; then
+    # Regular mergeable PRs
+    Task("PR Merge Specialist: Review and merge PR #$PR_NUMBER - analyze changes, ensure quality, run tests, merge with: gh pr merge $PR_NUMBER --merge --delete-branch", "pr-manager")
+  else
+    # PRs with conflicts or issues - CRITICAL TO FIX
+    Task("PR Conflict Resolver: Fix merge conflicts in PR #$PR_NUMBER - resolve all conflicts, rebase if needed, ensure clean merge, test thoroughly, then merge with: gh pr merge $PR_NUMBER --merge --delete-branch", "coder")
+  fi
+done
+
+# CRITICAL: After ALL PRs are handled, sync local repository
+echo "🔄 Phase 1 Complete - Syncing local repository after PR merges"
+git fetch origin
+git pull origin main --rebase
+git status
+
+# Verify clean state after PR merges
+REMAINING_PRS=$(gh pr list --state=open --json number | jq '. | length')
+if [ "$REMAINING_PRS" -eq 0 ]; then
+  echo "✅ All PRs handled successfully - proceeding to issue resolution"
+else
+  echo "🚨 ERROR: $REMAINING_PRS PRs still open - must resolve before issues"
+  exit 1
+fi
+```
+
+### Phase 2: **GitHub Issues Deep Analysis & Resolution** (AFTER PR CLEANUP)
+
+```bash
+# CRITICAL: Now analyze ALL open issues with complete context (PRs are already handled)
+echo "🚨 PHASE 2: Issues resolution after PR cleanup and local sync"
+
 gh issue list --state=open --json number,title,body,labels,comments --jq '.[]' | while read issue; do
   ISSUE_NUMBER=$(echo "$issue" | jq -r '.number')
   ISSUE_TITLE=$(echo "$issue" | jq -r '.title')
@@ -557,37 +610,14 @@ gh issue list --state=open --json number,title,body,labels,comments --jq '.[]' |
     Task("General Issue Resolver: Resolve issue #$ISSUE_NUMBER - analyze the problem description, implement the required solution, test thoroughly, close with: gh issue close $ISSUE_NUMBER --comment '🔧 Fixed: [detailed description of solution]'", "coder")
   fi
 done
-```
 
-### Phase 2: **Pull Requests Analysis & Merging**
-
-```bash
-# CRITICAL: Handle ALL open PRs intelligently
-gh pr list --state=open --json number,title,author,mergeable,draft --jq '.[]' | while read pr; do
-  PR_NUMBER=$(echo "$pr" | jq -r '.number')
-  PR_TITLE=$(echo "$pr" | jq -r '.title')
-  PR_AUTHOR=$(echo "$pr" | jq -r '.author.login')
-  IS_MERGEABLE=$(echo "$pr" | jq -r '.mergeable')
-  IS_DRAFT=$(echo "$pr" | jq -r '.draft')
-
-  echo "🔍 Analyzing PR #$PR_NUMBER: $PR_TITLE by $PR_AUTHOR"
-
-  if [[ "$IS_DRAFT" == "true" ]]; then
-    echo "⏭️ Skipping draft PR #$PR_NUMBER"
-    continue
-  fi
-
-  if [[ "$PR_AUTHOR" == "dependabot"* ]]; then
-    # Dependabot PRs - careful analysis needed
-    Task("Dependabot PR Handler: Analyze and merge PR #$PR_NUMBER - review dependency updates, check for breaking changes, run tests locally, if safe merge with: gh pr merge $PR_NUMBER --merge --delete-branch", "coder")
-  elif [[ "$IS_MERGEABLE" == "MERGEABLE" ]]; then
-    # Regular mergeable PRs
-    Task("PR Merge Specialist: Review and merge PR #$PR_NUMBER - analyze changes, ensure quality, run tests, merge with: gh pr merge $PR_NUMBER --merge --delete-branch", "pr-manager")
-  else
-    # PRs with conflicts or issues
-    Task("PR Conflict Resolver: Fix merge conflicts in PR #$PR_NUMBER - resolve conflicts, update branch, ensure mergeability, then merge", "coder")
-  fi
-done
+# Verify issues are resolved before proceeding
+REMAINING_ISSUES=$(gh issue list --state=open --json number | jq '. | length')
+if [ "$REMAINING_ISSUES" -eq 0 ]; then
+  echo "✅ All issues resolved - proceeding to roadmap execution"
+else
+  echo "🚨 WARNING: $REMAINING_ISSUES issues still open - roadmap may conflict"
+fi
 ```
 
 ### Phase 3: **Roadmap Task Execution** (ONLY AFTER GITHUB CLEAN)
@@ -674,12 +704,13 @@ fi
 
 **CRITICAL AUTOMATION FLOW:**
 
-1. ✅ Fix ALL GitHub Issues first (CI/CD, TypeScript, tests, builds)
-2. ✅ Merge/close ALL Pull Requests intelligently
-3. ✅ Work through ALL Roadmap tasks systematically
-4. ✅ Push ONLY when everything is 100% complete
-5. ✅ GitHub workflows trigger and send callback when done
-6. ✅ dennis gets killed and restarted for next cycle
+1. ✅ Merge/close ALL Pull Requests FIRST (prevent merge conflicts)
+2. ✅ Sync local repo with `git pull` after PR merges
+3. ✅ Fix ALL GitHub Issues on current codebase (CI/CD, TypeScript, tests, builds)
+4. ✅ Work through ALL Roadmap tasks systematically
+5. ✅ Push ONLY when everything is 100% complete
+6. ✅ GitHub workflows trigger and send callback when done
+7. ✅ dennis gets killed and restarted for next cycle
 
 **NO PUSH UNTIL EVERYTHING IS COMPLETE! PUSH = END OF CYCLE!**
 

@@ -47,10 +47,14 @@ impl Database {
         if self.config.database_url.starts_with("sqlite://") {
             let path = self.config.database_url.strip_prefix("sqlite://").unwrap();
             let db_path = PathBuf::from(path);
-            
+
             if let Some(parent) = db_path.parent() {
-                fs::create_dir_all(parent).await
-                    .map_err(|e| NeuralBridgeError::database(format!("Failed to create database directory: {}", e)))?;
+                fs::create_dir_all(parent).await.map_err(|e| {
+                    NeuralBridgeError::database(format!(
+                        "Failed to create database directory: {}",
+                        e
+                    ))
+                })?;
             }
         }
 
@@ -78,7 +82,7 @@ impl Database {
     async fn create_sqlite_tables(&self) -> Result<()> {
         // Placeholder for SQLite table creation
         // In a real implementation, you would use sqlx or another SQLite library
-        
+
         info!("SQLite tables created");
         Ok(())
     }
@@ -86,10 +90,10 @@ impl Database {
     /// Execute a query
     pub async fn execute(&self, query: &str) -> Result<u64> {
         info!("Executing query: {}", query);
-        
+
         // Placeholder implementation
         // In a real implementation, you would use a proper database driver
-        
+
         Ok(1)
     }
 
@@ -99,42 +103,45 @@ impl Database {
         T: Send + 'static,
     {
         info!("Fetching records with query: {}", query);
-        
+
         // Placeholder implementation
         // In a real implementation, you would use a proper database driver
-        
+
         Ok(Vec::new())
     }
 
     /// Health check
     pub async fn health_check(&self) -> Result<bool> {
         info!("Performing database health check");
-        
+
         // Placeholder implementation
         // In a real implementation, you would execute a simple query
-        
+
         Ok(true)
     }
 }
 
 // Global database instance
-static DATABASE: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<Database>>>> = std::sync::OnceLock::new();
+static DATABASE: std::sync::OnceLock<std::sync::Arc<std::sync::Mutex<Option<Database>>>> =
+    std::sync::OnceLock::new();
 
 /// Get or create the global database instance
 pub fn get_database() -> Result<std::sync::Arc<std::sync::Mutex<Option<Database>>>> {
-    Ok(DATABASE.get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(None))).clone())
+    Ok(DATABASE
+        .get_or_init(|| std::sync::Arc::new(std::sync::Mutex::new(None)))
+        .clone())
 }
 
 /// Initialize the global database
 pub async fn initialize_database(config: Option<DatabaseConfig>) -> Result<()> {
     let db_mutex = get_database()?;
     let mut db_guard = db_mutex.lock().unwrap();
-    
+
     let database = Database::new(config.unwrap_or_default());
     database.initialize().await?;
-    
+
     *db_guard = Some(database);
-    
+
     info!("Global database initialized");
     Ok(())
 }
@@ -143,7 +150,7 @@ pub async fn initialize_database(config: Option<DatabaseConfig>) -> Result<()> {
 pub async fn execute_query(query: &str) -> Result<u64> {
     let db_mutex = get_database()?;
     let db_guard = db_mutex.lock().unwrap();
-    
+
     match db_guard.as_ref() {
         Some(db) => db.execute(query).await,
         None => Err(NeuralBridgeError::database("Database not initialized")),
@@ -157,7 +164,7 @@ where
 {
     let db_mutex = get_database()?;
     let db_guard = db_mutex.lock().unwrap();
-    
+
     match db_guard.as_ref() {
         Some(db) => db.fetch(query).await,
         None => Err(NeuralBridgeError::database("Database not initialized")),
@@ -168,7 +175,7 @@ where
 pub async fn check_database_health() -> Result<bool> {
     let db_mutex = get_database()?;
     let db_guard = db_mutex.lock().unwrap();
-    
+
     match db_guard.as_ref() {
         Some(db) => db.health_check().await,
         None => Err(NeuralBridgeError::database("Database not initialized")),

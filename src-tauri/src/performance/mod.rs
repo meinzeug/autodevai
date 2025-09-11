@@ -1,19 +1,19 @@
 // Performance optimization module for AutoDev-AI Neural Bridge Platform
 // Provides comprehensive performance monitoring, optimization, and analytics
 
-pub mod memory;
-pub mod concurrency;
-pub mod monitoring;
-pub mod profiler;
-pub mod metrics;
 pub mod cache;
+pub mod concurrency;
 pub mod database;
+pub mod memory;
+pub mod metrics;
+pub mod monitoring;
 pub mod network;
+pub mod profiler;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::time::{Duration, Instant};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceConfig {
@@ -96,7 +96,7 @@ impl Default for PerformanceConfig {
 impl PerformanceManager {
     pub fn new(config: PerformanceConfig) -> Self {
         info!("Initializing Performance Manager with optimizations enabled");
-        
+
         Self {
             config,
             metrics: Vec::new(),
@@ -108,20 +108,26 @@ impl PerformanceManager {
 
     pub fn start_operation(&mut self, operation: &str) -> OperationTracker {
         if self.config.profiling_enabled {
-            let counter = self.operation_counters.entry(operation.to_string()).or_insert(0);
+            let counter = self
+                .operation_counters
+                .entry(operation.to_string())
+                .or_insert(0);
             *counter += 1;
-            
+
             debug!("Starting operation: {} (count: {})", operation, counter);
         }
-        
+
         OperationTracker::new(operation.to_string(), self.config.profiling_enabled)
     }
 
     pub fn record_operation_time(&mut self, operation: &str, duration: Duration) {
         if self.config.profiling_enabled {
-            let timings = self.timing_data.entry(operation.to_string()).or_insert_with(Vec::new);
+            let timings = self
+                .timing_data
+                .entry(operation.to_string())
+                .or_insert_with(Vec::new);
             timings.push(duration);
-            
+
             // Keep only recent timings (last 1000)
             if timings.len() > 1000 {
                 timings.drain(0..500);
@@ -131,12 +137,12 @@ impl PerformanceManager {
 
     pub async fn collect_metrics(&mut self) -> anyhow::Result<PerformanceMetrics> {
         let timestamp = chrono::Utc::now().timestamp();
-        
+
         // Collect system metrics
         let memory_usage_mb = self.get_memory_usage().await?;
         let cpu_usage_percent = self.get_cpu_usage().await?;
         let active_connections = self.get_active_connections().await?;
-        
+
         // Calculate performance metrics
         let requests_per_second = self.calculate_requests_per_second();
         let average_response_time_ms = self.calculate_average_response_time();
@@ -163,7 +169,7 @@ impl PerformanceManager {
 
         // Store metrics
         self.metrics.push(metrics.clone());
-        
+
         // Keep only recent metrics (last 10000)
         if self.metrics.len() > 10000 {
             self.metrics.drain(0..5000);
@@ -192,7 +198,7 @@ impl PerformanceManager {
     fn calculate_requests_per_second(&self) -> f64 {
         let elapsed = self.start_time.elapsed();
         let total_requests: u64 = self.operation_counters.values().sum();
-        
+
         if elapsed.as_secs() > 0 {
             total_requests as f64 / elapsed.as_secs_f64()
         } else {
@@ -247,8 +253,11 @@ impl PerformanceManager {
     async fn check_alerts(&self, metrics: &PerformanceMetrics) {
         let thresholds = &self.config.alert_thresholds;
 
-        if metrics.memory_usage_mb as f64 / self.config.max_memory_mb as f64 * 100.0 > thresholds.memory_usage_percent {
-            warn!("Memory usage alert: {}MB ({}%)", 
+        if metrics.memory_usage_mb as f64 / self.config.max_memory_mb as f64 * 100.0
+            > thresholds.memory_usage_percent
+        {
+            warn!(
+                "Memory usage alert: {}MB ({}%)",
                 metrics.memory_usage_mb,
                 metrics.memory_usage_mb as f64 / self.config.max_memory_mb as f64 * 100.0
             );
@@ -259,20 +268,35 @@ impl PerformanceManager {
         }
 
         if metrics.average_response_time_ms > thresholds.response_time_ms as f64 {
-            warn!("Response time alert: {}ms", metrics.average_response_time_ms);
+            warn!(
+                "Response time alert: {}ms",
+                metrics.average_response_time_ms
+            );
         }
     }
 
     pub fn get_performance_summary(&self) -> PerformanceSummary {
         let recent_metrics: Vec<_> = self.metrics.iter().rev().take(100).collect();
-        
+
         if recent_metrics.is_empty() {
             return PerformanceSummary::default();
         }
 
-        let avg_memory = recent_metrics.iter().map(|m| m.memory_usage_mb).sum::<u64>() as f64 / recent_metrics.len() as f64;
-        let avg_cpu = recent_metrics.iter().map(|m| m.cpu_usage_percent).sum::<f64>() / recent_metrics.len() as f64;
-        let avg_response_time = recent_metrics.iter().map(|m| m.average_response_time_ms).sum::<f64>() / recent_metrics.len() as f64;
+        let avg_memory = recent_metrics
+            .iter()
+            .map(|m| m.memory_usage_mb)
+            .sum::<u64>() as f64
+            / recent_metrics.len() as f64;
+        let avg_cpu = recent_metrics
+            .iter()
+            .map(|m| m.cpu_usage_percent)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
+        let avg_response_time = recent_metrics
+            .iter()
+            .map(|m| m.average_response_time_ms)
+            .sum::<f64>()
+            / recent_metrics.len() as f64;
         let total_operations: u64 = self.operation_counters.values().sum();
 
         PerformanceSummary {
@@ -306,7 +330,8 @@ impl PerformanceManager {
     }
 
     pub fn export_metrics(&self) -> anyhow::Result<String> {
-        serde_json::to_string_pretty(&self.metrics).map_err(|e| anyhow::anyhow!("Failed to serialize metrics: {}", e))
+        serde_json::to_string_pretty(&self.metrics)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize metrics: {}", e))
     }
 
     pub async fn optimize_performance(&mut self) -> anyhow::Result<OptimizationReport> {
@@ -352,7 +377,8 @@ impl PerformanceManager {
     }
 
     fn calculate_performance_score(&self, summary: &PerformanceSummary) -> f64 {
-        let memory_score = (1.0 - (summary.average_memory_usage_mb / self.config.max_memory_mb as f64)) * 100.0;
+        let memory_score =
+            (1.0 - (summary.average_memory_usage_mb / self.config.max_memory_mb as f64)) * 100.0;
         let cpu_score = (1.0 - (summary.average_cpu_usage_percent / 100.0)) * 100.0;
         let response_score = if summary.average_response_time_ms > 0.0 {
             (1000.0 / summary.average_response_time_ms).min(100.0)
@@ -493,11 +519,11 @@ mod tests {
     async fn test_operation_tracking() {
         let config = PerformanceConfig::default();
         let mut manager = PerformanceManager::new(config);
-        
+
         let tracker = manager.start_operation("test_operation");
         tokio::time::sleep(Duration::from_millis(10)).await;
         let duration = tracker.finish();
-        
+
         manager.record_operation_time("test_operation", duration);
         assert!(duration > Duration::ZERO);
     }
@@ -506,7 +532,7 @@ mod tests {
     async fn test_metrics_collection() {
         let config = PerformanceConfig::default();
         let mut manager = PerformanceManager::new(config);
-        
+
         let metrics = manager.collect_metrics().await.unwrap();
         assert!(metrics.timestamp > 0);
         assert!(metrics.memory_usage_mb > 0);

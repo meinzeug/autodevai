@@ -91,7 +91,10 @@ pub async fn initialize_swarm(topology: &str, max_agents: u32) -> Result<String>
         strategy: "balanced".to_string(),
     };
 
-    match client.post::<SwarmInitRequest, SwarmInitResponse>("api/v1/swarm/init", &request).await {
+    match client
+        .post::<SwarmInitRequest, SwarmInitResponse>("api/v1/swarm/init", &request)
+        .await
+    {
         Ok(response) => {
             info!("Swarm initialized successfully: {}", response.swarm_id);
             Ok(response.swarm_id)
@@ -121,7 +124,13 @@ pub async fn execute_task(task_description: &str, priority: Option<String>) -> R
         max_agents: None,
     };
 
-    match client.post::<TaskOrchestrationRequest, TaskOrchestrationResponse>("api/v1/task/orchestrate", &request).await {
+    match client
+        .post::<TaskOrchestrationRequest, TaskOrchestrationResponse>(
+            "api/v1/task/orchestrate",
+            &request,
+        )
+        .await
+    {
         Ok(response) => {
             info!("Task orchestrated successfully: {}", response.task_id);
             Ok(response.task_id)
@@ -144,9 +153,15 @@ pub async fn get_swarm_status(swarm_id: &str) -> Result<SwarmStatus> {
 
     let client = ApiClient::new(config)?;
 
-    match client.get::<SwarmStatus>(&format!("api/v1/swarm/{}/status", swarm_id)).await {
+    match client
+        .get::<SwarmStatus>(&format!("api/v1/swarm/{}/status", swarm_id))
+        .await
+    {
         Ok(status) => {
-            info!("Retrieved swarm status: {} agents active", status.agents.len());
+            info!(
+                "Retrieved swarm status: {} agents active",
+                status.agents.len()
+            );
             Ok(status)
         }
         Err(e) => {
@@ -157,7 +172,11 @@ pub async fn get_swarm_status(swarm_id: &str) -> Result<SwarmStatus> {
 }
 
 /// Spawn a new agent in the swarm
-pub async fn spawn_agent(swarm_id: &str, agent_type: &str, capabilities: Vec<String>) -> Result<String> {
+pub async fn spawn_agent(
+    swarm_id: &str,
+    agent_type: &str,
+    capabilities: Vec<String>,
+) -> Result<String> {
     info!("Spawning agent type: {} in swarm: {}", agent_type, swarm_id);
 
     let config = ApiConfig {
@@ -169,7 +188,10 @@ pub async fn spawn_agent(swarm_id: &str, agent_type: &str, capabilities: Vec<Str
 
     let mut request_data = HashMap::new();
     request_data.insert("type", agent_type.to_string());
-    request_data.insert("capabilities", serde_json::to_string(&capabilities).unwrap_or_default());
+    request_data.insert(
+        "capabilities",
+        serde_json::to_string(&capabilities).unwrap_or_default(),
+    );
     request_data.insert("swarmId", swarm_id.to_string());
 
     #[derive(Deserialize)]
@@ -178,7 +200,10 @@ pub async fn spawn_agent(swarm_id: &str, agent_type: &str, capabilities: Vec<Str
         agent_id: String,
     }
 
-    match client.post::<HashMap<String, String>, SpawnResponse>("api/v1/agent/spawn", &request_data).await {
+    match client
+        .post::<HashMap<String, String>, SpawnResponse>("api/v1/agent/spawn", &request_data)
+        .await
+    {
         Ok(response) => {
             info!("Agent spawned successfully: {}", response.agent_id);
             Ok(response.agent_id)
@@ -201,7 +226,10 @@ pub async fn get_task_results(task_id: &str) -> Result<serde_json::Value> {
 
     let client = ApiClient::new(config)?;
 
-    match client.get::<serde_json::Value>(&format!("api/v1/task/{}/results", task_id)).await {
+    match client
+        .get::<serde_json::Value>(&format!("api/v1/task/{}/results", task_id))
+        .await
+    {
         Ok(results) => {
             info!("Retrieved task results for: {}", task_id);
             Ok(results)
@@ -227,10 +255,13 @@ pub async fn scale_swarm(swarm_id: &str, target_agents: u32) -> Result<()> {
     let mut request_data = HashMap::new();
     request_data.insert("targetAgents", target_agents.to_string());
 
-    match client.put::<HashMap<String, String>, serde_json::Value>(
-        &format!("api/v1/swarm/{}/scale", swarm_id),
-        &request_data
-    ).await {
+    match client
+        .put::<HashMap<String, String>, serde_json::Value>(
+            &format!("api/v1/swarm/{}/scale", swarm_id),
+            &request_data,
+        )
+        .await
+    {
         Ok(_) => {
             info!("Swarm scaled successfully");
             Ok(())
@@ -280,12 +311,15 @@ pub async fn store_memory(key: &str, value: &str, namespace: Option<&str>) -> Re
     request_data.insert("action", "store".to_string());
     request_data.insert("key", key.to_string());
     request_data.insert("value", value.to_string());
-    
+
     if let Some(ns) = namespace {
         request_data.insert("namespace", ns.to_string());
     }
 
-    match client.post::<HashMap<String, String>, serde_json::Value>("api/v1/memory", &request_data).await {
+    match client
+        .post::<HashMap<String, String>, serde_json::Value>("api/v1/memory", &request_data)
+        .await
+    {
         Ok(_) => {
             info!("Memory stored successfully");
             Ok(())
@@ -309,12 +343,13 @@ pub async fn retrieve_memory(key: &str, namespace: Option<&str>) -> Result<Strin
     let client = ApiClient::new(config)?;
 
     let mut query_params = vec![("action", "retrieve"), ("key", key)];
-    
+
     if let Some(ns) = namespace {
         query_params.push(("namespace", ns));
     }
 
-    let query_string = query_params.iter()
+    let query_string = query_params
+        .iter()
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("&");
@@ -324,7 +359,10 @@ pub async fn retrieve_memory(key: &str, namespace: Option<&str>) -> Result<Strin
         value: String,
     }
 
-    match client.get::<MemoryResponse>(&format!("api/v1/memory?{}", query_string)).await {
+    match client
+        .get::<MemoryResponse>(&format!("api/v1/memory?{}", query_string))
+        .await
+    {
         Ok(response) => {
             info!("Memory retrieved successfully");
             Ok(response.value)

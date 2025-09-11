@@ -1,12 +1,12 @@
 // Database performance optimization with connection pooling, query analysis, and caching
 // Implements advanced database optimization strategies for high-performance applications
 
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use tokio::sync::{RwLock, Mutex};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::{Duration, Instant};
-use serde::{Serialize, Deserialize};
-use tracing::{info, warn, debug, error};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -104,7 +104,7 @@ pub struct DatabaseOptimizer {
 impl DatabaseOptimizer {
     pub fn new(config: DatabaseConfig) -> Self {
         let mut connection_pool = Vec::new();
-        
+
         // Initialize minimum connections
         for _ in 0..config.min_connections {
             connection_pool.push(Connection {
@@ -131,7 +131,10 @@ impl DatabaseOptimizer {
             index_usage_efficiency: 100.0,
         };
 
-        info!("Database optimizer initialized with {} connections", config.min_connections);
+        info!(
+            "Database optimizer initialized with {} connections",
+            config.min_connections
+        );
 
         Self {
             config,
@@ -146,13 +149,13 @@ impl DatabaseOptimizer {
 
     pub async fn acquire_connection(&self) -> anyhow::Result<Uuid> {
         let mut pool = self.connection_pool.write().await;
-        
+
         // Find an available connection
         for connection in pool.iter_mut() {
             if !connection.is_active {
                 connection.is_active = true;
                 connection.last_used = Instant::now();
-                
+
                 debug!("Acquired existing connection: {}", connection.id);
                 return Ok(connection.id);
             }
@@ -168,10 +171,10 @@ impl DatabaseOptimizer {
                 query_count: 0,
                 total_query_time: Duration::ZERO,
             };
-            
+
             let connection_id = new_connection.id;
             pool.push(new_connection);
-            
+
             info!("Created new database connection: {}", connection_id);
             return Ok(connection_id);
         }
@@ -182,12 +185,12 @@ impl DatabaseOptimizer {
 
     pub async fn release_connection(&self, connection_id: Uuid) -> anyhow::Result<()> {
         let mut pool = self.connection_pool.write().await;
-        
+
         for connection in pool.iter_mut() {
             if connection.id == connection_id {
                 connection.is_active = false;
                 connection.last_used = Instant::now();
-                
+
                 debug!("Released connection: {}", connection_id);
                 return Ok(());
             }
@@ -196,10 +199,11 @@ impl DatabaseOptimizer {
         Err(anyhow::anyhow!("Connection not found"))
     }
 
-    pub async fn execute_query(&self, 
-        connection_id: Uuid, 
-        query: &str, 
-        parameters: &[&str]
+    pub async fn execute_query(
+        &self,
+        connection_id: Uuid,
+        query: &str,
+        parameters: &[&str],
     ) -> anyhow::Result<String> {
         let start_time = Instant::now();
         let query_hash = self.hash_query(query, parameters);
@@ -213,7 +217,7 @@ impl DatabaseOptimizer {
                 if let Some(cached_mut) = cache_write.get_mut(&query_hash) {
                     cached_mut.hit_count += 1;
                 }
-                
+
                 debug!("Query cache hit for hash: {}", query_hash);
                 return Ok(cached.result.clone());
             }
@@ -221,7 +225,8 @@ impl DatabaseOptimizer {
 
         // Update connection stats
         let mut pool = self.connection_pool.write().await;
-        let connection = pool.iter_mut()
+        let connection = pool
+            .iter_mut()
             .find(|conn| conn.id == connection_id)
             .ok_or_else(|| anyhow::anyhow!("Connection not found"))?;
 
@@ -237,11 +242,13 @@ impl DatabaseOptimizer {
             "rows_affected": 1,
             "execution_time_ms": execution_time.as_millis(),
             "data": [{"id": 1, "value": "test"}]
-        }).to_string();
+        })
+        .to_string();
 
         // Update query analytics
         if self.config.query_analysis_enabled {
-            self.update_query_analytics(query, &query_hash, execution_time).await;
+            self.update_query_analytics(query, &query_hash, execution_time)
+                .await;
         }
 
         // Cache the result
@@ -252,7 +259,7 @@ impl DatabaseOptimizer {
         // Record execution history
         let mut history = self.execution_history.write().await;
         history.push_back((start_time, execution_time, query.to_string()));
-        
+
         // Keep only recent history (last 1000 queries)
         if history.len() > 1000 {
             history.drain(..500);
@@ -260,7 +267,8 @@ impl DatabaseOptimizer {
 
         // Check for slow queries
         if execution_time.as_millis() > self.config.slow_query_threshold_ms as u128 {
-            self.record_slow_query(query, &query_hash, execution_time).await;
+            self.record_slow_query(query, &query_hash, execution_time)
+                .await;
         }
 
         Ok(result)
@@ -291,23 +299,29 @@ impl DatabaseOptimizer {
     }
 
     fn hash_query(&self, query: &str, parameters: &[&str]) -> String {
-        use sha2::{Sha256, Digest};
-        
+        use sha2::{Digest, Sha256};
+
         let mut hasher = Sha256::new();
         hasher.update(query.as_bytes());
-        
+
         for param in parameters {
             hasher.update(param.as_bytes());
         }
-        
+
         hex::encode(hasher.finalize())
     }
 
-    async fn update_query_analytics(&self, query: &str, query_hash: &str, execution_time: Duration) {
+    async fn update_query_analytics(
+        &self,
+        query: &str,
+        query_hash: &str,
+        execution_time: Duration,
+    ) {
         let mut analytics = self.query_analytics.write().await;
-        
-        let analysis = analytics.entry(query_hash.to_string()).or_insert_with(|| {
-            QueryAnalysis {
+
+        let analysis = analytics
+            .entry(query_hash.to_string())
+            .or_insert_with(|| QueryAnalysis {
                 query_hash: query_hash.to_string(),
                 query_template: self.normalize_query(query),
                 execution_count: 0,
@@ -321,14 +335,14 @@ impl DatabaseOptimizer {
                 rows_examined: rand::random::<u64>() % 1000 + 100,
                 rows_returned: rand::random::<u64>() % 100 + 1,
                 optimization_suggestions: Vec::new(),
-            }
-        });
+            });
 
         let exec_time_ms = execution_time.as_millis() as f64;
-        
+
         analysis.execution_count += 1;
         analysis.total_execution_time_ms += exec_time_ms;
-        analysis.average_execution_time_ms = analysis.total_execution_time_ms / analysis.execution_count as f64;
+        analysis.average_execution_time_ms =
+            analysis.total_execution_time_ms / analysis.execution_count as f64;
         analysis.min_execution_time_ms = analysis.min_execution_time_ms.min(exec_time_ms);
         analysis.max_execution_time_ms = analysis.max_execution_time_ms.max(exec_time_ms);
         analysis.last_executed = chrono::Utc::now().timestamp();
@@ -340,13 +354,19 @@ impl DatabaseOptimizer {
     fn normalize_query(&self, query: &str) -> String {
         // Simple query normalization - replace parameters with placeholders
         let mut normalized = query.to_lowercase();
-        
+
         // Replace numeric literals
-        normalized = regex::Regex::new(r"\b\d+\b").unwrap().replace_all(&normalized, "?").to_string();
-        
+        normalized = regex::Regex::new(r"\b\d+\b")
+            .unwrap()
+            .replace_all(&normalized, "?")
+            .to_string();
+
         // Replace string literals
-        normalized = regex::Regex::new(r"'[^']*'").unwrap().replace_all(&normalized, "?").to_string();
-        
+        normalized = regex::Regex::new(r"'[^']*'")
+            .unwrap()
+            .replace_all(&normalized, "?")
+            .to_string();
+
         normalized
     }
 
@@ -359,56 +379,74 @@ impl DatabaseOptimizer {
         analysis.optimization_suggestions.clear();
 
         if analysis.average_execution_time_ms > 500.0 {
-            analysis.optimization_suggestions.push("Consider adding appropriate indexes".to_string());
+            analysis
+                .optimization_suggestions
+                .push("Consider adding appropriate indexes".to_string());
         }
 
         if !analysis.uses_index && analysis.execution_count > 10 {
-            analysis.optimization_suggestions.push("Query may benefit from indexing".to_string());
+            analysis
+                .optimization_suggestions
+                .push("Query may benefit from indexing".to_string());
         }
 
         if analysis.rows_examined > analysis.rows_returned * 10 {
-            analysis.optimization_suggestions.push("High rows examined to returned ratio - optimize WHERE clause".to_string());
+            analysis
+                .optimization_suggestions
+                .push("High rows examined to returned ratio - optimize WHERE clause".to_string());
         }
 
         if analysis.execution_count > 1000 && analysis.average_execution_time_ms > 100.0 {
-            analysis.optimization_suggestions.push("Frequently executed slow query - prioritize optimization".to_string());
+            analysis
+                .optimization_suggestions
+                .push("Frequently executed slow query - prioritize optimization".to_string());
         }
     }
 
     async fn cache_query_result(&self, query_hash: &str, result: &str) {
         let mut cache = self.query_cache.write().await;
-        
+
         // Check cache size limit
         let current_size: usize = cache.values().map(|c| c.size_bytes).sum();
         let max_size = (self.config.query_cache_size_mb * 1024 * 1024) as usize;
-        
+
         if current_size + result.len() > max_size {
             // Remove oldest entries until we have space
-            let mut entries: Vec<_> = cache.iter().map(|(k, v)| (k.clone(), v.cached_at)).collect();
+            let mut entries: Vec<_> = cache
+                .iter()
+                .map(|(k, v)| (k.clone(), v.cached_at))
+                .collect();
             entries.sort_by_key(|(_, cached_at)| *cached_at);
-            
+
             for (key, _) in entries.iter().take(cache.len() / 4) {
                 cache.remove(key);
             }
         }
 
-        cache.insert(query_hash.to_string(), CachedQuery {
-            query_hash: query_hash.to_string(),
-            result: result.to_string(),
-            cached_at: Instant::now(),
-            hit_count: 0,
-            size_bytes: result.len(),
-        });
+        cache.insert(
+            query_hash.to_string(),
+            CachedQuery {
+                query_hash: query_hash.to_string(),
+                result: result.to_string(),
+                cached_at: Instant::now(),
+                hit_count: 0,
+                size_bytes: result.len(),
+            },
+        );
     }
 
     async fn record_slow_query(&self, query: &str, query_hash: &str, execution_time: Duration) {
-        warn!("Slow query detected: {} ms - {}", execution_time.as_millis(), query);
+        warn!(
+            "Slow query detected: {} ms - {}",
+            execution_time.as_millis(),
+            query
+        );
 
         let analytics = self.query_analytics.read().await;
         if let Some(analysis) = analytics.get(query_hash) {
             let mut slow_queries = self.slow_queries.write().await;
             slow_queries.push_back(analysis.clone());
-            
+
             // Keep only recent slow queries (last 100)
             if slow_queries.len() > 100 {
                 slow_queries.drain(..50);
@@ -418,20 +456,22 @@ impl DatabaseOptimizer {
 
     pub async fn get_metrics(&self) -> DatabaseMetrics {
         let mut metrics = self.metrics.lock().await;
-        
+
         // Update real-time metrics
         let pool = self.connection_pool.read().await;
         let active_connections = pool.iter().filter(|conn| conn.is_active).count() as u32;
         let total_connections = pool.len() as u32;
-        
+
         metrics.active_connections = active_connections;
         metrics.total_connections = total_connections;
-        metrics.connection_pool_utilization = (active_connections as f64 / self.config.max_connections as f64) * 100.0;
+        metrics.connection_pool_utilization =
+            (active_connections as f64 / self.config.max_connections as f64) * 100.0;
 
         // Calculate queries per second
         let history = self.execution_history.read().await;
         let one_minute_ago = Instant::now() - Duration::from_secs(60);
-        let recent_queries = history.iter()
+        let recent_queries = history
+            .iter()
             .filter(|(timestamp, _, _)| *timestamp > one_minute_ago)
             .count();
         metrics.queries_per_second = recent_queries as f64 / 60.0;
@@ -485,23 +525,32 @@ impl DatabaseOptimizer {
 
         // Analyze connection pool usage
         if metrics.connection_pool_utilization > 90.0 {
-            report.optimization_recommendations.push("Consider increasing max_connections limit".to_string());
+            report
+                .optimization_recommendations
+                .push("Consider increasing max_connections limit".to_string());
         } else if metrics.connection_pool_utilization < 20.0 {
-            report.optimization_recommendations.push("Consider reducing min_connections to save resources".to_string());
+            report
+                .optimization_recommendations
+                .push("Consider reducing min_connections to save resources".to_string());
         }
 
         // Analyze slow queries
         if metrics.slow_queries_count > 10 {
-            report.optimization_recommendations.push("High number of slow queries detected - review and optimize".to_string());
+            report
+                .optimization_recommendations
+                .push("High number of slow queries detected - review and optimize".to_string());
         }
 
         // Analyze cache performance
         if metrics.cache_hit_rate < 70.0 {
-            report.optimization_recommendations.push("Low cache hit rate - review caching strategy".to_string());
+            report
+                .optimization_recommendations
+                .push("Low cache hit rate - review caching strategy".to_string());
         }
 
         // Generate query-specific optimizations
-        for analysis in analytics.iter().take(10) { // Top 10 most executed queries
+        for analysis in analytics.iter().take(10) {
+            // Top 10 most executed queries
             if !analysis.optimization_suggestions.is_empty() {
                 report.query_optimizations.push(QueryOptimization {
                     query_hash: analysis.query_hash.clone(),
@@ -516,8 +565,16 @@ impl DatabaseOptimizer {
         // Estimate overall improvements
         report.estimated_improvements = EstimatedImprovements {
             query_performance_improvement: if slow_queries.len() > 5 { 25.0 } else { 10.0 },
-            cache_hit_rate_improvement: if metrics.cache_hit_rate < 80.0 { 15.0 } else { 5.0 },
-            connection_efficiency_improvement: if metrics.connection_pool_utilization > 80.0 { 20.0 } else { 5.0 },
+            cache_hit_rate_improvement: if metrics.cache_hit_rate < 80.0 {
+                15.0
+            } else {
+                5.0
+            },
+            connection_efficiency_improvement: if metrics.connection_pool_utilization > 80.0 {
+                20.0
+            } else {
+                5.0
+            },
             overall_throughput_improvement: 15.0,
         };
 
@@ -545,11 +602,14 @@ impl DatabaseOptimizer {
     pub async fn cleanup_connections(&self) -> anyhow::Result<usize> {
         let mut pool = self.connection_pool.write().await;
         let initial_count = pool.len();
-        
+
         // Remove inactive connections that haven't been used for a while
         let cutoff = Instant::now() - Duration::from_secs(300); // 5 minutes
         pool.retain(|conn| {
-            if !conn.is_active && conn.last_used < cutoff && pool.len() > self.config.min_connections as usize {
+            if !conn.is_active
+                && conn.last_used < cutoff
+                && pool.len() > self.config.min_connections as usize
+            {
                 debug!("Cleaning up inactive connection: {}", conn.id);
                 false
             } else {
@@ -559,7 +619,7 @@ impl DatabaseOptimizer {
 
         let cleaned_count = initial_count - pool.len();
         info!("Cleaned up {} inactive database connections", cleaned_count);
-        
+
         Ok(cleaned_count)
     }
 
@@ -567,7 +627,7 @@ impl DatabaseOptimizer {
         let mut cache = self.query_cache.write().await;
         let cleared_count = cache.len();
         cache.clear();
-        
+
         info!("Cleared {} cached queries", cleared_count);
         Ok(cleared_count)
     }
@@ -627,7 +687,9 @@ pub async fn execute_optimized_query(query: &str, parameters: &[&str]) -> anyhow
     let optimizer = DATABASE_OPTIMIZER.read().await;
     if let Some(optimizer) = optimizer.as_ref() {
         let connection_id = optimizer.acquire_connection().await?;
-        let result = optimizer.execute_query(connection_id, query, parameters).await;
+        let result = optimizer
+            .execute_query(connection_id, query, parameters)
+            .await;
         optimizer.release_connection(connection_id).await?;
         result
     } else {
@@ -653,15 +715,18 @@ mod tests {
     async fn test_database_optimizer() {
         let config = DatabaseConfig::default();
         let optimizer = DatabaseOptimizer::new(config);
-        
+
         let connection_id = optimizer.acquire_connection().await.unwrap();
         assert!(!connection_id.is_nil());
-        
-        let result = optimizer.execute_query(connection_id, "SELECT * FROM test", &[]).await.unwrap();
+
+        let result = optimizer
+            .execute_query(connection_id, "SELECT * FROM test", &[])
+            .await
+            .unwrap();
         assert!(!result.is_empty());
-        
+
         optimizer.release_connection(connection_id).await.unwrap();
-        
+
         let metrics = optimizer.get_metrics().await;
         assert!(metrics.total_connections > 0);
     }
@@ -670,16 +735,22 @@ mod tests {
     async fn test_query_caching() {
         let config = DatabaseConfig::default();
         let optimizer = DatabaseOptimizer::new(config);
-        
+
         let connection_id = optimizer.acquire_connection().await.unwrap();
-        
+
         // Execute same query twice
         let query = "SELECT * FROM users WHERE id = 1";
-        let _result1 = optimizer.execute_query(connection_id, query, &[]).await.unwrap();
-        let _result2 = optimizer.execute_query(connection_id, query, &[]).await.unwrap();
-        
+        let _result1 = optimizer
+            .execute_query(connection_id, query, &[])
+            .await
+            .unwrap();
+        let _result2 = optimizer
+            .execute_query(connection_id, query, &[])
+            .await
+            .unwrap();
+
         optimizer.release_connection(connection_id).await.unwrap();
-        
+
         let metrics = optimizer.get_metrics().await;
         // Second query should hit cache
         assert!(metrics.cache_hit_rate > 0.0 || metrics.queries_per_second > 0.0);

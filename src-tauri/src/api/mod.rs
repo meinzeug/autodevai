@@ -52,10 +52,14 @@ impl ApiClient {
     where
         T: for<'de> Deserialize<'de>,
     {
-        let url = format!("{}/{}", self.config.base_url.trim_end_matches('/'), endpoint.trim_start_matches('/'));
-        
+        let url = format!(
+            "{}/{}",
+            self.config.base_url.trim_end_matches('/'),
+            endpoint.trim_start_matches('/')
+        );
+
         let mut request = self.client.get(&url);
-        
+
         if let Some(token) = &self.config.auth_token {
             request = request.bearer_auth(token);
         }
@@ -84,10 +88,14 @@ impl ApiClient {
         T: Serialize,
         R: for<'de> Deserialize<'de>,
     {
-        let url = format!("{}/{}", self.config.base_url.trim_end_matches('/'), endpoint.trim_start_matches('/'));
-        
+        let url = format!(
+            "{}/{}",
+            self.config.base_url.trim_end_matches('/'),
+            endpoint.trim_start_matches('/')
+        );
+
         let mut request = self.client.post(&url).json(data);
-        
+
         if let Some(token) = &self.config.auth_token {
             request = request.bearer_auth(token);
         }
@@ -116,10 +124,14 @@ impl ApiClient {
         T: Serialize,
         R: for<'de> Deserialize<'de>,
     {
-        let url = format!("{}/{}", self.config.base_url.trim_end_matches('/'), endpoint.trim_start_matches('/'));
-        
+        let url = format!(
+            "{}/{}",
+            self.config.base_url.trim_end_matches('/'),
+            endpoint.trim_start_matches('/')
+        );
+
         let mut request = self.client.put(&url).json(data);
-        
+
         if let Some(token) = &self.config.auth_token {
             request = request.bearer_auth(token);
         }
@@ -144,10 +156,14 @@ impl ApiClient {
 
     /// Make a DELETE request
     pub async fn delete(&self, endpoint: &str) -> Result<()> {
-        let url = format!("{}/{}", self.config.base_url.trim_end_matches('/'), endpoint.trim_start_matches('/'));
-        
+        let url = format!(
+            "{}/{}",
+            self.config.base_url.trim_end_matches('/'),
+            endpoint.trim_start_matches('/')
+        );
+
         let mut request = self.client.delete(&url);
-        
+
         if let Some(token) = &self.config.auth_token {
             request = request.bearer_auth(token);
         }
