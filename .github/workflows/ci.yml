@@ -16,58 +16,58 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
-      
+
       - name: Quick lint check
         run: |
           npm ci --prefer-offline
           npm run lint --max-warnings 50 || true
-  
+
   build-and-test:
     needs: quick-check
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ./src-tauri
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: TypeScript check
         run: npm run typecheck || true
-      
+
       - name: Build frontend
         run: npm run build
-      
+
       - name: Run tests
         run: npm test -- --run || true
-      
+
       - name: Build Tauri
         working-directory: ./src-tauri
         run: cargo build --release
-      
+
       - name: Run Rust tests
         working-directory: ./src-tauri
         run: cargo test
@@ -76,10 +76,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      
+
       - name: Run npm audit
         run: npm audit --audit-level=high || true
-      
+
       - name: Run cargo audit
         working-directory: ./src-tauri
         run: |
@@ -88,28 +88,172 @@ jobs:
 
   on-failure:
     needs: [build-and-test, security-scan]
-    if: failure()
+    if: always() && (needs.build-and-test.result == 'failure' || needs.security-scan.result == 'failure')
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v5
-      
-      - name: Create failure issue
+
+      - name: Collect failure artifacts
+        continue-on-error: true
+        run: |
+          mkdir -p failure-artifacts
+
+          # Collect system info
+          echo "## System Information" > failure-artifacts/system-info.md
+          echo "- OS: $(uname -a)" >> failure-artifacts/system-info.md
+          echo "- Node: $(node --version 2>/dev/null || echo 'N/A')" >> failure-artifacts/system-info.md
+          echo "- NPM: $(npm --version 2>/dev/null || echo 'N/A')" >> failure-artifacts/system-info.md
+          echo "- Rust: $(rustc --version 2>/dev/null || echo 'N/A')" >> failure-artifacts/system-info.md
+          echo "- Cargo: $(cargo --version 2>/dev/null || echo 'N/A')" >> failure-artifacts/system-info.md
+          echo "- Disk space: $(df -h . | tail -1)" >> failure-artifacts/system-info.md
+          echo "- Memory: $(free -h | head -2)" >> failure-artifacts/system-info.md
+
+          # Collect build logs if they exist
+          find . -name "*.log" -o -name "build.txt" -o -name "test-results.xml" | head -10 | xargs -I {} cp {} failure-artifacts/ 2>/dev/null || true
+
+          # Collect package info
+          cp package.json failure-artifacts/ 2>/dev/null || true
+          cp package-lock.json failure-artifacts/ 2>/dev/null || true
+          cp src-tauri/Cargo.toml failure-artifacts/ 2>/dev/null || true
+          cp src-tauri/Cargo.lock failure-artifacts/ 2>/dev/null || true
+
+      - name: Upload failure artifacts
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ci-failure-artifacts-${{ github.run_number }}
+          path: failure-artifacts/
+          retention-days: 14
+
+      - name: Get job failure details
+        id: failure-details
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+
+            try {
+              const jobs = await github.rest.actions.listJobsForWorkflowRun({
+                owner,
+                repo,
+                run_id
+              });
+              
+              const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
+              const failedSteps = [];
+              
+              for (const job of failedJobs) {
+                for (const step of job.steps || []) {
+                  if (step.conclusion === 'failure') {
+                    failedSteps.push({
+                      job: job.name,
+                      step: step.name,
+                      number: step.number
+                    });
+                  }
+                }
+              }
+              
+              return {
+                failedJobs: failedJobs.map(j => j.name),
+                failedSteps,
+                totalJobs: jobs.data.jobs.length
+              };
+            } catch (error) {
+              console.error('Failed to get job details:', error);
+              return {
+                failedJobs: ['Unknown'],
+                failedSteps: [],
+                totalJobs: 0,
+                error: error.message
+              };
+            }
+
+      - name: Create detailed failure issue
         uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
             const run_url = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            
+            const commit_url = `https://github.com/${owner}/${repo}/commit/${context.sha}`;
+            const artifacts_url = `${run_url}#artifacts`;
+
+            const failureDetails = ${{ steps.failure-details.outputs.result || '{}' }};
+            const buildResult = '${{ needs.build-and-test.result }}';
+            const securityResult = '${{ needs.security-scan.result }}';
+
+            let failedJobsText = 'Unknown';
+            let failedStepsText = 'No specific steps identified';
+
+            if (failureDetails.failedJobs && failureDetails.failedJobs.length > 0) {
+              failedJobsText = failureDetails.failedJobs.map(job => `- ${job}`).join('\n');
+            }
+
+            if (failureDetails.failedSteps && failureDetails.failedSteps.length > 0) {
+              failedStepsText = failureDetails.failedSteps.map(step => 
+                `- **${step.job}**: ${step.step} (step ${step.number})`
+              ).join('\n');
+            }
+
+            const issueBody = `## 🚨 CI/CD Pipeline Failure
+
+            ### Failure Summary
+            - **Workflow**: ${context.workflow}
+            - **Run Number**: [#${context.runNumber}](${run_url})
+            - **Commit**: [\`${context.sha.substring(0, 7)}\`](${commit_url})
+            - **Branch**: \`${context.ref.replace('refs/heads/', '')}\`
+            - **Triggered by**: @${context.actor}
+            - **Event**: ${context.eventName}
+
+            ### Job Results
+            - **Build & Test**: ${buildResult === 'failure' ? '❌ Failed' : buildResult === 'success' ? '✅ Passed' : '⚠️ ' + buildResult}
+            - **Security Scan**: ${securityResult === 'failure' ? '❌ Failed' : securityResult === 'success' ? '✅ Passed' : '⚠️ ' + securityResult}
+
+            ### Failed Jobs
+            ${failedJobsText}
+
+            ### Failed Steps
+            ${failedStepsText}
+
+            ### Debugging Information
+            - 📁 [Failure Artifacts](${artifacts_url}) (includes logs, system info, and config files)
+            - 🔍 [Full Workflow Run](${run_url})
+            - 💾 Artifacts retained for 14 days
+
+            ### Next Steps
+            1. Review the [workflow logs](${run_url}) for detailed error messages
+            2. Check the [failure artifacts](${artifacts_url}) for system information and build logs
+            3. Verify dependencies and environment configuration
+            4. If this is a flaky test, consider re-running the workflow
+
+            ### Environment Information
+            - **Runner OS**: ubuntu-latest
+            - **Node.js**: 22
+            - **Rust**: stable toolchain
+
+            ---
+            *This issue was automatically created by the CI/CD failure reporter.*
+            *Run ID: ${context.runId}*`;
+
             await github.rest.issues.create({
               owner,
               repo,
-              title: `🚨 CI/CD Failure - ${context.workflow} #${context.runNumber}`,
-              body: `## Workflow Failure
-              
-              **Run:** [${context.runNumber}](${run_url})
-              **Commit:** ${context.sha.substring(0, 7)}
-              **Triggered by:** @${context.actor}
-              
-              Please check the [workflow run](${run_url}) for details.`,
-              labels: ['ci-failure', 'automated']
+              title: `🚨 CI/CD Failure: ${context.workflow} #${context.runNumber} - ${context.sha.substring(0, 7)}`,
+              body: issueBody,
+              labels: [
+                'ci-failure', 
+                'automated',
+                'priority:high',
+                ...(buildResult === 'failure' ? ['build-failure'] : []),
+                ...(securityResult === 'failure' ? ['security-failure'] : [])
+              ],
+              assignees: [context.actor].filter(user => user && user !== 'dependabot[bot]' && user !== 'github-actions[bot]')
             });
+
+            console.log('✅ Failure issue created successfully');

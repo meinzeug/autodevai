@@ -1,0 +1,206 @@
+name: Dependabot Security Issue Creator
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * MON' # Weekly security check on Mondays
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  security-events: read
+
+jobs:
+  create-security-issues:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get PR details
+        id: pr-info
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "pr_title=${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+          echo "pr_body=${{ github.event.pull_request.body }}" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - name: Analyze security impact
+        id: security-analysis
+        run: |
+          # Check if this is a security update
+          PR_TITLE="${{ steps.pr-info.outputs.pr_title }}"
+          PR_BODY="${{ steps.pr-info.outputs.pr_body }}"
+
+          if echo "$PR_TITLE" | grep -iE "(security|vulnerability|cve-|critical)" || \
+             echo "$PR_BODY" | grep -iE "(security|vulnerability|cve-|critical)"; then
+            echo "is_security=true" >> $GITHUB_OUTPUT
+            echo "severity=high" >> $GITHUB_OUTPUT
+          elif echo "$PR_TITLE" | grep -iE "(major|breaking)"; then
+            echo "is_security=false" >> $GITHUB_OUTPUT
+            echo "severity=major" >> $GITHUB_OUTPUT
+          else
+            echo "is_security=false" >> $GITHUB_OUTPUT
+            echo "severity=minor" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create security or major update issue
+        if: steps.security-analysis.outputs.is_security == 'true' || steps.security-analysis.outputs.severity == 'major'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const isSecurity = '${{ steps.security-analysis.outputs.is_security }}' === 'true';
+            const severity = '${{ steps.security-analysis.outputs.severity }}';
+            const prTitle = '${{ steps.pr-info.outputs.pr_title }}';
+            const prBody = '${{ steps.pr-info.outputs.pr_body }}';
+            const prNumber = '${{ steps.pr-info.outputs.pr_number }}';
+
+            let issueTitle, issueBody, labels;
+
+            if (isSecurity) {
+              issueTitle = `🚨 SECURITY UPDATE: ${prTitle}`;
+              labels = ['security', 'dependencies', 'critical'];
+              issueBody = `## 🛡️ Security Update Required
+              
+            **Related PR:** #${prNumber}
+            **Severity:** ${severity.toUpperCase()}
+              
+            ### Security Details
+            ${prBody}
+              
+            ### ⚠️ Action Required
+            - [ ] Review security implications immediately
+            - [ ] Test thoroughly before merging
+            - [ ] Consider emergency deployment if critical
+            - [ ] Update security documentation if needed
+            - [ ] Notify team of security update
+              
+            ### 🚨 Priority
+            This is a **SECURITY-RELATED** dependency update that requires immediate attention.
+
+            **Dependabot Security Issue Auto-Creation - Fix for Issue #99**`;
+            } else if (severity === 'major') {
+              issueTitle = `📋 MAJOR UPDATE REVIEW: ${prTitle}`;
+              labels = ['dependencies', 'review-required', 'major-update'];
+              issueBody = `## 🔍 Major Update Review Required
+              
+            **Related PR:** #${prNumber}
+            **Type:** Major Version Update
+              
+            ### Update Details
+            ${prBody}
+              
+            ### 📋 Review Checklist
+            - [ ] Review breaking changes documentation
+            - [ ] Update code if necessary
+            - [ ] Run comprehensive test suite
+            - [ ] Update project documentation
+            - [ ] Consider impact on dependent projects
+            - [ ] Check for API changes
+              
+            ### 📝 Notes
+            This major version update may contain breaking changes and requires manual review before merging.
+
+            **Dependabot Major Update Issue Auto-Creation**`;
+            }
+
+            if (issueTitle) {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: labels,
+                assignees: ['meinzeug']
+              });
+              
+              console.log(`✅ Created issue #${issue.data.number}: ${issueTitle}`);
+              
+              // Add comment to PR linking to issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `🔗 **Tracking Issue Created:** #${issue.data.number}
+
+            This ${isSecurity ? '**SECURITY UPDATE**' : '**MAJOR UPDATE**'} requires manual review before merging.
+
+            ${isSecurity ? '⚠️ **Security Alert**: Please review this update immediately for potential security implications.' : '📋 **Review Required**: This major version update may contain breaking changes.'}`
+              });
+            }
+
+  security-alert-monitor:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Check for security alerts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            try {
+              // Query for active security alerts
+              const alerts = await github.rest.dependabot.listAlertsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open'
+              });
+              
+              for (const alert of alerts.data) {
+                if (alert.security_advisory.severity === 'critical' || alert.security_advisory.severity === 'high') {
+                  // Check if issue already exists
+                  const existingIssues = await github.rest.issues.listForRepo({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    labels: 'security,dependabot-alert',
+                    state: 'open'
+                  });
+                  
+                  const alertTitle = `🚨 SECURITY ALERT: ${alert.security_advisory.summary}`;
+                  const issueExists = existingIssues.data.some(issue => 
+                    issue.title.includes(alert.security_advisory.summary) ||
+                    issue.body?.includes(alert.security_advisory.ghsa_id)
+                  );
+                  
+                  if (!issueExists) {
+                    await github.rest.issues.create({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      title: alertTitle,
+                      body: `## 🛡️ Security Alert Detected
+                      
+            **Advisory ID:** ${alert.security_advisory.ghsa_id}
+            **Severity:** ${alert.security_advisory.severity.toUpperCase()}
+            **Package:** ${alert.security_vulnerability.package.name}
+            **Vulnerable Range:** ${alert.security_vulnerability.vulnerable_version_range}
+
+            ### Summary
+            ${alert.security_advisory.summary}
+
+            ### Description
+            ${alert.security_advisory.description || 'No detailed description available.'}
+
+            ### 🚨 Action Required
+            - [ ] Update the vulnerable package immediately
+            - [ ] Test the application thoroughly after update
+            - [ ] Deploy security fix as high priority
+            - [ ] Monitor for Dependabot PR creation
+            - [ ] Document security incident if needed
+
+            **Weekly Security Alert Monitor - Auto-generated**`,
+                      labels: ['security', 'dependabot-alert', 'critical'],
+                      assignees: ['meinzeug']
+                    });
+                    console.log(`✅ Created security alert issue for: ${alert.security_advisory.summary}`);
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`ℹ️ Security alerts check completed. Error (expected for private repos): ${error.message}`);
+            }

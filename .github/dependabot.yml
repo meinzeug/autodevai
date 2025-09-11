@@ -1,19 +1,20 @@
 version: 2
 updates:
-  # NPM dependencies - OPTIMIZED for daily updates with intelligent grouping
+  # NPM dependencies - Enhanced for security issue creation
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
-      interval: 'daily' # OPTIMIZED: Daily updates at 9:00 AM
+      interval: 'daily' # Daily updates for faster security response
       time: '09:00'
-    open-pull-requests-limit: 5 # Allow more PRs for daily processing
+      timezone: 'UTC'
+    open-pull-requests-limit: 10 # Increased for security updates
     groups:
       # SECURITY UPDATES - Highest Priority (separate PR)
       security-updates:
         applies-to: security-updates
         patterns:
           - '*'
-      
+
       # DEVELOPMENT DEPENDENCIES - Safe for auto-merge
       dev-dependencies:
         patterns:
@@ -33,7 +34,7 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-      
+
       # PRODUCTION DEPENDENCIES - Minor/Patch updates only
       prod-dependencies:
         patterns:
@@ -55,7 +56,7 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-      
+
       # MAJOR UPDATES - Manual review required
       major-updates:
         patterns:
@@ -82,9 +83,11 @@ updates:
       - 'dependencies'
       - 'npm'
       - 'automated'
-      - 'auto-merge-candidate' # Label for auto-merge workflow
 
     reviewers:
+      - 'meinzeug'
+
+    assignees:
       - 'meinzeug'
 
     commit-message:
@@ -104,7 +107,7 @@ updates:
         applies-to: security-updates
         patterns:
           - '*'
-      
+
       # DEVELOPMENT/BUILD DEPENDENCIES
       cargo-dev-dependencies:
         patterns:
@@ -118,7 +121,7 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-      
+
       # TAURI ECOSYSTEM - Grouped together
       tauri-ecosystem:
         patterns:
@@ -127,7 +130,7 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-      
+
       # OTHER PRODUCTION DEPENDENCIES
       cargo-prod-dependencies:
         patterns:
@@ -186,7 +189,7 @@ updates:
           - 'minor'
           - 'patch'
           - 'major' # Actions updates are typically safe
-    
+
     labels:
       - 'dependencies'
       - 'ci/cd'

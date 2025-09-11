@@ -22,10 +22,16 @@ on:
         default: 'false'
         type: boolean
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  security-events: read
+  actions: read
+
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NOTIFICATION_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-  MAINTENANCE_BRANCH: autodev-maintenance-${{ github.run_number }}
 
 concurrency:
   group: daily-maintenance
@@ -37,7 +43,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      maintenance-branch: ${{ steps.setup.outputs.branch-name }}
       dry-run: ${{ steps.setup.outputs.dry-run }}
       timestamp: ${{ steps.setup.outputs.timestamp }}
       run-id: ${{ steps.setup.outputs.run-id }}
@@ -52,21 +57,17 @@ jobs:
         id: setup
         run: |
           TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
-          BRANCH_NAME="autodev-maintenance-${GITHUB_RUN_NUMBER}"
-          echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
           echo "dry-run=${{ inputs.dry-run || 'false' }}" >> $GITHUB_OUTPUT
           echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "run-id=${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
-          
-          # Create maintenance branch for rollback
+
+          # Configure git for potential commits
           git config user.name "AutoDev-AI Maintenance Bot"
           git config user.email "maintenance@autodev-ai.github.io"
-          git checkout -b "${BRANCH_NAME}"
-          git push origin "${BRANCH_NAME}"
-          
+
           echo "🚀 Daily maintenance initialized for $(date -u)"
-          echo "📝 Branch: ${BRANCH_NAME}"
           echo "🔄 Run ID: ${GITHUB_RUN_ID}"
+          echo "📋 Working on main branch"
 
       - name: Create maintenance issue
         uses: actions/github-script@v8
@@ -74,7 +75,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            
+
             await github.rest.issues.create({
               owner,
               repo,
@@ -82,16 +83,13 @@ jobs:
               body: `## Daily Maintenance Pipeline Started
               
               **Run:** [${context.runNumber}](${runUrl})
-              **Branch:** \`${{ steps.setup.outputs.branch-name }}\`
               **Timestamp:** ${{ steps.setup.outputs.timestamp }}
               **Mode:** ${{ inputs.dry-run == 'true' && 'DRY RUN' || 'LIVE' }}
               
               ### Planned Activities
               - ✅ Merge safe Dependabot PRs
               - 🔒 Security vulnerability scan & fixes
-              - 📚 Documentation updates
               - 🔄 Local sync trigger
-              - 📋 Roadmap execution
               
               This issue will be updated with progress and closed upon completion.`,
               labels: ['maintenance', 'automated', 'daily-pipeline']
@@ -124,12 +122,12 @@ jobs:
               sort: 'created',
               direction: 'asc'
             });
-            
+
             const dependabotPRs = prs.data.filter(pr => 
               pr.user.login === 'dependabot[bot]' && 
               pr.labels.some(label => label.name === 'dependencies')
             );
-            
+
             console.log(`Found ${dependabotPRs.length} Dependabot PRs`);
             return dependabotPRs;
 
@@ -141,11 +139,11 @@ jobs:
             const dependabotPRs = ${{ steps.get-prs.outputs.result }};
             const dryRun = '${{ needs.initialize.outputs.dry-run }}' === 'true';
             const forceMerge = '${{ inputs.force-merge }}' === 'true';
-            
+
             let mergedCount = 0;
             let failedCount = 0;
             const mergeResults = [];
-            
+
             for (const pr of dependabotPRs) {
               try {
                 console.log(`Processing PR #${pr.number}: ${pr.title}`);
@@ -194,12 +192,12 @@ jobs:
                 mergeResults.push(`💥 Error processing PR #${pr.number}: ${error.message}`);
               }
             }
-            
+
             console.log(`Merge summary: ${mergedCount} merged, ${failedCount} failed`);
             core.setOutput('merged-count', mergedCount);
             core.setOutput('failed-count', failedCount);
             core.setOutput('results', mergeResults.join('\n'));
-            
+
             // Helper function to check PR safety
             async function checkPRSafety(pr, github, context, forceMerge) {
               if (forceMerge) return true;
@@ -249,7 +247,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ needs.initialize.outputs.maintenance-branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
@@ -270,23 +267,23 @@ jobs:
         id: scan
         run: |
           echo "🔍 Running security scans..."
-          
+
           # NPM audit
           echo "📦 NPM Security Audit:"
           npm audit --audit-level=moderate --json > security-npm.json || true
-          
+
           # Cargo audit
           echo "🦀 Cargo Security Audit:"
           cd src-tauri
           cargo audit --json > ../security-cargo.json || true
           cd ..
-          
+
           # Check for vulnerable dependencies
           VULN_COUNT=$(cat security-npm.json | jq '.metadata.vulnerabilities.total // 0')
           CARGO_VULN_COUNT=$(cat security-cargo.json | jq '.vulnerabilities | length // 0')
-          
+
           TOTAL_VULNS=$((VULN_COUNT + CARGO_VULN_COUNT))
-          
+
           echo "vulnerabilities-found=${TOTAL_VULNS}" >> $GITHUB_OUTPUT
           echo "📊 Found ${TOTAL_VULNS} total vulnerabilities"
 
@@ -296,9 +293,9 @@ jobs:
         run: |
           FIXES_APPLIED=0
           DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-          
+
           echo "🔧 Applying automatic security fixes..."
-          
+
           # NPM audit fix
           if [ -s security-npm.json ]; then
             echo "🔨 Fixing NPM vulnerabilities..."
@@ -309,7 +306,7 @@ jobs:
               echo "🔍 DRY RUN - Would run: npm audit fix"
             fi
           fi
-          
+
           # Update Cargo dependencies
           cd src-tauri
           if [ -s ../security-cargo.json ]; then
@@ -322,32 +319,32 @@ jobs:
             fi
           fi
           cd ..
-          
+
           echo "fixes-applied=${FIXES_APPLIED}" >> $GITHUB_OUTPUT
 
       - name: Generate security report
         run: |
           cat > security-report.md << EOF
           # 🔒 Security Scan Report
-          
+
           **Date:** $(date -u)
           **Pipeline:** ${GITHUB_RUN_NUMBER}
-          
+
           ## Summary
           - **NPM Vulnerabilities:** $(cat security-npm.json | jq '.metadata.vulnerabilities.total // 0')
           - **Cargo Vulnerabilities:** $(cat security-cargo.json | jq '.vulnerabilities | length // 0')
           - **Fixes Applied:** ${{ steps.fix.outputs.fixes-applied }}
-          
+
           ## NPM Audit Results
           \`\`\`json
           $(cat security-npm.json | jq '.vulnerabilities // {}' | head -20)
           \`\`\`
-          
+
           ## Cargo Audit Results
           \`\`\`json
           $(cat security-cargo.json | head -20)
           \`\`\`
-          
+
           EOF
 
       - name: Commit security fixes
@@ -355,18 +352,18 @@ jobs:
         run: |
           git config user.name "AutoDev-AI Security Bot"
           git config user.email "security@autodev-ai.github.io"
-          
+
           git add -A
           git commit -m "🔒 Security: Auto-fix vulnerabilities
-          
+
           - Applied ${{ steps.fix.outputs.fixes-applied }} automatic fixes
           - NPM audit fixes applied
           - Cargo dependencies updated
-          
+
           Pipeline: ${{ github.run_number }}
           Run: ${{ github.run_id }}" || true
-          
-          git push origin ${{ needs.initialize.outputs.maintenance-branch }}
+
+          git push origin main
 
   sync-local:
     name: 🔄 Trigger Local Sync
@@ -386,21 +383,21 @@ jobs:
         id: trigger
         run: |
           DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-          
+
           # Create sync script for local environments
           cat > .github/sync-local.sh << 'EOF'
           #!/bin/bash
           set -e
-          
+
           echo "🔄 Local Environment Sync - $(date)"
-          echo "📋 Maintenance Branch: ${{ needs.initialize.outputs.maintenance-branch }}"
-          
+          echo "📋 Working on main branch"
+
           # Pull latest changes
           if git remote get-url origin >/dev/null 2>&1; then
             echo "📥 Pulling latest changes..."
             git fetch origin
-            git checkout ${{ needs.initialize.outputs.maintenance-branch }} || git checkout -b ${{ needs.initialize.outputs.maintenance-branch }} origin/${{ needs.initialize.outputs.maintenance-branch }}
-            git pull origin ${{ needs.initialize.outputs.maintenance-branch }}
+            git checkout main
+            git pull origin main
             
             # Update dependencies
             echo "📦 Updating dependencies..."
@@ -413,16 +410,16 @@ jobs:
             exit 1
           fi
           EOF
-          
+
           chmod +x .github/sync-local.sh
-          
+
           if [ "$DRY_RUN" = "false" ]; then
             # Commit sync script
             git config user.name "AutoDev-AI Sync Bot"
             git config user.email "sync@autodev-ai.github.io"
             git add .github/sync-local.sh
             git commit -m "🔄 Add local sync script for maintenance pipeline" || true
-            git push origin ${{ needs.initialize.outputs.maintenance-branch }}
+            git push origin main
             
             echo "sync-triggered=true" >> $GITHUB_OUTPUT
           else
@@ -430,87 +427,9 @@ jobs:
             echo "sync-triggered=false" >> $GITHUB_OUTPUT
           fi
 
-  execute-roadmap:
-    name: 📋 Execute Roadmap Tasks
-    needs: [initialize, sync-local]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    if: always() && !cancelled()
-    outputs:
-      tasks-executed: ${{ steps.roadmap.outputs.tasks-executed }}
-      tasks-failed: ${{ steps.roadmap.outputs.tasks-failed }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.initialize.outputs.maintenance-branch }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Execute automated roadmap tasks
-        id: roadmap
-        run: |
-          DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-          EXECUTED=0
-          FAILED=0
-          
-          echo "📋 Executing automated roadmap tasks..."
-          
-          # Read roadmap and identify automatable tasks
-          if [ -f "docs/roadmap.md" ]; then
-            echo "📖 Found roadmap file"
-            
-            # Example: Update documentation
-            if grep -q "documentation" docs/roadmap.md; then
-              echo "📚 Updating documentation..."
-              if [ "$DRY_RUN" = "false" ]; then
-                # Generate API documentation
-                npm run typecheck && echo "✅ Documentation check passed" || ((FAILED++))
-                EXECUTED=$((EXECUTED + 1))
-              else
-                echo "🔍 DRY RUN - Would update documentation"
-                EXECUTED=$((EXECUTED + 1))
-              fi
-            fi
-            
-            # Example: Run automated tests
-            if grep -q "test.*coverage" docs/roadmap.md; then
-              echo "🧪 Running test coverage check..."
-              if [ "$DRY_RUN" = "false" ]; then
-                npm test -- --run --coverage || ((FAILED++))
-                EXECUTED=$((EXECUTED + 1))
-              else
-                echo "🔍 DRY RUN - Would run tests"
-                EXECUTED=$((EXECUTED + 1))
-              fi
-            fi
-            
-            # Example: Performance optimization
-            if grep -q "performance" docs/roadmap.md; then
-              echo "⚡ Running performance checks..."
-              if [ "$DRY_RUN" = "false" ]; then
-                npm run benchmark || ((FAILED++))
-                EXECUTED=$((EXECUTED + 1))
-              else
-                echo "🔍 DRY RUN - Would run performance checks"
-                EXECUTED=$((EXECUTED + 1))
-              fi
-            fi
-          else
-            echo "❌ No roadmap file found"
-            FAILED=$((FAILED + 1))
-          fi
-          
-          echo "tasks-executed=${EXECUTED}" >> $GITHUB_OUTPUT
-          echo "tasks-failed=${FAILED}" >> $GITHUB_OUTPUT
-
   rollback-check:
     name: 🔄 Rollback Mechanism
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local, execute-roadmap]
+    needs: [initialize, merge-dependabot-prs, security-scan, sync-local]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: failure()
@@ -527,14 +446,10 @@ jobs:
         id: rollback
         run: |
           echo "🚨 Pipeline failure detected - initiating rollback..."
-          
-          # Reset to main branch
-          git checkout main
-          git reset --hard HEAD
-          
-          # Delete maintenance branch
-          git push origin --delete ${{ needs.initialize.outputs.maintenance-branch }} || true
-          
+
+          # Already on main branch - no rollback needed for branch-less workflow
+          echo "✅ No rollback required - working directly on main branch"
+
           # Create rollback issue
           echo "rollback-performed=true" >> $GITHUB_OUTPUT
           echo "✅ Rollback completed successfully"
@@ -546,7 +461,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            
+
             await github.rest.issues.create({
               owner,
               repo,
@@ -556,7 +471,6 @@ jobs:
               The daily maintenance pipeline failed and an automatic rollback was performed.
               
               **Failed Run:** [${context.runNumber}](${runUrl})
-              **Branch Deleted:** \`${{ needs.initialize.outputs.maintenance-branch }}\`
               **Rollback Time:** ${new Date().toISOString()}
               
               ### Action Required
@@ -569,7 +483,7 @@ jobs:
 
   status-dashboard:
     name: 📊 Update Status Dashboard
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local, execute-roadmap]
+    needs: [initialize, merge-dependabot-prs, security-scan, sync-local]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: always()
@@ -577,13 +491,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          ref: ${{ needs.initialize.outputs.maintenance-branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate dashboard data
         run: |
           mkdir -p docs/dashboard
-          
+
           cat > docs/dashboard/maintenance-status.json << EOF
           {
             "timestamp": "${{ needs.initialize.outputs.timestamp }}",
@@ -601,10 +514,6 @@ jobs:
               },
               "sync": {
                 "triggered": ${{ needs.sync-local.outputs.sync-triggered || false }}
-              },
-              "roadmap": {
-                "tasksExecuted": ${{ needs.execute-roadmap.outputs.tasks-executed || 0 }},
-                "tasksFailed": ${{ needs.execute-roadmap.outputs.tasks-failed || 0 }}
               }
             }
           }
@@ -686,7 +595,6 @@ jobs:
                           document.getElementById('lastRun').textContent = new Date(data.timestamp).toLocaleString();
                           document.getElementById('mergedPRs').textContent = data.summary.dependabotPRs.merged;
                           document.getElementById('vulnFixed').textContent = data.summary.security.fixesApplied;
-                          document.getElementById('tasksCompleted').textContent = data.summary.roadmap.tasksExecuted;
                       })
                       .catch(error => {
                           console.error('Error loading dashboard data:', error);
@@ -702,21 +610,21 @@ jobs:
         run: |
           git config user.name "AutoDev-AI Dashboard Bot"
           git config user.email "dashboard@autodev-ai.github.io"
-          
+
           git add docs/dashboard/
           git commit -m "📊 Update maintenance dashboard
-          
+
           - Generated dashboard for run ${{ needs.initialize.outputs.run-id }}
           - Updated metrics and status
           - Timestamp: ${{ needs.initialize.outputs.timestamp }}
-          
+
           Pipeline: ${{ github.run_number }}" || true
-          
-          git push origin ${{ needs.initialize.outputs.maintenance-branch }}
+
+          git push origin main
 
   notifications:
     name: 📢 Send Notifications
-    needs: [initialize, merge-dependabot-prs, security-scan, sync-local, execute-roadmap, status-dashboard]
+    needs: [initialize, merge-dependabot-prs, security-scan, sync-local, status-dashboard]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
@@ -727,9 +635,8 @@ jobs:
           STATUS="${{ job.status }}"
           MERGED_PRS="${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }}"
           SECURITY_FIXES="${{ needs.security-scan.outputs.fixes-applied || 0 }}"
-          ROADMAP_TASKS="${{ needs.execute-roadmap.outputs.tasks-executed || 0 }}"
           DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-          
+
           if [ "$DRY_RUN" = "true" ]; then
             STATUS_EMOJI="🔍"
             STATUS_TEXT="DRY RUN COMPLETED"
@@ -740,7 +647,7 @@ jobs:
             STATUS_EMOJI="❌"
             STATUS_TEXT="COMPLETED WITH ISSUES"
           fi
-          
+
           echo "status-emoji=${STATUS_EMOJI}" >> $GITHUB_OUTPUT
           echo "status-text=${STATUS_TEXT}" >> $GITHUB_OUTPUT
 
@@ -802,7 +709,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            
+
             // Find the maintenance issue
             const issues = await github.rest.issues.listForRepo({
               owner,
@@ -813,7 +720,7 @@ jobs:
               direction: 'desc',
               per_page: 1
             });
-            
+
             if (issues.data.length > 0) {
               const issue = issues.data[0];
               const statusEmoji = '${{ steps.prepare.outputs.status-emoji }}';
@@ -830,8 +737,7 @@ jobs:
               ### Final Results
               - **Dependabot PRs Merged:** ${{ needs.merge-dependabot-prs.outputs.merged-count || 0 }}
               - **Security Fixes Applied:** ${{ needs.security-scan.outputs.fixes-applied || 0 }}
-              - **Roadmap Tasks Executed:** ${{ needs.execute-roadmap.outputs.tasks-executed || 0 }}
-              - **Mode:** ${{ needs.initialize.outputs.dry-run == 'true' && 'DRY RUN' || 'LIVE' }}
+              - **Mode:** ${{ needs.initialize.outputs.dry-run == 'true' && 'DRY RUN' || 'LIVE' }
               
               ### Links
               - [📊 Dashboard](./docs/dashboard/maintenance-dashboard.html)
@@ -857,15 +763,15 @@ jobs:
       - name: Cleanup maintenance branch
         run: |
           echo "🧹 Cleaning up maintenance branch..."
-          
+
           # Note: In a real scenario, you might want to keep the branch for a while
           # or merge it back to main if all checks pass
-          
+
           DRY_RUN="${{ needs.initialize.outputs.dry-run }}"
-          
+
           if [ "$DRY_RUN" = "false" ]; then
-            echo "✅ Maintenance branch will be preserved for 24 hours"
-            echo "🔗 Branch: ${{ needs.initialize.outputs.maintenance-branch }}"
+            echo "✅ Maintenance completed on main branch"
+            echo "🔗 All changes committed directly to main"
           else
             echo "🔍 DRY RUN - No cleanup needed"
           fi
