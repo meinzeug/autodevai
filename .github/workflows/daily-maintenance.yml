@@ -43,7 +43,7 @@ jobs:
       run-id: ${{ steps.setup.outputs.run-id }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -69,7 +69,7 @@ jobs:
           echo "🔄 Run ID: ${GITHUB_RUN_ID}"
 
       - name: Create maintenance issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -107,13 +107,13 @@ jobs:
       failed-count: ${{ steps.merge.outputs.failed-count }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get Dependabot PRs
         id: get-prs
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -135,7 +135,7 @@ jobs:
 
       - name: Analyze and merge safe PRs
         id: merge
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const dependabotPRs = ${{ steps.get-prs.outputs.result }};
@@ -247,13 +247,13 @@ jobs:
       fixes-applied: ${{ steps.fix.outputs.fixes-applied }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.initialize.outputs.maintenance-branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -378,7 +378,7 @@ jobs:
       sync-triggered: ${{ steps.trigger.outputs.sync-triggered }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.initialize.outputs.maintenance-branch }}
 
@@ -441,12 +441,12 @@ jobs:
       tasks-failed: ${{ steps.roadmap.outputs.tasks-failed }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.initialize.outputs.maintenance-branch }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -518,7 +518,7 @@ jobs:
       rollback-performed: ${{ steps.rollback.outputs.rollback-performed }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -541,7 +541,7 @@ jobs:
 
       - name: Create rollback issue
         if: steps.rollback.outputs.rollback-performed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -575,7 +575,7 @@ jobs:
     if: always()
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.initialize.outputs.maintenance-branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -797,7 +797,7 @@ jobs:
             ${{ env.NOTIFICATION_WEBHOOK }}
 
       - name: Update maintenance issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
