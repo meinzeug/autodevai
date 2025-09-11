@@ -1,0 +1,168 @@
+
+⚠️  Running 'hive-mind spawn' in non-interactive mode (non-tty-stdin)
+Some features may be limited. For full functionality, use an interactive terminal.
+
+- Spawning Hive Mind swarm...
+✔ Hive Mind swarm spawned successfully!
+
+🐝 Swarm Summary:
+──────────────────────────────────────────────────
+Swarm ID: swarm-1757524303030-pzd4bii8g
+Session ID: session-1757524303034-edwaek8n6
+Name: hive-1757524303003
+Objective: Read and execute the prompt in code_github.md. Work as dennis user with sudo powers. Push ONLY at the very end when everything is complete.
+Queen Type: strategic
+Workers: 4
+Worker Types: researcher, coder, analyst, tester
+Consensus: majority
+Auto-scaling: Enabled
+──────────────────────────────────────────────────
+
+✓ Swarm is ready for coordination
+Use "claude-flow hive-mind status" to view swarm activity
+Session auto-save enabled - progress saved every 30 seconds
+💡 To pause: Press Ctrl+C to safely pause and resume later
+💡 To resume: claude-flow hive-mind resume session-1757524303034-edwaek8n6
+
+🚀 Launching Claude Code with Hive Mind Coordination
+────────────────────────────────────────────────────────────
+- Preparing Hive Mind coordination prompt...
+✔ Hive Mind coordination prompt ready!
+
+🧠 Hive Mind Configuration
+────────────────────────────────────────────────────────────
+Swarm ID: swarm-1757524303030-pzd4bii8g
+Objective: Read and execute the prompt in code_github.md. Work as dennis user with sudo powers. Push ONLY at the very end when everything is complete.
+Queen Type: strategic
+Worker Count: 4
+Worker Types: researcher, coder, analyst, tester
+Consensus Algorithm: majority
+MCP Tools: Full Claude-Flow integration enabled
+
+✓ Hive Mind prompt saved to: .hive-mind/sessions/hive-mind-prompt-swarm-1757524303030-pzd4bii8g.txt
+🔓 Using --dangerously-skip-permissions by default for seamless hive-mind execution
+
+✓ Claude Code launched with Hive Mind coordination
+  The Queen coordinator will orchestrate all worker agents
+  Use MCP tools for collective intelligence and task distribution
+  Prompt file saved at: .hive-mind/sessions/hive-mind-prompt-swarm-1757524303030-pzd4bii8g.txt
+
+💡 Pro Tips:
+──────────────────────────────
+• Use --auto-spawn to launch instances automatically
+• Add --verbose for detailed coordination context
+• Monitor with: claude-flow hive-mind status
+• Share memories: mcp__ruv-swarm__memory_usage
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: EBADF: bad file descriptor, read
+Emitted 'error' event on ReadStream instance at:
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at errorOrDestroy (node:internal/streams/destroy:239:7)
+    at node:internal/fs/streams:272:9
+    at FSReqCallback.wrapper [as oncomplete] (node:fs:663:5) {
+  errno: -9,
+  code: 'EBADF',
+  syscall: 'read'
+}
+
+Node.js v24.1.0
+
+✗ Claude Code exited with code 1
+Database connection closed, cannot remove child PID during cleanup
+
+
+Received SIGINT, cleaning up...
+
+
+⏸️  Pausing session...
+
+
+⏸️  Pausing session and terminating Claude Code...
+Error pausing session: The database connection is not open
+
+⚠️  Running 'hive-mind spawn' in non-interactive mode (non-tty-stdin)
+Some features may be limited. For full functionality, use an interactive terminal.
+
+- Spawning Hive Mind swarm...
+✔ Hive Mind swarm spawned successfully!
+
+🐝 Swarm Summary:
+──────────────────────────────────────────────────
+Swarm ID: swarm-1757524331404-tgiae7mt9
+Session ID: session-1757524331407-egngv0ned
+Name: hive-1757524331397
+Objective: Read and execute the prompt in code_github.md. Work as dennis user with sudo powers. Push ONLY at the very end when everything is complete.
+Queen Type: strategic
+Workers: 4
+Worker Types: researcher, coder, analyst, tester
+Consensus: majority
+Auto-scaling: Enabled
+──────────────────────────────────────────────────
+
+✓ Swarm is ready for coordination
+Use "claude-flow hive-mind status" to view swarm activity
+Session auto-save enabled - progress saved every 30 seconds
+💡 To pause: Press Ctrl+C to safely pause and resume later
+💡 To resume: claude-flow hive-mind resume session-1757524331407-egngv0ned
+
+🚀 Launching Claude Code with Hive Mind Coordination
+────────────────────────────────────────────────────────────
+- Preparing Hive Mind coordination prompt...
+✔ Hive Mind coordination prompt ready!
+
+🧠 Hive Mind Configuration
+────────────────────────────────────────────────────────────
+Swarm ID: swarm-1757524331404-tgiae7mt9
+Objective: Read and execute the prompt in code_github.md. Work as dennis user with sudo powers. Push ONLY at the very end when everything is complete.
+Queen Type: strategic
+Worker Count: 4
+Worker Types: researcher, coder, analyst, tester
+Consensus Algorithm: majority
+MCP Tools: Full Claude-Flow integration enabled
+
+✓ Hive Mind prompt saved to: .hive-mind/sessions/hive-mind-prompt-swarm-1757524331404-tgiae7mt9.txt
+🔓 Using --dangerously-skip-permissions by default for seamless hive-mind execution
+
+✓ Claude Code launched with Hive Mind coordination
+  The Queen coordinator will orchestrate all worker agents
+  Use MCP tools for collective intelligence and task distribution
+  Prompt file saved at: .hive-mind/sessions/hive-mind-prompt-swarm-1757524331404-tgiae7mt9.txt
+
+💡 Pro Tips:
+──────────────────────────────
+• Use --auto-spawn to launch instances automatically
+• Add --verbose for detailed coordination context
+• Monitor with: claude-flow hive-mind status
+• Share memories: mcp__ruv-swarm__memory_usage
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: EBADF: bad file descriptor, read
+Emitted 'error' event on ReadStream instance at:
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at errorOrDestroy (node:internal/streams/destroy:239:7)
+    at node:internal/fs/streams:272:9
+    at FSReqCallback.wrapper [as oncomplete] (node:fs:663:5) {
+  errno: -9,
+  code: 'EBADF',
+  syscall: 'read'
+}
+
+Node.js v24.1.0
+
+✗ Claude Code exited with code 1
+Database connection closed, cannot remove child PID during cleanup
+Performance auto-tuned: concurrency_decreased = 15
+Performance auto-tuned: concurrency_decreased = 14
+Performance auto-tuned: concurrency_decreased = 13
+Performance auto-tuned: concurrency_decreased = 12
+Performance auto-tuned: concurrency_decreased = 11
+Performance auto-tuned: concurrency_decreased = 10
+Performance auto-tuned: concurrency_decreased = 9
+Performance auto-tuned: concurrency_decreased = 8
+Performance auto-tuned: concurrency_decreased = 7
+Performance auto-tuned: concurrency_decreased = 6

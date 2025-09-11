@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  neural-bridge-build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+      args:
+        - RUST_VERSION=1.75
+    container_name: neural-bridge-builder
+    volumes:
+      - .:/workspace:delegated
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    working_dir: /workspace
+    environment:
+      - CARGO_TARGET_DIR=/workspace/target
+      - RUST_BACKTRACE=1
+      - DOCKER_PORT_RANGE_START=50000
+      - DOCKER_PORT_RANGE_END=50100
+    ports:
+      - "50000-50100:50000-50100"  # Docker port range compatibility
+    networks:
+      - neural-bridge-network
+    command: |
+      bash -c "
+        echo '🚀 Starting Docker-based build process...'
+        echo '🔌 Docker port range: 50000-50100'
+        ./before-build.sh
+        cargo build --release --target x86_64-unknown-linux-gnu
+        cargo build --release --target x86_64-pc-windows-gnu
+        echo '✅ Multi-target build completed'
+      "
+
+  # Cross-compilation service for Windows
+  cross-compile-windows:
+    image: ghcr.io/cross-rs/cross:x86_64-pc-windows-gnu
+    volumes:
+      - .:/project:delegated
+      - cargo-cache:/usr/local/cargo/registry
+    working_dir: /project
+    environment:
+      - CROSS_CONTAINER_IN_CONTAINER=true
+    command: |
+      bash -c "
+        echo '🏗️ Cross-compiling for Windows...'
+        cross build --release --target x86_64-pc-windows-gnu
+        echo '✅ Windows build completed'
+      "
+
+volumes:
+  cargo-cache:
+    driver: local
+  target-cache:
+    driver: local
+
+networks:
+  neural-bridge-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

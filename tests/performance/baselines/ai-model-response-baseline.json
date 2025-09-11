@@ -1,0 +1,103 @@
+{
+  "timestamp": 1757502990951,
+  "testSuite": "ai-model-response",
+  "measurements": [
+    {
+      "iteration": 0,
+      "responseTime": 172.3565329999999,
+      "error": "Network Error",
+      "timestamp": 1757502989892,
+      "success": false
+    },
+    {
+      "iteration": 1,
+      "responseTime": 9.200669000000062,
+      "error": "Network Error",
+      "timestamp": 1757502990002,
+      "success": false
+    },
+    {
+      "iteration": 2,
+      "responseTime": 6.017466000000013,
+      "error": "Network Error",
+      "timestamp": 1757502990108,
+      "success": false
+    },
+    {
+      "iteration": 3,
+      "responseTime": 5.029509999999846,
+      "error": "Network Error",
+      "timestamp": 1757502990212,
+      "success": false
+    },
+    {
+      "iteration": 4,
+      "responseTime": 6.0095430000001215,
+      "error": "Network Error",
+      "timestamp": 1757502990319,
+      "success": false
+    },
+    {
+      "iteration": 5,
+      "responseTime": 5.2721449999999095,
+      "error": "Network Error",
+      "timestamp": 1757502990425,
+      "success": false
+    },
+    {
+      "iteration": 6,
+      "responseTime": 4.94400799999994,
+      "error": "Network Error",
+      "timestamp": 1757502990531,
+      "success": false
+    },
+    {
+      "iteration": 7,
+      "responseTime": 7.269317000000228,
+      "error": "Network Error",
+      "timestamp": 1757502990638,
+      "success": false
+    },
+    {
+      "iteration": 8,
+      "responseTime": 6.054378999999699,
+      "error": "Network Error",
+      "timestamp": 1757502990743,
+      "success": false
+    },
+    {
+      "iteration": 9,
+      "responseTime": 5.411687000000256,
+      "error": "Network Error",
+      "timestamp": 1757502990849,
+      "success": false
+    }
+  ],
+  "statistics": {
+    "count": 10,
+    "responseTime": {
+      "min": 4.94400799999994,
+      "max": 172.3565329999999,
+      "average": 22.756525699999997,
+      "median": 6.017466000000013,
+      "p95": 172.3565329999999,
+      "p99": 172.3565329999999
+    },
+    "errorRate": 100,
+    "throughput": 58.01926869810038,
+    "memoryUsage": {
+      "min": 0,
+      "max": 0,
+      "average": 0,
+      "median": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "successRate": 0
+  },
+  "environment": {
+    "nodeVersion": "v24.1.0",
+    "platform": "linux",
+    "arch": "x64"
+  }
+}

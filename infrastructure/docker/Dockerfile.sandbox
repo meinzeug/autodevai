@@ -1,0 +1,66 @@
+# Sandbox Manager Dockerfile
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    docker-cli \
+    docker-compose \
+    python3 \
+    python3-dev \
+    py3-pip \
+    git \
+    curl \
+    bash \
+    jq
+
+# Install Python packages for sandbox environments
+RUN pip3 install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    pydantic \
+    redis \
+    psycopg2-binary \
+    docker
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm ci --only=production
+
+# Copy sandbox manager source
+COPY src/sandbox-manager ./src
+COPY src/shared ./shared
+
+# Create sandbox configurations directory
+RUN mkdir -p /etc/sandboxes/templates
+
+# Copy sandbox templates
+COPY infrastructure/configs/sandboxes/ /etc/sandboxes/
+
+# Create non-root user
+RUN addgroup --system --gid 1001 sandbox
+RUN adduser --system --uid 1001 --ingroup sandbox sandbox
+
+# Give sandbox user docker permissions
+RUN adduser sandbox docker
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/temp
+RUN chown -R sandbox:sandbox /app
+
+# Switch to sandbox user
+USER sandbox
+
+# Expose port range for sandboxes
+EXPOSE 50010-50089
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:50010/health || exit 1
+
+# Start the sandbox manager
+CMD ["node", "src/sandbox-manager.js"]

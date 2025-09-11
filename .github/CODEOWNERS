@@ -1,0 +1,54 @@
+# Global owners
+* @autodev-ai/core-team @autodev-ai/maintainers
+
+# GitHub workflows and CI/CD
+/.github/ @autodev-ai/devops-team @autodev-ai/maintainers
+
+# Frontend code
+/src/ @autodev-ai/frontend-team @autodev-ai/core-team
+/public/ @autodev-ai/frontend-team
+*.tsx @autodev-ai/frontend-team
+*.ts @autodev-ai/frontend-team @autodev-ai/core-team
+*.css @autodev-ai/frontend-team @autodev-ai/design-team
+
+# Backend/Rust code
+/src-tauri/ @autodev-ai/rust-team @autodev-ai/backend-team
+*.rs @autodev-ai/rust-team @autodev-ai/backend-team
+Cargo.toml @autodev-ai/rust-team @autodev-ai/backend-team
+Cargo.lock @autodev-ai/rust-team @autodev-ai/backend-team
+
+# Build and configuration files
+package.json @autodev-ai/core-team @autodev-ai/maintainers
+package-lock.json @autodev-ai/core-team @autodev-ai/maintainers
+tsconfig.json @autodev-ai/frontend-team @autodev-ai/core-team
+vite.config.ts @autodev-ai/frontend-team @autodev-ai/core-team
+tailwind.config.js @autodev-ai/frontend-team @autodev-ai/design-team
+postcss.config.js @autodev-ai/frontend-team
+
+# Docker and deployment
+/docker/ @autodev-ai/devops-team @autodev-ai/maintainers
+/k8s/ @autodev-ai/devops-team @autodev-ai/maintainers
+Dockerfile @autodev-ai/devops-team
+docker-compose*.yml @autodev-ai/devops-team
+
+# Documentation
+*.md @autodev-ai/docs-team @autodev-ai/maintainers
+/docs/ @autodev-ai/docs-team
+
+# Security and compliance
+SECURITY.md @autodev-ai/security-team @autodev-ai/maintainers
+.github/dependabot.yml @autodev-ai/security-team @autodev-ai/devops-team
+.github/workflows/security-scan.yml @autodev-ai/security-team @autodev-ai/devops-team
+
+# Testing
+/tests/ @autodev-ai/qa-team @autodev-ai/core-team
+*.test.* @autodev-ai/qa-team @autodev-ai/core-team
+*.spec.* @autodev-ai/qa-team @autodev-ai/core-team
+playwright.config.ts @autodev-ai/qa-team @autodev-ai/frontend-team
+
+# Claude-Flow integration
+/.claude-flow/ @autodev-ai/ai-team @autodev-ai/core-team
+starthive.sh @autodev-ai/ai-team @autodev-ai/devops-team
+
+# Environment and secrets
+.env.example @autodev-ai/devops-team @autodev-ai/security-team

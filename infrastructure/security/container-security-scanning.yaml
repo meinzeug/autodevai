@@ -1,0 +1,394 @@
+# Container Security Scanning Configuration for AutoDev-AI Platform
+# Implements comprehensive security scanning using multiple tools
+
+---
+# Trivy Security Scanner DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: trivy-scanner
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trivy-scanner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trivy-scanner
+        app.kubernetes.io/component: security-scanning
+    spec:
+      serviceAccountName: trivy-scanner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+      - name: trivy
+        image: aquasec/trivy:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 10001
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        args:
+        - server
+        - --listen=0.0.0.0:4954
+        - --cache-dir=/tmp/trivy/.cache
+        - --log-level=info
+        ports:
+        - name: trivy-server
+          containerPort: 4954
+        env:
+        - name: TRIVY_CACHE_DIR
+          value: /tmp/trivy/.cache
+        - name: TRIVY_DB_REPOSITORY
+          value: ghcr.io/aquasecurity/trivy-db
+        - name: TRIVY_JAVA_DB_REPOSITORY
+          value: ghcr.io/aquasecurity/trivy-java-db
+        volumeMounts:
+        - name: cache
+          mountPath: /tmp/trivy/.cache
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+          limits:
+            memory: 512Mi
+            cpu: 500m
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4954
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 4954
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: cache
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: tmp
+        emptyDir:
+          sizeLimit: 100Mi
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+
+---
+# Service Account for Trivy Scanner
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy-scanner
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+automountServiceAccountToken: true
+
+---
+# ClusterRole for Trivy Scanner
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy-scanner
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "replicationcontrollers"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["replicasets", "deployments", "daemonsets", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding for Trivy Scanner
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy-scanner
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy-scanner
+subjects:
+- kind: ServiceAccount
+  name: trivy-scanner
+  namespace: autodevai
+
+---
+# ConfigMap for Trivy Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trivy-config
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+data:
+  config.yaml: |
+    # Trivy configuration for container security scanning
+    cache:
+      redis:
+        addr: redis-service:6379
+        password: ""
+        db: 0
+    
+    vulnerability:
+      type:
+        - os
+        - library
+      
+    secret:
+      config: secret-config.yaml
+    
+    scan:
+      security-checks:
+        - vuln
+        - secret
+        - config
+    
+    report:
+      format: json
+      template: "@contrib/sarif.tpl"
+    
+    db:
+      repository: ghcr.io/aquasecurity/trivy-db
+      
+    java-db:
+      repository: ghcr.io/aquasecurity/trivy-java-db
+      
+    severity:
+      - UNKNOWN
+      - LOW
+      - MEDIUM
+      - HIGH
+      - CRITICAL
+      
+    ignore-unfixed: false
+    skip-update: false
+    skip-java-db-update: false
+    offline-scan: false
+    security-checks:
+      - vuln
+      - secret
+      - config
+    
+  secret-config.yaml: |
+    # Secret scanning patterns
+    rules:
+      - id: generic-api-key
+        description: Generic API Key
+        regex: (?i)(?:key|api[_-]?key|token|secret|password)\s*[=:]\s*["\']?([a-z0-9_-]{20,})["\']?
+        severity: HIGH
+        
+      - id: anthropic-api-key
+        description: Anthropic API Key
+        regex: sk-ant-[a-zA-Z0-9_-]{95}
+        severity: CRITICAL
+        
+      - id: openai-api-key
+        description: OpenAI API Key
+        regex: sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20}
+        severity: CRITICAL
+        
+      - id: jwt-token
+        description: JWT Token
+        regex: eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*
+        severity: HIGH
+        
+      - id: database-url
+        description: Database Connection URL
+        regex: (?i)(postgresql|mysql|mongodb)://[^\s"']+
+        severity: HIGH
+
+---
+# CronJob for Regular Security Scans
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trivy-security-scan
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: trivy-security-scan
+    app.kubernetes.io/component: security-scanning
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: trivy-scanner
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            fsGroup: 10001
+          restartPolicy: OnFailure
+          containers:
+          - name: trivy-scan
+            image: aquasec/trivy:latest
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 10001
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop: ["ALL"]
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting security scan for AutoDev-AI containers..."
+              
+              # Scan all container images in the namespace
+              kubectl get pods -n autodevai -o jsonpath='{.items[*].spec.containers[*].image}' | tr ' ' '\n' | sort -u | while read image; do
+                echo "Scanning image: $image"
+                trivy image --format json --output /tmp/scan-results/$image.json $image
+              done
+              
+              # Scan Kubernetes configuration
+              trivy k8s cluster --report summary --format table
+              
+              # Generate consolidated report
+              echo "Security scan completed. Results stored in /tmp/scan-results/"
+            
+            volumeMounts:
+            - name: scan-results
+              mountPath: /tmp/scan-results
+            - name: tmp
+              mountPath: /tmp
+            resources:
+              requests:
+                memory: 512Mi
+                cpu: 200m
+              limits:
+                memory: 1Gi
+                cpu: 500m
+          volumes:
+          - name: scan-results
+            emptyDir:
+              sizeLimit: 2Gi
+          - name: tmp
+            emptyDir:
+              sizeLimit: 100Mi
+
+---
+# Service for Trivy Scanner
+apiVersion: v1
+kind: Service
+metadata:
+  name: trivy-scanner-service
+  namespace: autodevai
+  labels:
+    app.kubernetes.io/name: trivy-scanner
+    app.kubernetes.io/component: security-scanning
+spec:
+  ports:
+  - port: 4954
+    targetPort: 4954
+    name: trivy-server
+  selector:
+    app.kubernetes.io/name: trivy-scanner
+
+---
+# Security Policy Validator using OPA Gatekeeper
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredsecuritycontext
+  labels:
+    app.kubernetes.io/name: gatekeeper-policy
+    app.kubernetes.io/component: security-policy
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredSecurityContext
+      validation:
+        type: object
+        properties:
+          runAsNonRoot:
+            type: boolean
+          readOnlyRootFilesystem:
+            type: boolean
+          allowPrivilegeEscalation:
+            type: boolean
+          requiredDropCapabilities:
+            type: array
+            items:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredsecuritycontext
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.runAsNonRoot
+          msg := sprintf("Container %v must set runAsNonRoot to true", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.readOnlyRootFilesystem
+          msg := sprintf("Container %v must set readOnlyRootFilesystem to true", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.allowPrivilegeEscalation
+          msg := sprintf("Container %v must set allowPrivilegeEscalation to false", [container.name])
+        }
+        
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          required := input.parameters.requiredDropCapabilities
+          provided := container.securityContext.capabilities.drop
+          missing := required[_]
+          not missing in provided
+          msg := sprintf("Container %v must drop capability %v", [container.name, missing])
+        }
+
+---
+# Constraint using the template
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredSecurityContext
+metadata:
+  name: must-have-security-context
+  labels:
+    app.kubernetes.io/name: gatekeeper-policy
+    app.kubernetes.io/component: security-policy
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "ReplicaSet", "DaemonSet", "StatefulSet"]
+    namespaces: ["autodevai", "autodev-staging", "autodev-production"]
+  parameters:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    requiredDropCapabilities: ["ALL"]

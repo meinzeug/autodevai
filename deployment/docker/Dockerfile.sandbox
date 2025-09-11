@@ -1,0 +1,56 @@
+# Dockerfile for AutoDev-AI Sandbox Manager
+FROM node:18-alpine AS base
+
+# Install Docker and system dependencies
+RUN apk add --no-cache \
+    docker \
+    docker-compose \
+    python3 \
+    make \
+    g++ \
+    curl \
+    wget \
+    git \
+    bash \
+    ca-certificates \
+    iptables \
+    socat
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy sandbox manager source
+COPY src/sandbox ./src/sandbox
+COPY src/utils ./src/utils
+COPY src/config ./src/config
+COPY scripts/sandbox-manager.js ./sandbox-manager.js
+
+# Create sandbox user
+RUN addgroup -g 1001 -S docker
+RUN adduser -S sandbox -u 1001 -G docker
+
+# Create necessary directories
+RUN mkdir -p /var/lib/sandboxes /app/logs
+RUN chown -R sandbox:docker /app /var/lib/sandboxes
+
+# Copy entrypoint
+COPY deployment/docker/sandbox-entrypoint.sh ./sandbox-entrypoint.sh
+RUN chmod +x ./sandbox-entrypoint.sh
+
+# Switch to sandbox user
+USER sandbox
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose sandbox port range
+EXPOSE 8080 50010-50090
+
+ENTRYPOINT ["./sandbox-entrypoint.sh"]

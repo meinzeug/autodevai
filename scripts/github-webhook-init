@@ -1,0 +1,92 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          github-webhook
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: GitHub Webhook Server for AutoDev-AI
+# Description:       Webhook server that receives GitHub events and triggers AI automation
+### END INIT INFO
+
+NAME="github-webhook"
+DAEMON="/usr/bin/node"
+DAEMON_ARGS="/home/dennis/autodevai/github-callback-server.js"
+PIDFILE="/var/run/$NAME.pid"
+USER="dennis"
+WORKDIR="/home/dennis/autodevai"
+LOGFILE="/tmp/github-callback-server.log"
+
+. /lib/lsb/init-functions
+
+start() {
+    log_daemon_msg "Starting $NAME"
+    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+        log_end_msg 1
+        echo "$NAME is already running"
+        return 1
+    fi
+    
+    cd "$WORKDIR"
+    start-stop-daemon --start --quiet --background \
+        --make-pidfile --pidfile "$PIDFILE" \
+        --chuid "$USER" --chdir "$WORKDIR" \
+        --startas /bin/bash -- -c "exec $DAEMON $DAEMON_ARGS >> $LOGFILE 2>&1"
+    
+    sleep 2
+    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+        log_end_msg 0
+        echo "$NAME started successfully"
+    else
+        log_end_msg 1
+        echo "Failed to start $NAME"
+        return 1
+    fi
+}
+
+stop() {
+    log_daemon_msg "Stopping $NAME"
+    if [ ! -f "$PIDFILE" ]; then
+        log_end_msg 1
+        echo "$NAME is not running"
+        return 1
+    fi
+    
+    start-stop-daemon --stop --quiet --pidfile "$PIDFILE" --retry=TERM/30/KILL/5
+    rm -f "$PIDFILE"
+    log_end_msg 0
+    echo "$NAME stopped"
+}
+
+status() {
+    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+        echo "$NAME is running (PID: $(cat $PIDFILE))"
+        curl -s http://localhost:19000/health 2>/dev/null | grep -q "alive" && echo "Health check: OK" || echo "Health check: FAILED"
+    else
+        echo "$NAME is not running"
+        return 3
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 2
+        start
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

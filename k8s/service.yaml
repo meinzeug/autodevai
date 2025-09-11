@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-gui-service
+  namespace: autodev-ai
+  labels:
+    app: autodev-ai
+    component: gui
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 50020
+    protocol: TCP
+    name: gui
+  - port: 443
+    targetPort: 50020
+    protocol: TCP
+    name: gui-tls
+  selector:
+    app: autodev-ai
+  loadBalancerSourceRanges:
+  - 0.0.0.0/0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-api-service
+  namespace: autodev-ai
+  labels:
+    app: autodev-ai
+    component: api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 50021
+    targetPort: 50021
+    protocol: TCP
+    name: api
+  selector:
+    app: autodev-ai
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-sandbox-service
+  namespace: autodev-ai
+  labels:
+    app: autodev-ai
+    component: sandbox
+spec:
+  type: ClusterIP
+  ports:
+  - port: 50022
+    targetPort: 50022
+    protocol: TCP
+    name: sandbox
+  selector:
+    app: autodev-ai
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-metrics-service
+  namespace: autodev-ai
+  labels:
+    app: autodev-ai
+    component: metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    app: autodev-ai
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autodev-ai-headless
+  namespace: autodev-ai
+  labels:
+    app: autodev-ai
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 50020
+    name: gui
+  - port: 50021
+    name: api
+  - port: 50022
+    name: sandbox
+  selector:
+    app: autodev-ai

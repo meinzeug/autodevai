@@ -1,0 +1,40 @@
+{
+  "name": "AutoDev-AI Neural Bridge",
+  "identifier": "com.meinzeug.autodev-ai",
+  "version": "0.1.0",
+  "targets": ["deb", "appimage", "msi", "dmg", "nsis"],
+  "debian": {
+    "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libssl3"],
+    "section": "utils",
+    "priority": "optional"
+  },
+  "appimage": {
+    "bundleMediaFramework": true,
+    "libs": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+  },
+  "windows": {
+    "certificateThumbprint": null,
+    "digestAlgorithm": "sha256",
+    "timestampUrl": "http://timestamp.digicert.com",
+    "installMode": "passive",
+    "languages": ["en-US", "de-DE"],
+    "nsis": {
+      "installerIcon": "icons/icon.ico",
+      "headerImage": "icons/header.bmp",
+      "sidebarImage": "icons/sidebar.bmp"
+    }
+  },
+  "macOS": {
+    "minimumSystemVersion": "10.15",
+    "hardenedRuntime": true,
+    "entitlements": "entitlements.plist",
+    "providerShortName": "AutoDevAI",
+    "signingIdentity": null
+  },
+  "resources": ["icons/*", "README.md"],
+  "externalBin": [],
+  "copyright": "Copyright (c) 2025 AutoDev-AI",
+  "category": "DeveloperTool",
+  "shortDescription": "Neural Bridge Platform for AI orchestration",
+  "longDescription": "Advanced neural bridge platform for orchestrating Claude-Flow and OpenAI Codex with Docker containers and port management (50000-50100)."
+}

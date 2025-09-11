@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validate commit message with commitlint
+npx --no-install commitlint --edit "$1"
+
+# Store commit info in Claude Flow memory
+npx claude-flow@alpha hooks post-commit --message "$(cat $1)"

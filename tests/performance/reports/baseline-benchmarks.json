@@ -1,0 +1,160 @@
+{
+  "timestamp": 1757512269496,
+  "benchmarks": [
+    {
+      "name": "Text Generation - Small Prompt",
+      "duration": 110.15987500000006,
+      "error": "Network Error",
+      "score": 0,
+      "timestamp": 1757512258484,
+      "status": "failed"
+    },
+    {
+      "name": "Text Generation - Large Prompt",
+      "duration": 10.19982200000004,
+      "error": "Network Error",
+      "score": 0,
+      "timestamp": 1757512258495,
+      "status": "failed"
+    },
+    {
+      "name": "Code Analysis Performance",
+      "duration": 10.032735000000002,
+      "error": "Network Error",
+      "score": 0,
+      "timestamp": 1757512258506,
+      "status": "failed"
+    },
+    {
+      "name": "CPU Intensive Operations",
+      "duration": 60.677614000000176,
+      "result": {
+        "duration": 60.388676999999916,
+        "iterations": 1000000,
+        "operationsPerSecond": 16559395.729103344,
+        "result": "42.81",
+        "value": 16559395.729103344
+      },
+      "score": 0,
+      "timestamp": 1757512258569,
+      "status": "completed"
+    },
+    {
+      "name": "Memory Allocation Performance",
+      "duration": 115.0258060000001,
+      "result": {
+        "allocationDuration": 114.25031499999977,
+        "cleanupDuration": 0.079138999999941,
+        "memoryAllocated": 78920104,
+        "arraysCreated": 10000,
+        "allocationRate": 87527.11097558042,
+        "value": 114.25031499999977
+      },
+      "score": 100,
+      "timestamp": 1757512258684,
+      "status": "completed"
+    },
+    {
+      "name": "File I/O Performance",
+      "duration": 12.563634999999977,
+      "result": {
+        "writeDuration": 4.8189870000001065,
+        "readDuration": 3.646299999999883,
+        "totalDuration": 8.46528699999999,
+        "fileCount": 100,
+        "throughput": 24192918.680725206,
+        "writeRate": 20751.249173321656,
+        "readRate": 27425.061020761652,
+        "value": 8.46528699999999
+      },
+      "score": 16.93057399999998,
+      "timestamp": 1757512258697,
+      "status": "completed"
+    },
+    {
+      "name": "Network Latency Test",
+      "duration": 1098.3485839999998,
+      "result": {
+        "averageLatency": null,
+        "minLatency": null,
+        "maxLatency": null,
+        "successfulPings": 0,
+        "totalPings": 10,
+        "successRate": 0,
+        "value": null
+      },
+      "score": 0,
+      "timestamp": 1757512259797,
+      "status": "completed"
+    },
+    {
+      "name": "Network Throughput Test",
+      "duration": 787.756754,
+      "result": {
+        "duration": 787.420126,
+        "totalRequests": 200,
+        "successfulRequests": 0,
+        "failedRequests": 200,
+        "requestsPerSecond": 253.99401589590562,
+        "successRate": 0,
+        "value": 253.99401589590562
+      },
+      "score": 100,
+      "timestamp": 1757512260585,
+      "status": "completed"
+    },
+    {
+      "name": "Container Creation Speed",
+      "duration": 742.5130280000003,
+      "result": {
+        "averageCreationTime": 63.0888477999999,
+        "minCreationTime": 30.47027900000012,
+        "maxCreationTime": 295.77909199999976,
+        "successfulCreations": 10,
+        "totalAttempts": 10,
+        "successRate": 100,
+        "value": 63.0888477999999
+      },
+      "score": 63.0888477999999,
+      "timestamp": 1757512261631,
+      "status": "completed"
+    },
+    {
+      "name": "Container Startup Performance",
+      "duration": 2857.53917,
+      "result": {
+        "averageStartupTime": 275.2293522,
+        "minStartupTime": 165.20292100000006,
+        "maxStartupTime": 598.8153979999997,
+        "successfulStartups": 5,
+        "totalAttempts": 5,
+        "successRate": 100,
+        "value": 275.2293522
+      },
+      "score": 100,
+      "timestamp": 1757512264489,
+      "status": "completed"
+    },
+    {
+      "name": "Memory Efficiency Test",
+      "duration": 44.15112700000009,
+      "result": {
+        "memoryIncrease": 27916584,
+        "memoryRecovered": -600,
+        "recoveryRate": -0.0021492600957194476,
+        "itemsCreated": 150000,
+        "memoryPerItem": 186.11056,
+        "memoryEfficiency": "good",
+        "value": 186.11056
+      },
+      "score": 100,
+      "timestamp": 1757512264534,
+      "status": "completed"
+    }
+  ],
+  "environment": {
+    "nodeVersion": "v24.1.0",
+    "platform": "linux",
+    "arch": "x64"
+  }
+}

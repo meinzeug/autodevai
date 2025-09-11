@@ -1,0 +1,350 @@
+# Vector configuration for AutoDev-AI log aggregation and processing
+# Collects logs from all containers and processes them for monitoring
+
+# =================================
+# GLOBAL CONFIGURATION
+# =================================
+data_dir = "/var/lib/vector"
+log_schema.host_key = "host"
+log_schema.message_key = "message"
+log_schema.timestamp_key = "@timestamp"
+
+# =================================
+# LOG SOURCES
+# =================================
+
+# Docker container logs
+[sources.docker_logs]
+type = "docker_logs"
+include_containers = [
+  "autodev-ai-platform",
+  "autodev-ai-postgres", 
+  "autodev-ai-redis",
+  "autodev-ai-grafana",
+  "autodev-ai-prometheus",
+  "autodev-ai-nginx"
+]
+exclude_containers = [
+  "autodev-ai-vector"  # Don't collect our own logs
+]
+auto_partial_merge = true
+partial_event_marker_field = "_partial"
+
+# AutoDev-AI application logs
+[sources.autodev_app_logs]
+type = "file"
+include = ["/app/logs/*.log", "/app/logs/**/*.log"]
+exclude = ["/app/logs/vector.log"]
+read_from = "beginning"
+fingerprint.strategy = "device_and_inode"
+
+[sources.autodev_app_logs.multiline]
+start_pattern = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+mode = "halt_before"
+condition_pattern = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+timeout_ms = 1000
+
+# Nginx access logs
+[sources.nginx_access]
+type = "file"
+include = ["/var/log/nginx/access.log"]
+read_from = "beginning"
+
+# Nginx error logs  
+[sources.nginx_error]
+type = "file"
+include = ["/var/log/nginx/error.log"]
+read_from = "beginning"
+
+# System metrics from host
+[sources.host_metrics]
+type = "host_metrics"
+collectors = ["cpu", "memory", "disk", "network", "filesystem"]
+scrape_interval_secs = 30
+
+# =================================
+# LOG TRANSFORMS
+# =================================
+
+# Parse JSON logs from AutoDev-AI application
+[transforms.parse_autodev_json]
+type = "remap"
+inputs = ["autodev_app_logs"]
+source = '''
+  if is_string(.message) {
+    parsed = parse_json(.message) ?? {}
+    . = merge(., parsed)
+  }
+  
+  # Add metadata
+  .source_type = "autodev_application"
+  .environment = get_env_var("NODE_ENV") ?? "production"
+  .service = "autodev-ai"
+'''
+
+# Parse Nginx access logs
+[transforms.parse_nginx_access]
+type = "remap"
+inputs = ["nginx_access"]
+source = '''
+  # Parse nginx access log format
+  parsed = parse_regex(.message, r'^(?P<remote_addr>\S+) - (?P<remote_user>\S+) \[(?P<time_local>[^\]]+)\] "(?P<request>[^"]*)" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)" "(?P<http_x_forwarded_for>[^"]*)" rt=(?P<request_time>\S+) uct="(?P<upstream_connect_time>[^"]*)" uht="(?P<upstream_header_time>[^"]*)" urt="(?P<upstream_response_time>[^"]*)"') ?? {}
+  
+  . = merge(., parsed)
+  
+  # Convert numeric fields
+  .status = to_int(.status) ?? null
+  .body_bytes_sent = to_int(.body_bytes_sent) ?? null
+  .request_time = to_float(.request_time) ?? null
+  
+  # Add metadata
+  .source_type = "nginx_access"
+  .service = "nginx"
+'''
+
+# Parse Docker container logs
+[transforms.parse_docker_logs]
+type = "remap"
+inputs = ["docker_logs"]
+source = '''
+  # Extract container metadata
+  .container_name = .container_name
+  .container_id = .container_id
+  .image = .image
+  
+  # Try to parse JSON logs
+  if is_string(.message) {
+    parsed = parse_json(.message) ?? {}
+    if is_object(parsed) {
+      . = merge(., parsed)
+    }
+  }
+  
+  # Add source type based on container
+  if contains(.container_name, "postgres") {
+    .source_type = "postgresql"
+    .service = "database"
+  } else if contains(.container_name, "redis") {
+    .source_type = "redis"  
+    .service = "cache"
+  } else if contains(.container_name, "grafana") {
+    .source_type = "grafana"
+    .service = "monitoring"
+  } else if contains(.container_name, "prometheus") {
+    .source_type = "prometheus"
+    .service = "metrics"
+  } else if contains(.container_name, "autodev-ai") {
+    .source_type = "autodev_container"
+    .service = "autodev-ai"
+  } else {
+    .source_type = "docker_container"
+    .service = "unknown"
+  }
+'''
+
+# Enrich logs with additional metadata
+[transforms.enrich_logs]
+type = "remap"
+inputs = ["parse_autodev_json", "parse_nginx_access", "parse_docker_logs"]
+source = '''
+  # Add timestamp in ISO format
+  .@timestamp = now()
+  
+  # Add host information
+  .host = get_hostname()
+  
+  # Add environment metadata
+  .environment = get_env_var("NODE_ENV") ?? "production"
+  .version = get_env_var("AUTODEV_VERSION") ?? "unknown"
+  
+  # Extract log level from message if available
+  if is_string(.message) {
+    if match(.message, r"ERROR|Error|error") {
+      .level = "error"
+    } else if match(.message, r"WARN|Warn|warn") {
+      .level = "warn"
+    } else if match(.message, r"INFO|Info|info") {
+      .level = "info"
+    } else if match(.message, r"DEBUG|Debug|debug") {
+      .level = "debug"
+    } else {
+      .level = "info"
+    }
+  }
+  
+  # Add severity score for alerting
+  if .level == "error" {
+    .severity = 4
+  } else if .level == "warn" {
+    .severity = 3
+  } else if .level == "info" {
+    .severity = 2
+  } else {
+    .severity = 1
+  }
+'''
+
+# Filter out noise and low-value logs
+[transforms.filter_logs]
+type = "filter"
+inputs = ["enrich_logs"]
+condition = '''
+  # Filter out health check logs
+  !contains(.message, "/health") &&
+  
+  # Filter out static asset requests
+  !contains(.message, ".css") &&
+  !contains(.message, ".js") &&
+  !contains(.message, ".png") &&
+  !contains(.message, ".jpg") &&
+  !contains(.message, ".ico") &&
+  
+  # Filter out debug logs in production
+  !(get_env_var("NODE_ENV") == "production" && .level == "debug")
+'''
+
+# =================================
+# METRICS GENERATION
+# =================================
+
+# Generate metrics from logs
+[transforms.log_metrics]
+type = "log_to_metric"
+inputs = ["filter_logs"]
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "log_events_total"
+namespace = "autodev"
+tags.service = "{{ service }}"
+tags.level = "{{ level }}"
+tags.source_type = "{{ source_type }}"
+
+[[transforms.log_metrics.metrics]]
+type = "counter" 
+field = "message"
+name = "error_events_total"
+namespace = "autodev"
+condition = '.level == "error"'
+tags.service = "{{ service }}"
+tags.source_type = "{{ source_type }}"
+
+# HTTP request metrics from nginx logs
+[transforms.http_metrics]
+type = "log_to_metric"
+inputs = ["parse_nginx_access"]
+
+[[transforms.http_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "http_requests_total"
+namespace = "autodev"
+tags.method = "{{ method }}"
+tags.status = "{{ status }}"
+tags.service = "nginx"
+
+[[transforms.http_metrics.metrics]]
+type = "histogram"
+field = "request_time"
+name = "http_request_duration_seconds"
+namespace = "autodev"
+tags.method = "{{ method }}"
+tags.status = "{{ status }}"
+
+# =================================
+# OUTPUT SINKS
+# =================================
+
+# Console output for debugging
+[sinks.console]
+type = "console"
+inputs = ["filter_logs"]
+encoding.codec = "json"
+# Only enable in development
+enable = false
+
+# File output for log archival
+[sinks.file_archive]
+type = "file"
+inputs = ["filter_logs"]
+path = "/app/logs/aggregated/autodev-%Y-%m-%d.log"
+encoding.codec = "json"
+
+[sinks.file_archive.compression]
+algorithm = "gzip"
+level = 6
+
+# Prometheus metrics output
+[sinks.prometheus_metrics]
+type = "prometheus_exporter"
+inputs = ["log_metrics", "http_metrics", "host_metrics"]
+address = "0.0.0.0:9598"
+flush_period_secs = 5
+
+# Send logs to Grafana Loki (if available)
+[sinks.loki]
+type = "loki"
+inputs = ["filter_logs"]
+endpoint = "http://grafana:3100"
+encoding.codec = "json"
+labels.service = "{{ service }}"
+labels.level = "{{ level }}"
+labels.source_type = "{{ source_type }}"
+labels.environment = "{{ environment }}"
+# Only enable if Loki is configured
+enable = false
+
+# Send high-severity events to alerting system
+[sinks.alerts]
+type = "http"
+inputs = ["filter_logs"]
+uri = "http://autodev-ai:50001/api/alerts/webhook"
+method = "POST"
+encoding.codec = "json"
+compression = "gzip"
+
+[sinks.alerts.request.headers]
+Content-Type = "application/json"
+Authorization = "Bearer {{ ALERTING_TOKEN }}"
+
+# Only send error and critical events
+[sinks.alerts.condition]
+type = "filter"
+condition = '.severity >= 3'
+
+# Send metrics to Prometheus directly (alternative to prometheus_exporter)
+[sinks.prometheus_remote_write]
+type = "prometheus_remote_write"
+inputs = ["log_metrics", "http_metrics"]
+endpoint = "http://prometheus:9090/api/v1/write"
+# Only enable if remote write is configured
+enable = false
+
+# =================================
+# BUFFER CONFIGURATION
+# =================================
+
+# Configure buffering for all sinks
+[sinks.file_archive.buffer]
+type = "disk"
+max_size = 268435456  # 256MB
+when_full = "block"
+
+[sinks.loki.buffer]
+type = "memory"
+max_events = 10000
+when_full = "drop_newest"
+
+[sinks.alerts.buffer]
+type = "memory"
+max_events = 1000
+when_full = "drop_newest"
+
+# =================================
+# HEALTH CHECK
+# =================================
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+playground = false

@@ -1,0 +1,47 @@
+{
+  "name": "autodevai-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for AutoDev-AI Neural Bridge Platform",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:frontend": "jest --selectProjects='Frontend Tests'",
+    "test:integration": "jest --selectProjects='Integration Tests'",
+    "test:unit": "jest --selectProjects='Unit Tests'",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:performance": "artillery run tests/performance/load-test.yml",
+    "test:security": "npm audit && snyk test",
+    "test:rust": "cd .. && cargo test --manifest-path tests/Cargo.toml",
+    "test:rust:coverage": "cd .. && cargo tarpaulin --manifest-path tests/Cargo.toml --out html --output-dir tests/coverage/rust",
+    "test:all": "npm run test:rust && npm run test && npm run test:e2e",
+    "test:ci": "npm run test:security && npm run test:all",
+    "coverage:merge": "nyc merge tests/coverage coverage/merged.json",
+    "coverage:report": "nyc report --reporter=html --reporter=text --reporter=lcov",
+    "lint:test": "eslint tests/**/*.{ts,tsx,js,jsx}",
+    "typecheck:test": "tsc --noEmit --project tests/tsconfig.json"
+  },
+  "dependencies": {
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@playwright/test": "^1.40.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.9.0",
+    "artillery": "^2.0.3",
+    "eslint": "^8.54.0",
+    "jest-html-reporters": "^3.1.5",
+    "jest-junit": "^16.0.0",
+    "msw": "^2.0.8",
+    "nyc": "^15.1.0",
+    "snyk": "^1.1249.0",
+    "typescript": "^5.2.2"
+  }
+}

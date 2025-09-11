@@ -1,0 +1,348 @@
+{
+  "environment": "development",
+  "version": "1.0.0",
+  "openrouter": {
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "timeout": 30000,
+    "retryAttempts": 3,
+    "defaultModel": "anthropic/claude-3.5-sonnet",
+    "fallbackModels": [
+      "anthropic/claude-3-haiku",
+      "openai/gpt-4-turbo",
+      "openai/gpt-3.5-turbo"
+    ],
+    "costOptimization": {
+      "enabled": true,
+      "maxCostPerRequest": 0.5,
+      "preferCheaperModels": false,
+      "trackUsage": true
+    },
+    "modelCapabilities": {
+      "anthropic/claude-3.5-sonnet": {
+        "reasoning": 9.5,
+        "coding": 9.8,
+        "analysis": 9.6,
+        "creativity": 8.8,
+        "speed": 7.5,
+        "cost": 3.0,
+        "specializations": ["complex_reasoning", "code_generation", "analysis"]
+      },
+      "anthropic/claude-3-haiku": {
+        "reasoning": 8.5,
+        "coding": 8.7,
+        "analysis": 8.8,
+        "creativity": 7.5,
+        "speed": 9.5,
+        "cost": 9.0,
+        "specializations": [
+          "quick_responses",
+          "simple_coding",
+          "text_processing"
+        ]
+      },
+      "openai/gpt-4-turbo": {
+        "reasoning": 9.2,
+        "coding": 9.0,
+        "analysis": 9.3,
+        "creativity": 9.0,
+        "speed": 8.0,
+        "cost": 4.0,
+        "specializations": ["general_purpose", "creative_tasks", "reasoning"]
+      },
+      "openai/gpt-3.5-turbo": {
+        "reasoning": 7.8,
+        "coding": 8.2,
+        "analysis": 8.0,
+        "creativity": 7.5,
+        "speed": 9.8,
+        "cost": 9.5,
+        "specializations": ["fast_responses", "simple_tasks", "chat"]
+      },
+      "google/palm-2-codechat-bison": {
+        "reasoning": 8.0,
+        "coding": 9.5,
+        "analysis": 7.8,
+        "creativity": 6.5,
+        "speed": 8.5,
+        "cost": 7.0,
+        "specializations": ["code_completion", "sql_queries", "debugging"]
+      },
+      "meta-llama/codellama-34b-instruct": {
+        "reasoning": 7.5,
+        "coding": 9.8,
+        "analysis": 7.2,
+        "creativity": 6.0,
+        "speed": 8.8,
+        "cost": 8.0,
+        "specializations": [
+          "c_cpp_optimization",
+          "low_level_programming",
+          "performance"
+        ]
+      }
+    }
+  },
+  "claudeFlow": {
+    "defaultTopology": "mesh",
+    "maxAgents": 8,
+    "enableHooks": true,
+    "sessionManagement": {
+      "autoSave": true,
+      "saveInterval": 300000,
+      "maxSessionAge": 86400000,
+      "enableMetrics": true
+    },
+    "agentCapabilities": {
+      "researcher": {
+        "specialization": ["analysis", "investigation", "data_gathering"],
+        "complexityHandling": 8.5,
+        "coordinationLevel": 7.0,
+        "optimalModel": "anthropic/claude-3.5-sonnet"
+      },
+      "coder": {
+        "specialization": ["implementation", "debugging", "optimization"],
+        "complexityHandling": 9.2,
+        "coordinationLevel": 8.5,
+        "optimalModel": "anthropic/claude-3.5-sonnet"
+      },
+      "architect": {
+        "specialization": ["system_design", "architecture", "planning"],
+        "complexityHandling": 9.8,
+        "coordinationLevel": 9.5,
+        "optimalModel": "anthropic/claude-3.5-sonnet"
+      },
+      "tester": {
+        "specialization": ["testing", "quality_assurance", "validation"],
+        "complexityHandling": 8.0,
+        "coordinationLevel": 7.5,
+        "optimalModel": "openai/gpt-4-turbo"
+      },
+      "reviewer": {
+        "specialization": ["code_review", "security", "best_practices"],
+        "complexityHandling": 8.8,
+        "coordinationLevel": 8.0,
+        "optimalModel": "anthropic/claude-3.5-sonnet"
+      },
+      "optimizer": {
+        "specialization": ["performance", "efficiency", "bottleneck_analysis"],
+        "complexityHandling": 9.0,
+        "coordinationLevel": 7.8,
+        "optimalModel": "meta-llama/codellama-34b-instruct"
+      },
+      "coordinator": {
+        "specialization": ["orchestration", "communication", "workflow"],
+        "complexityHandling": 7.5,
+        "coordinationLevel": 9.8,
+        "optimalModel": "openai/gpt-4-turbo"
+      }
+    },
+    "taskStrategies": {
+      "parallel": {
+        "description": "Execute tasks simultaneously across multiple agents",
+        "bestFor": ["independent_tasks", "time_critical", "simple_operations"],
+        "maxConcurrency": 5,
+        "timeoutMultiplier": 1.0
+      },
+      "sequential": {
+        "description": "Execute tasks in order with result handoffs",
+        "bestFor": ["dependent_tasks", "complex_workflows", "quality_critical"],
+        "timeoutMultiplier": 2.0,
+        "enableResultPassing": true
+      },
+      "adaptive": {
+        "description": "Automatically choose strategy based on task complexity",
+        "complexityThreshold": 0.7,
+        "agentCountThreshold": 2,
+        "fallbackStrategy": "sequential"
+      }
+    },
+    "coordination": {
+      "enableAutoSpawn": true,
+      "autoSpawnThreshold": 0.8,
+      "maxAutoSpawnedAgents": 3,
+      "enableLoadBalancing": true,
+      "enableFailover": true,
+      "healthCheckInterval": 60000
+    }
+  },
+  "codex": {
+    "defaultTemperature": 0.3,
+    "maxTokens": 2000,
+    "enableOptimization": true,
+    "cacheResults": true,
+    "cacheTTL": 3600000,
+    "languageSpecialists": {
+      "typescript": "anthropic/claude-3.5-sonnet",
+      "javascript": "anthropic/claude-3.5-sonnet",
+      "python": "anthropic/claude-3.5-sonnet",
+      "rust": "anthropic/claude-3.5-sonnet",
+      "go": "openai/gpt-4-turbo",
+      "java": "openai/gpt-4-turbo",
+      "cpp": "meta-llama/codellama-34b-instruct",
+      "c": "meta-llama/codellama-34b-instruct",
+      "sql": "google/palm-2-codechat-bison",
+      "bash": "anthropic/claude-3-haiku",
+      "dockerfile": "anthropic/claude-3-haiku",
+      "yaml": "anthropic/claude-3-haiku",
+      "json": "anthropic/claude-3-haiku"
+    },
+    "taskTypeSettings": {
+      "generation": {
+        "temperature": 0.3,
+        "maxTokens": 2000,
+        "enableSuggestions": true
+      },
+      "analysis": {
+        "temperature": 0.1,
+        "maxTokens": 1500,
+        "enableDetailedMetrics": true
+      },
+      "completion": {
+        "temperature": 0.4,
+        "maxTokens": 1000,
+        "prioritizeSpeed": true
+      },
+      "debugging": {
+        "temperature": 0.2,
+        "maxTokens": 1800,
+        "enableStepByStep": true
+      },
+      "optimization": {
+        "temperature": 0.25,
+        "maxTokens": 2500,
+        "enablePerformanceMetrics": true
+      }
+    },
+    "qualityControl": {
+      "enableSyntaxValidation": true,
+      "enableBestPracticesCheck": true,
+      "enableSecurityScan": true,
+      "confidenceThreshold": 0.7,
+      "autoRetryOnLowConfidence": true
+    }
+  },
+  "integration": {
+    "enableTeamDiscussions": true,
+    "discussionRounds": 3,
+    "maxParticipants": 5,
+    "enableContextSharing": true,
+    "enableCrossAgentLearning": true,
+    "patterns": {
+      "taskRouting": {
+        "enabled": true,
+        "complexityThresholds": {
+          "low": 0.3,
+          "medium": 0.6,
+          "high": 0.8
+        },
+        "routingRules": {
+          "low": ["single_agent", "fast_model"],
+          "medium": ["dual_agent", "balanced_model"],
+          "high": ["multi_agent", "best_model"]
+        }
+      },
+      "qualityControl": {
+        "enabled": true,
+        "stages": ["generation", "review", "testing", "optimization"],
+        "requireAllStages": false,
+        "minStagesRequired": 2
+      },
+      "errorRecovery": {
+        "enabled": true,
+        "maxRetries": 3,
+        "backoffMultiplier": 2,
+        "enableModelFallback": true,
+        "enableAgentReassignment": true
+      }
+    }
+  },
+  "monitoring": {
+    "enablePerformanceTracking": true,
+    "enableCostTracking": true,
+    "enableQualityMetrics": true,
+    "metricsRetention": 2592000000,
+    "alerting": {
+      "enabled": true,
+      "costThreshold": 10.0,
+      "responseTimeThreshold": 30000,
+      "errorRateThreshold": 0.1
+    },
+    "dashboard": {
+      "enabled": true,
+      "refreshInterval": 30000,
+      "enableRealTime": true
+    }
+  },
+  "security": {
+    "enableApiKeyRotation": false,
+    "enableRequestLogging": true,
+    "enableResponseFiltering": true,
+    "sanitizeInputs": true,
+    "maxRequestSize": 1048576,
+    "rateLimiting": {
+      "enabled": true,
+      "requestsPerMinute": 100,
+      "burstLimit": 150
+    }
+  },
+  "development": {
+    "enableDebugMode": true,
+    "enableVerboseLogging": true,
+    "enableMockResponses": false,
+    "testDataGeneration": true,
+    "enableHotReload": true
+  },
+  "production": {
+    "enableDebugMode": false,
+    "enableVerboseLogging": false,
+    "enableMetricsExport": true,
+    "enableHealthChecks": true,
+    "enableGracefulShutdown": true,
+    "shutdownTimeout": 30000
+  },
+  "features": {
+    "aiTeamDiscussion": {
+      "enabled": true,
+      "maxParticipants": 5,
+      "roundLimit": 3,
+      "enableContextCarryover": true
+    },
+    "intelligentTaskRouting": {
+      "enabled": true,
+      "useMLRouting": false,
+      "enableLearning": true
+    },
+    "qualityControlChecks": {
+      "enabled": true,
+      "stages": ["syntax", "security", "performance", "best_practices"],
+      "strictMode": false
+    },
+    "performanceMonitoring": {
+      "enabled": true,
+      "realTimeMetrics": true,
+      "enablePredictiveAnalysis": false
+    },
+    "errorRecoveryPatterns": {
+      "enabled": true,
+      "autoRetry": true,
+      "intelligentFallback": true,
+      "learningFromFailures": true
+    }
+  },
+  "logging": {
+    "level": "info",
+    "enableFileLogging": true,
+    "logRotation": true,
+    "maxLogSize": "100MB",
+    "maxLogFiles": 10,
+    "enableStructuredLogging": true,
+    "enableSensitiveDataFiltering": true
+  },
+  "cache": {
+    "enabled": true,
+    "type": "memory",
+    "ttl": 3600000,
+    "maxSize": 1000,
+    "enableDistributed": false
+  }
+}

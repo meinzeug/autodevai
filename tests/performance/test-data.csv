@@ -1,0 +1,17 @@
+code,language,environment
+"console.log('Hello World');",javascript,node
+"print('Hello Python')",python,python3
+"echo 'Hello Bash'",bash,bash
+"puts 'Hello Ruby'",ruby,ruby
+"const sum = (a, b) => a + b; console.log(sum(2, 3));",javascript,node
+"import math; print(math.sqrt(16))",python,python3
+"ls -la",bash,bash
+"5.times { |i| puts i }",ruby,ruby
+"const factorial = n => n <= 1 ? 1 : n * factorial(n-1); console.log(factorial(5));",javascript,node
+"def fibonacci(n): return n if n <= 1 else fibonacci(n-1) + fibonacci(n-2); print(fibonacci(10))",python,python3
+"find . -name '*.js' | head -5",bash,bash
+"class Test; def greet; 'Hello from class'; end; end; puts Test.new.greet",ruby,ruby
+"const data = [1,2,3,4,5]; console.log(data.map(x => x * 2));",javascript,node
+"import json; data = {'test': True}; print(json.dumps(data))",python,python3
+"curl -s https://api.github.com/users/octocat | head -10",bash,bash
+"require 'json'; puts JSON.generate({test: true})",ruby,ruby

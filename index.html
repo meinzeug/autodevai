@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- Title and Description -->
+    <title>AutoDev-AI Neural Bridge Platform</title>
+    <meta name="description" content="AutoDev-AI Neural Bridge Platform with Claude-Flow orchestration, OpenRouter integration, and comprehensive security testing framework" />
+    <meta name="author" content="AutoDev-AI" />
+    <meta name="keywords" content="autodev-ai, neural-bridge, claude-flow, openrouter, ai-orchestration, multi-agent-systems, tauri" />
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Theme and Color Scheme -->
+    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="msapplication-TileColor" content="#0ea5e9" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://autodev-ai.com/" />
+    <meta property="og:title" content="AutoDev-AI Neural Bridge Platform" />
+    <meta property="og:description" content="Advanced AI orchestration platform with neural bridge technology" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="AutoDev-AI" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://autodev-ai.com/" />
+    <meta property="twitter:title" content="AutoDev-AI Neural Bridge Platform" />
+    <meta property="twitter:description" content="Advanced AI orchestration platform with neural bridge technology" />
+    <meta property="twitter:image" content="/twitter-image.png" />
+    <meta property="twitter:creator" content="@autodevai" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    
+    <!-- Performance and Preloading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AutoDev-AI Neural Bridge Platform",
+      "description": "Advanced AI orchestration platform with neural bridge technology",
+      "url": "https://autodev-ai.com",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Windows, macOS, Linux",
+      "author": {
+        "@type": "Organization",
+        "name": "AutoDev-AI"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+    
+    <!-- Theme Detection Script -->
+    <script>
+      // Prevent FOUC (Flash of Unstyled Content) for theme
+      (function() {
+        const theme = localStorage.getItem('theme') || 
+                     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    
+    <!-- Critical CSS Inline -->
+    <style>
+      /* Critical path CSS for immediate rendering */
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #ffffff;
+        color: #1e293b;
+      }
+      
+      .dark body {
+        background-color: #0f172a;
+        color: #f8fafc;
+      }
+      
+      /* Loading spinner for initial load */
+      .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #0ea5e9;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 9999;
+      }
+      
+      @keyframes spin {
+        0% { transform: translate(-50%, -50%) rotate(0deg); }
+        100% { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+      
+      /* Hide loading spinner when app loads */
+      #root:not(:empty) + .loading-spinner {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="h-full">
+    <!-- Main Application Container -->
+    <div id="root" class="h-full"></div>
+    
+    <!-- Loading Spinner (shown until React app loads) -->
+    <div class="loading-spinner" aria-label="Loading AutoDev-AI application"></div>
+    
+    <!-- Application Scripts -->
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+    
+    <!-- Error Boundary Script -->
+    <script>
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        // Send to error tracking service in production
+      });
+      
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason);
+        // Send to error tracking service in production
+      });
+    </script>
+  </body>
+</html>

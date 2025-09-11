@@ -1,0 +1,177 @@
+import React from 'react';
+import { HeaderProps, StatusIndicator } from '../types';
+
+const StatusIndicatorComponent: React.FC<{ indicator: StatusIndicator }> = ({ indicator }) => {
+  const getStatusColor = (status: StatusIndicator['status']) => {
+    switch (status) {
+      case 'online':
+        return 'text-green-500 bg-green-100';
+      case 'warning':
+        return 'text-yellow-500 bg-yellow-100';
+      case 'error':
+        return 'text-red-500 bg-red-100';
+      case 'offline':
+        return 'text-gray-500 bg-gray-100';
+      default:
+        return 'text-gray-500 bg-gray-100';
+    }
+  };
+
+  const getStatusIcon = (status: StatusIndicator['status']) => {
+    switch (status) {
+      case 'online':
+        return '●';
+      case 'warning':
+        return '⚠';
+      case 'error':
+        return '✕';
+      case 'offline':
+        return '○';
+      default:
+        return '○';
+    }
+  };
+
+  return (
+    <div 
+      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(indicator.status)}`}
+      role="status"
+      aria-label={`${indicator.label}: ${indicator.status}`}
+    >
+      <span className="text-sm" aria-hidden="true">
+        {getStatusIcon(indicator.status)}
+      </span>
+      <span className="font-semibold">{indicator.label}</span>
+      {indicator.value && (
+        <span className="ml-1 opacity-75">{indicator.value}</span>
+      )}
+    </div>
+  );
+};
+
+export const Header: React.FC<HeaderProps> = ({
+  title = 'AutoDevAI',
+  statusIndicators = [],
+  onMenuClick,
+  className = '',
+  children
+}) => {
+  return (
+    <header 
+      className={`bg-white shadow-sm border-b border-gray-200 ${className}`}
+      role="banner"
+    >
+      <div className="flex items-center justify-between px-4 py-3">
+        {/* Left Section - Title and Menu */}
+        <div className="flex items-center gap-4">
+          {onMenuClick && (
+            <button
+              onClick={onMenuClick}
+              className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 lg:hidden"
+              aria-label="Open navigation menu"
+              type="button"
+            >
+              <svg 
+                className="w-5 h-5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 6h16M4 12h16M4 18h16" 
+                />
+              </svg>
+            </button>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm" aria-hidden="true">
+                AD
+              </span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 hidden sm:block">
+              {title}
+            </h1>
+          </div>
+        </div>
+
+        {/* Center Section - Status Indicators */}
+        {statusIndicators.length > 0 && (
+          <div className="hidden md:flex items-center gap-2 flex-1 justify-center max-w-md">
+            <div 
+              className="flex items-center gap-2 flex-wrap justify-center"
+              role="region"
+              aria-label="System status indicators"
+            >
+              {statusIndicators.map((indicator, index) => (
+                <StatusIndicatorComponent key={`${indicator.label}-${index}`} indicator={indicator} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Right Section - Actions */}
+        <div className="flex items-center gap-2">
+          {children}
+          
+          {/* Time Display */}
+          <div className="hidden sm:block text-sm text-gray-500">
+            {new Date().toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false
+            })}
+          </div>
+
+          {/* User Menu */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              aria-label="User menu"
+              type="button"
+            >
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                <svg 
+                  className="w-4 h-4 text-gray-600" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" 
+                  />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Status Indicators */}
+      {statusIndicators.length > 0 && (
+        <div className="md:hidden px-4 pb-3">
+          <div 
+            className="flex items-center gap-2 flex-wrap"
+            role="region"
+            aria-label="System status indicators"
+          >
+            {statusIndicators.map((indicator, index) => (
+              <StatusIndicatorComponent key={`mobile-${indicator.label}-${index}`} indicator={indicator} />
+            ))}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default Header;

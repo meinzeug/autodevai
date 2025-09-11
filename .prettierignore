@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+.nyc_output
+src-tauri/target
+src-tauri/gen
+*.log
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml.github/workflows/release.yml

@@ -1,0 +1,86 @@
+{
+  "workspace": {
+    "name": "autodev-ai-workspace",
+    "version": "1.0.0",
+    "description": "Claude-Flow workspace configuration for AutoDev-AI project",
+    "created": "2025-09-10T13:57:00.000Z"
+  },
+  "swarm": {
+    "topology": "hierarchical",
+    "maxAgents": 12,
+    "strategy": "adaptive",
+    "coordination": {
+      "enabled": true,
+      "consensusThreshold": 0.75,
+      "memoryPersistence": true
+    }
+  },
+  "agents": {
+    "coordinator": {
+      "type": "task-orchestrator",
+      "capabilities": [
+        "task-coordination",
+        "dependency-resolution",
+        "progress-tracking"
+      ],
+      "priority": "critical"
+    },
+    "backend-dev": {
+      "type": "specialist",
+      "capabilities": ["rust", "tauri", "backend-architecture"],
+      "priority": "high"
+    },
+    "frontend-dev": {
+      "type": "coder",
+      "capabilities": ["react", "typescript", "vite", "tailwind"],
+      "priority": "high"
+    },
+    "infrastructure": {
+      "type": "architect",
+      "capabilities": ["docker", "ci-cd", "deployment"],
+      "priority": "high"
+    },
+    "ai-integration": {
+      "type": "specialist",
+      "capabilities": ["claude-flow", "sparc", "neural-networks"],
+      "priority": "medium"
+    },
+    "quality-assurance": {
+      "type": "tester",
+      "capabilities": ["testing", "validation", "performance"],
+      "priority": "medium"
+    }
+  },
+  "sparc": {
+    "modes": ["spec-pseudocode", "architect", "tdd", "integration"],
+    "workflow": "adaptive",
+    "parallelExecution": true,
+    "testDriven": true
+  },
+  "memory": {
+    "namespace": "autodev-ai",
+    "persistence": true,
+    "crossSession": true,
+    "ttl": 86400
+  },
+  "neural": {
+    "enabled": true,
+    "patterns": ["coordination", "optimization", "prediction"],
+    "training": {
+      "epochs": 50,
+      "learningRate": 0.001
+    }
+  },
+  "hooks": {
+    "preTask": "npx claude-flow@alpha hooks pre-task",
+    "postTask": "npx claude-flow@alpha hooks post-task",
+    "postEdit": "npx claude-flow@alpha hooks post-edit",
+    "sessionRestore": "npx claude-flow@alpha hooks session-restore"
+  },
+  "github": {
+    "integration": true,
+    "autoCommit": false,
+    "branchStrategy": "feature-based",
+    "prTemplate": true
+  }
+}

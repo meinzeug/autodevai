@@ -1,0 +1,1033 @@
+{
+  "timestamp": 1757502999654,
+  "testSuite": "api-throughput",
+  "measurements": [
+    {
+      "clientIndex": 0,
+      "requestIndex": 0,
+      "responseTime": 502.57016099999964,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502997888,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 1,
+      "requestIndex": 0,
+      "responseTime": 505.18972699999904,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502997908,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 2,
+      "requestIndex": 0,
+      "responseTime": 484.18769299999985,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502997940,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 3,
+      "requestIndex": 0,
+      "responseTime": 374.6829809999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502997968,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 4,
+      "requestIndex": 0,
+      "responseTime": 438.0480950000001,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998048,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 5,
+      "requestIndex": 0,
+      "responseTime": 467.6062149999998,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998102,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 6,
+      "requestIndex": 0,
+      "responseTime": 478.7344720000001,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998125,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 7,
+      "requestIndex": 0,
+      "responseTime": 504.62104700000054,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998152,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 8,
+      "requestIndex": 0,
+      "responseTime": 513.8353659999993,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998163,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 9,
+      "requestIndex": 0,
+      "responseTime": 697.6692640000001,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998351,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 10,
+      "requestIndex": 0,
+      "responseTime": 727.4597629999989,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998390,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 11,
+      "requestIndex": 0,
+      "responseTime": 741.6175249999997,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998415,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 12,
+      "requestIndex": 0,
+      "responseTime": 826.9262749999998,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998502,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 13,
+      "requestIndex": 0,
+      "responseTime": 816.2044780000015,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998506,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 14,
+      "requestIndex": 0,
+      "responseTime": 822.0981360000005,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998522,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 15,
+      "requestIndex": 0,
+      "responseTime": 851.5272379999988,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998619,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 16,
+      "requestIndex": 0,
+      "responseTime": 852.3903559999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998622,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 17,
+      "requestIndex": 0,
+      "responseTime": 881.673612999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998654,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 18,
+      "requestIndex": 0,
+      "responseTime": 864.5853900000002,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998659,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 19,
+      "requestIndex": 0,
+      "responseTime": 852.8353179999995,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998671,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 0,
+      "requestIndex": 1,
+      "responseTime": 834.0236980000009,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998722,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 1,
+      "requestIndex": 1,
+      "responseTime": 869.0546509999986,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998777,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 2,
+      "requestIndex": 1,
+      "responseTime": 877.0974729999998,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998817,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 3,
+      "requestIndex": 1,
+      "responseTime": 876.0147739999993,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998844,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 4,
+      "requestIndex": 1,
+      "responseTime": 825.7260330000008,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998874,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 5,
+      "requestIndex": 1,
+      "responseTime": 823.5369559999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998925,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 6,
+      "requestIndex": 1,
+      "responseTime": 803.3386899999987,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998928,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 8,
+      "requestIndex": 1,
+      "responseTime": 767.1526560000002,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998931,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 7,
+      "requestIndex": 1,
+      "responseTime": 780.6107800000009,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998933,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 9,
+      "requestIndex": 1,
+      "responseTime": 584.6204739999994,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998935,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 10,
+      "requestIndex": 1,
+      "responseTime": 547.0898749999997,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998938,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 11,
+      "requestIndex": 1,
+      "responseTime": 525.0340219999998,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998940,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 12,
+      "requestIndex": 1,
+      "responseTime": 440.4381260000009,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998943,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 13,
+      "requestIndex": 1,
+      "responseTime": 440.24379000000044,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998947,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 14,
+      "requestIndex": 1,
+      "responseTime": 432.7771790000006,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998954,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 15,
+      "requestIndex": 1,
+      "responseTime": 338.144354,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998957,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 16,
+      "requestIndex": 1,
+      "responseTime": 337.3750220000002,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998960,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 17,
+      "requestIndex": 1,
+      "responseTime": 308.80702500000007,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998962,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 18,
+      "requestIndex": 1,
+      "responseTime": 305.8581359999989,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998965,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 19,
+      "requestIndex": 1,
+      "responseTime": 296.93269300000065,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998968,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 0,
+      "requestIndex": 2,
+      "responseTime": 255.6504789999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998978,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 1,
+      "requestIndex": 2,
+      "responseTime": 202.79993699999977,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998980,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 2,
+      "requestIndex": 2,
+      "responseTime": 165.3814059999986,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998983,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 3,
+      "requestIndex": 2,
+      "responseTime": 141.46308599999975,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998985,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 4,
+      "requestIndex": 2,
+      "responseTime": 113.97603799999888,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998988,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 5,
+      "requestIndex": 2,
+      "responseTime": 65.1179460000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998990,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 6,
+      "requestIndex": 2,
+      "responseTime": 64.77850799999942,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998993,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 8,
+      "requestIndex": 2,
+      "responseTime": 64.6968250000009,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998995,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 7,
+      "requestIndex": 2,
+      "responseTime": 64.9123410000011,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502998998,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 9,
+      "requestIndex": 2,
+      "responseTime": 66.50558599999931,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999002,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 10,
+      "requestIndex": 2,
+      "responseTime": 66.9921689999992,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999005,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 11,
+      "requestIndex": 2,
+      "responseTime": 75.14060199999949,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999015,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 12,
+      "requestIndex": 2,
+      "responseTime": 74.99775200000113,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999018,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 13,
+      "requestIndex": 2,
+      "responseTime": 73.6106920000002,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999020,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 14,
+      "requestIndex": 2,
+      "responseTime": 78.11407099999997,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999032,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 15,
+      "requestIndex": 2,
+      "responseTime": 78.10508900000059,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999035,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 16,
+      "requestIndex": 2,
+      "responseTime": 83.56728199999998,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999043,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 17,
+      "requestIndex": 2,
+      "responseTime": 84.51060599999983,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999047,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 18,
+      "requestIndex": 2,
+      "responseTime": 88.37463500000013,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999054,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 19,
+      "requestIndex": 2,
+      "responseTime": 88.40887999999904,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999056,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 0,
+      "requestIndex": 3,
+      "responseTime": 100.57899899999938,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999078,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 1,
+      "requestIndex": 3,
+      "responseTime": 105.63756199999989,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999086,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 2,
+      "requestIndex": 3,
+      "responseTime": 111.54668800000036,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999094,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 3,
+      "requestIndex": 3,
+      "responseTime": 136.04931600000054,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999121,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 4,
+      "requestIndex": 3,
+      "responseTime": 161.6668520000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999149,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 5,
+      "requestIndex": 3,
+      "responseTime": 161.54887000000053,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999152,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 6,
+      "requestIndex": 3,
+      "responseTime": 200.9483820000005,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999194,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 8,
+      "requestIndex": 3,
+      "responseTime": 201.14932299999964,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999196,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 7,
+      "requestIndex": 3,
+      "responseTime": 233.32181599999967,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999231,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 9,
+      "requestIndex": 3,
+      "responseTime": 253.95423500000106,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999256,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 10,
+      "requestIndex": 3,
+      "responseTime": 270.1514580000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999275,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 11,
+      "requestIndex": 3,
+      "responseTime": 278.19363299999895,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999293,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 12,
+      "requestIndex": 3,
+      "responseTime": 278.2116640000004,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999296,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 13,
+      "requestIndex": 3,
+      "responseTime": 298.48924199999965,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999319,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 14,
+      "requestIndex": 3,
+      "responseTime": 309.4816659999997,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999342,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 15,
+      "requestIndex": 3,
+      "responseTime": 309.5918959999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999345,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 16,
+      "requestIndex": 3,
+      "responseTime": 344.64428399999997,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999388,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 17,
+      "requestIndex": 3,
+      "responseTime": 360.25808099999995,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999407,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 18,
+      "requestIndex": 3,
+      "responseTime": 380.6539350000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999434,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 19,
+      "requestIndex": 3,
+      "responseTime": 408.99444100000073,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999465,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 0,
+      "requestIndex": 4,
+      "responseTime": 422.479652,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999501,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 1,
+      "requestIndex": 4,
+      "responseTime": 453.5866239999996,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999539,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 2,
+      "requestIndex": 4,
+      "responseTime": 446.2392439999985,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999541,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 3,
+      "requestIndex": 4,
+      "responseTime": 436.85747000000083,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999558,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 4,
+      "requestIndex": 4,
+      "responseTime": 409.898228,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999559,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 5,
+      "requestIndex": 4,
+      "responseTime": 408.574924999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999561,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 6,
+      "requestIndex": 4,
+      "responseTime": 384.11330700000144,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999578,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 8,
+      "requestIndex": 4,
+      "responseTime": 382.74988499999927,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999579,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 7,
+      "requestIndex": 4,
+      "responseTime": 349.02448600000025,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999580,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 9,
+      "requestIndex": 4,
+      "responseTime": 341.6822369999991,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999598,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 10,
+      "requestIndex": 4,
+      "responseTime": 324.2250120000008,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999599,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 11,
+      "requestIndex": 4,
+      "responseTime": 306.81311800000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999600,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 12,
+      "requestIndex": 4,
+      "responseTime": 316.51581700000133,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999612,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 13,
+      "requestIndex": 4,
+      "responseTime": 314.47056300000077,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999633,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 14,
+      "requestIndex": 4,
+      "responseTime": 292.81488100000024,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999635,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 15,
+      "requestIndex": 4,
+      "responseTime": 291.3272770000003,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999636,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 16,
+      "requestIndex": 4,
+      "responseTime": 262.0380789999999,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999650,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 17,
+      "requestIndex": 4,
+      "responseTime": 243.9390800000001,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999651,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 18,
+      "requestIndex": 4,
+      "responseTime": 217.85969999999907,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999652,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    },
+    {
+      "clientIndex": 19,
+      "requestIndex": 4,
+      "responseTime": 187.9270889999989,
+      "error": "Network Error",
+      "success": false,
+      "timestamp": 1757502999653,
+      "throughput": 0,
+      "totalDuration": 2268.0023409999994
+    }
+  ],
+  "statistics": {
+    "count": 100,
+    "responseTime": {
+      "min": 64.6968250000009,
+      "max": 881.673612999999,
+      "average": 389.13652467000014,
+      "median": 338.144354,
+      "p95": 864.5853900000002,
+      "p99": 881.673612999999
+    },
+    "errorRate": 100,
+    "throughput": 113.42065649411707,
+    "memoryUsage": {
+      "min": 0,
+      "max": 0,
+      "average": 0,
+      "median": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "successRate": 0
+  },
+  "environment": {
+    "nodeVersion": "v24.1.0",
+    "platform": "linux",
+    "arch": "x64"
+  }
+}

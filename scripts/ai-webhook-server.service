@@ -1,0 +1,44 @@
+[Unit]
+Description=AI Automation Webhook Server
+Documentation=https://github.com/meinzeug/autodevai
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dennis
+Group=dennis
+WorkingDirectory=/home/dennis/autodevai/scripts
+ExecStart=/usr/bin/node ai-automation-server.js
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=-/home/dennis/autodevai/.env.local
+
+# Process management
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/dennis/autodevai
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-webhook-server
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,86 @@
+FROM rust:1.75-slim as builder
+
+# Create non-root user for building
+RUN groupadd -g 1000 builder && \
+    useradd -u 1000 -g 1000 -m builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    libwebkit2gtk-4.1-dev \
+    libgtk-3-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    patchelf \
+    curl \
+    wget \
+    unzip \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install cross-compilation targets
+RUN rustup target add x86_64-pc-windows-gnu x86_64-apple-darwin aarch64-apple-darwin
+
+# Install mingw for Windows cross-compilation
+RUN apt-get update && apt-get install -y mingw-w64 && rm -rf /var/lib/apt/lists/*
+
+# Set working directory and change ownership
+WORKDIR /workspace
+RUN chown -R builder:builder /workspace
+
+# Switch to non-root user for building
+USER builder
+
+# Configure environment for Docker port compatibility
+ENV DOCKER_PORT_RANGE_START=50000
+ENV DOCKER_PORT_RANGE_END=50100
+ENV CARGO_TARGET_DIR=/workspace/target
+ENV RUST_BACKTRACE=1
+
+# Expose Docker port range
+EXPOSE 50000-50100
+
+# Create volume mount points
+VOLUME ["/workspace", "/usr/local/cargo/registry", "/workspace/target"]
+
+# Default command
+CMD ["bash", "-c", "echo 'Neural Bridge Docker Build Environment Ready' && echo 'Port range: 50000-50100' && bash"]
+
+# Multi-stage build for production
+FROM rust:1.75-slim as production
+
+# Create non-root user for runtime
+RUN groupadd -g 1001 appuser && \
+    useradd -u 1001 -g 1001 -m -s /bin/sh appuser
+
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libwebkit2gtk-4.1-0 \
+    libgtk-3-0 \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
+
+# Security: Remove package manager
+RUN rm -rf /usr/bin/apt* /usr/bin/dpkg*
+
+WORKDIR /app
+
+# Copy built artifacts with proper ownership
+# COPY --from=builder --chown=appuser:appuser /workspace/target/release/neural-bridge-platform /app/
+
+# Create required directories
+RUN mkdir -p /app/data /app/logs /app/cache && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose Docker port range for runtime
+EXPOSE 50000-50100
+
+# Set security environment
+ENV RUST_BACKTRACE=0
+ENV RUST_LOG=warn
+
+CMD ["./neural-bridge-platform"]

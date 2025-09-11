@@ -1,0 +1,138 @@
+config:
+  target: 'http://localhost:1420'
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      name: 'Warm up'
+    - duration: 120
+      arrivalRate: 5
+      name: 'Ramp up load'
+    - duration: 300
+      arrivalRate: 10
+      name: 'Sustained load'
+    - duration: 60
+      arrivalRate: 20
+      name: 'Peak load'
+  payload:
+    path: './test-data.csv'
+    fields:
+      - 'code'
+      - 'language'
+      - 'environment'
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+
+scenarios:
+  - name: 'Swarm Initialization Performance'
+    weight: 20
+    flow:
+      - post:
+          url: '/api/claude-flow/init'
+          json:
+            topology: 'mesh'
+            max_agents: 5
+            strategy: 'balanced'
+          capture:
+            - json: '$.swarm_id'
+              as: 'swarmId'
+      - think: 2
+      - get:
+          url: '/api/claude-flow/status'
+          headers:
+            swarm-id: '{{ swarmId }}'
+      - think: 1
+
+  - name: 'Agent Spawning Performance'
+    weight: 25
+    flow:
+      - post:
+          url: '/api/claude-flow/spawn'
+          json:
+            type: 'researcher'
+            capabilities: ['analysis', 'documentation']
+            name: 'perf-test-agent'
+          capture:
+            - json: '$.agent_id'
+              as: 'agentId'
+      - think: 1
+      - get:
+          url: '/api/claude-flow/agents'
+      - think: 2
+
+  - name: 'Code Execution Performance'
+    weight: 30
+    flow:
+      - post:
+          url: '/api/codex/execute'
+          json:
+            code: '{{ code }}'
+            language: '{{ language }}'
+            environment: '{{ environment }}'
+          capture:
+            - json: '$.execution_id'
+              as: 'executionId'
+      - think: 3
+      - get:
+          url: '/api/codex/status/{{ executionId }}'
+      - think: 1
+
+  - name: 'Docker Management Performance'
+    weight: 20
+    flow:
+      - post:
+          url: '/api/docker/create'
+          json:
+            image: 'node:18-alpine'
+            ports:
+              '3000': '3000'
+            environment:
+              NODE_ENV: 'test'
+          capture:
+            - json: '$.container_id'
+              as: 'containerId'
+      - think: 5
+      - get:
+          url: '/api/docker/containers'
+      - post:
+          url: '/api/docker/stop'
+          json:
+            container_id: '{{ containerId }}'
+      - think: 2
+      - post:
+          url: '/api/docker/remove'
+          json:
+            container_id: '{{ containerId }}'
+
+  - name: 'Task Orchestration Performance'
+    weight: 5
+    flow:
+      - post:
+          url: '/api/claude-flow/orchestrate'
+          json:
+            task: 'Performance test task - analyze and optimize code'
+            strategy: 'parallel'
+            priority: 'medium'
+            max_agents: 3
+          capture:
+            - json: '$.task_id'
+              as: 'taskId'
+      - think: 10
+      - get:
+          url: '/api/claude-flow/tasks/{{ taskId }}/status'
+      - get:
+          url: '/api/claude-flow/tasks/{{ taskId }}/results'
+
+# Performance expectations
+expectations:
+  - http.response_time.p95: 2000  # 95% of requests under 2s
+  - http.response_time.p99: 5000  # 99% of requests under 5s
+  - http.request_rate: 50         # At least 50 requests per second
+  - http.codes.200: 95            # 95% success rate
+  - http.codes.500: 5             # Less than 5% server errors
+
+# Memory and CPU monitoring
+monitoring:
+  cpu_threshold: 80     # Alert if CPU > 80%
+  memory_threshold: 85  # Alert if memory > 85%
+  disk_threshold: 90    # Alert if disk > 90%

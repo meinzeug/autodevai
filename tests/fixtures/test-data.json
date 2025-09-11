@@ -1,0 +1,267 @@
+{
+  "swarm_configurations": [
+    {
+      "id": "mesh_config_1",
+      "topology": "mesh",
+      "max_agents": 5,
+      "strategy": "balanced",
+      "expected_agents": ["researcher", "coder", "tester"]
+    },
+    {
+      "id": "hierarchical_config_1", 
+      "topology": "hierarchical",
+      "max_agents": 8,
+      "strategy": "specialized",
+      "expected_agents": ["coordinator", "researcher", "coder", "reviewer"]
+    },
+    {
+      "id": "ring_config_1",
+      "topology": "ring", 
+      "max_agents": 6,
+      "strategy": "adaptive",
+      "expected_agents": ["researcher", "coder", "tester", "optimizer"]
+    }
+  ],
+  "agent_types": [
+    {
+      "type": "researcher",
+      "capabilities": ["analysis", "documentation", "pattern_recognition"],
+      "expected_tasks": ["analyze_codebase", "research_patterns", "document_findings"]
+    },
+    {
+      "type": "coder",
+      "capabilities": ["implementation", "refactoring", "debugging"],
+      "expected_tasks": ["implement_feature", "fix_bug", "refactor_code"]
+    },
+    {
+      "type": "tester",
+      "capabilities": ["test_creation", "validation", "quality_assurance"],
+      "expected_tasks": ["create_tests", "validate_functionality", "ensure_quality"]
+    },
+    {
+      "type": "reviewer",
+      "capabilities": ["code_review", "security_analysis", "performance_review"],
+      "expected_tasks": ["review_code", "check_security", "analyze_performance"]
+    },
+    {
+      "type": "optimizer",
+      "capabilities": ["performance_optimization", "resource_management", "bottleneck_analysis"],
+      "expected_tasks": ["optimize_performance", "manage_resources", "identify_bottlenecks"]
+    }
+  ],
+  "test_code_samples": [
+    {
+      "language": "javascript",
+      "environment": "node",
+      "code": "const sum = (a, b) => a + b;\nconsole.log(sum(2, 3));\nsum(5, 7);",
+      "expected_output": "5\n12",
+      "expected_return": 12
+    },
+    {
+      "language": "python",
+      "environment": "python3",
+      "code": "def factorial(n):\n    return 1 if n <= 1 else n * factorial(n-1)\n\nresult = factorial(5)\nprint(f'Factorial of 5: {result}')\nresult",
+      "expected_output": "Factorial of 5: 120",
+      "expected_return": 120
+    },
+    {
+      "language": "bash",
+      "environment": "bash",
+      "code": "echo 'Hello World'\necho 'Current date:'\ndate '+%Y-%m-%d'",
+      "expected_output_contains": ["Hello World", "Current date:", "2025"],
+      "expected_return": 0
+    },
+    {
+      "language": "ruby",
+      "environment": "ruby",
+      "code": "class Calculator\n  def self.multiply(a, b)\n    a * b\n  end\nend\n\nresult = Calculator.multiply(6, 7)\nputs \"Result: #{result}\"\nresult",
+      "expected_output": "Result: 42",
+      "expected_return": 42
+    }
+  ],
+  "docker_configurations": [
+    {
+      "name": "node_test_container",
+      "image": "node:18-alpine",
+      "ports": {"3000": "3000"},
+      "environment": {"NODE_ENV": "test", "PORT": "3000"},
+      "expected_status": "running"
+    },
+    {
+      "name": "python_test_container",
+      "image": "python:3.11-alpine",
+      "ports": {"8000": "8000"},
+      "environment": {"PYTHONPATH": "/app", "ENV": "test"},
+      "expected_status": "running"
+    },
+    {
+      "name": "nginx_test_container",
+      "image": "nginx:alpine",
+      "ports": {"80": "8080"},
+      "volumes": {"/usr/share/nginx/html": "/app/public"},
+      "expected_status": "running"
+    }
+  ],
+  "task_templates": [
+    {
+      "id": "code_analysis_task",
+      "description": "Analyze code quality and suggest improvements",
+      "strategy": "parallel",
+      "priority": "high",
+      "max_agents": 3,
+      "required_agent_types": ["researcher", "reviewer"],
+      "expected_duration": "5-10 minutes"
+    },
+    {
+      "id": "feature_implementation_task",
+      "description": "Implement new feature with full test coverage",
+      "strategy": "sequential",
+      "priority": "medium",
+      "max_agents": 4,
+      "required_agent_types": ["researcher", "coder", "tester", "reviewer"],
+      "expected_duration": "15-30 minutes"
+    },
+    {
+      "id": "performance_optimization_task",
+      "description": "Optimize application performance and identify bottlenecks",
+      "strategy": "adaptive",
+      "priority": "high",
+      "max_agents": 2,
+      "required_agent_types": ["optimizer", "reviewer"],
+      "expected_duration": "10-20 minutes"
+    }
+  ],
+  "api_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/claude-flow/init",
+      "required_fields": ["topology", "max_agents"],
+      "optional_fields": ["strategy", "name"],
+      "expected_response": {
+        "success": true,
+        "swarm_id": "string",
+        "status": "initialized"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/claude-flow/spawn",
+      "required_fields": ["type"],
+      "optional_fields": ["name", "capabilities"],
+      "expected_response": {
+        "success": true,
+        "agent_id": "string",
+        "status": "spawned"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/codex/execute",
+      "required_fields": ["code", "language"],
+      "optional_fields": ["environment", "timeout"],
+      "expected_response": {
+        "success": true,
+        "output": "string",
+        "execution_time": "number",
+        "status": "completed"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/docker/create",
+      "required_fields": ["image"],
+      "optional_fields": ["name", "ports", "environment", "volumes"],
+      "expected_response": {
+        "success": true,
+        "container_id": "string",
+        "status": "created"
+      }
+    }
+  ],
+  "error_scenarios": [
+    {
+      "scenario": "invalid_swarm_config",
+      "input": {"invalid": "config"},
+      "expected_error": "Invalid configuration",
+      "expected_status": 400
+    },
+    {
+      "scenario": "missing_required_field",
+      "input": {"topology": "mesh"},
+      "expected_error": "Missing required field: max_agents",
+      "expected_status": 400
+    },
+    {
+      "scenario": "invalid_agent_type",
+      "input": {"type": "invalid_type"},
+      "expected_error": "Unknown agent type",
+      "expected_status": 400
+    },
+    {
+      "scenario": "code_execution_timeout",
+      "input": {"code": "while(true) {}", "language": "javascript", "timeout": 1000},
+      "expected_error": "Execution timeout",
+      "expected_status": 408
+    },
+    {
+      "scenario": "docker_image_not_found",
+      "input": {"image": "nonexistent:latest"},
+      "expected_error": "Image not found",
+      "expected_status": 404
+    }
+  ],
+  "performance_benchmarks": [
+    {
+      "operation": "swarm_initialization",
+      "expected_max_time": 2000,
+      "expected_success_rate": 99
+    },
+    {
+      "operation": "agent_spawning",
+      "expected_max_time": 1000,
+      "expected_success_rate": 99
+    },
+    {
+      "operation": "code_execution_javascript",
+      "expected_max_time": 5000,
+      "expected_success_rate": 95
+    },
+    {
+      "operation": "docker_container_creation",
+      "expected_max_time": 10000,
+      "expected_success_rate": 90
+    },
+    {
+      "operation": "task_orchestration",
+      "expected_max_time": 15000,
+      "expected_success_rate": 95
+    }
+  ],
+  "security_test_cases": [
+    {
+      "test": "sql_injection",
+      "input": "'; DROP TABLE users; --",
+      "expected_result": "blocked"
+    },
+    {
+      "test": "xss_attack",
+      "input": "<script>alert('XSS')</script>",
+      "expected_result": "sanitized"
+    },
+    {
+      "test": "command_injection",
+      "input": "test; rm -rf /",
+      "expected_result": "blocked"
+    },
+    {
+      "test": "path_traversal",
+      "input": "../../../etc/passwd",
+      "expected_result": "blocked"
+    },
+    {
+      "test": "large_payload",
+      "input": "large_payload_string",
+      "expected_result": "rejected"
+    }
+  ]
+}

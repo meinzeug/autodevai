@@ -1,0 +1,270 @@
+# Multi-stage Dockerfile for AutoDev Sandboxes
+ARG BASE_IMAGE=node:20-bullseye
+ARG SANDBOX_TYPE=nodejs
+
+# Base stage with common tools
+FROM ${BASE_IMAGE} as base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    # Development essentials
+    git \
+    curl \
+    wget \
+    vim \
+    nano \
+    htop \
+    tree \
+    jq \
+    zip \
+    unzip \
+    # Build tools
+    build-essential \
+    pkg-config \
+    # Python support (for all sandboxes)
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Network tools
+    netcat \
+    telnet \
+    iputils-ping \
+    dnsutils \
+    # Process management
+    supervisor \
+    # Process and monitoring tools only \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create sandbox user with minimal permissions
+RUN groupadd -g 1000 sandbox && \
+    useradd -u 1000 -g 1000 -m -s /bin/bash sandbox && \
+    # Remove sudo access for security
+    rm -f /etc/sudoers.d/sandbox
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown -R sandbox:sandbox /workspace
+
+# Node.js specific stage
+FROM base as nodejs
+RUN npm install -g \
+    nodemon \
+    pm2 \
+    eslint \
+    prettier \
+    jest \
+    @claudejs/claude-code \
+    typescript \
+    ts-node \
+    create-react-app \
+    express-generator
+
+# Python specific stage  
+FROM base as python
+RUN pip3 install --no-cache-dir \
+    jupyter \
+    jupyterlab \
+    pytest \
+    black \
+    flake8 \
+    mypy \
+    requests \
+    flask \
+    django \
+    fastapi \
+    uvicorn \
+    pandas \
+    numpy \
+    matplotlib \
+    seaborn
+
+# Test runner specific stage
+FROM nodejs as test-runner
+RUN npm install -g \
+    cypress \
+    playwright \
+    @testing-library/react \
+    @testing-library/jest-dom \
+    supertest \
+    mocha \
+    chai
+
+# Final stage selection based on SANDBOX_TYPE
+FROM ${SANDBOX_TYPE} as final
+
+# Set up environment
+ENV SANDBOX_HOME=/workspace
+ENV PATH="/workspace/.local/bin:${PATH}"
+WORKDIR /workspace
+
+# Copy configuration files
+COPY docker/configs/sandbox/ /etc/sandbox/
+
+# Create sandbox initialization script
+RUN cat > /workspace/init-sandbox.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🏗️ Initializing AutoDev Sandbox..."
+echo "📦 Sandbox Type: $SANDBOX_TYPE"
+echo "🆔 Sandbox ID: $SANDBOX_ID"
+echo "🔒 Isolation Level: $ISOLATION_LEVEL"
+
+# Create project structure if it doesn't exist
+if [ ! -d "/workspace/project" ]; then
+    echo "📁 Creating project structure..."
+    mkdir -p /workspace/project/{src,tests,docs,config}
+    
+    # Initialize based on sandbox type
+    case "$SANDBOX_TYPE" in
+        "nodejs")
+            echo "🟢 Initializing Node.js project..."
+            cd /workspace/project
+            if [ ! -f package.json ]; then
+                npm init -y
+                npm install express jest nodemon
+                echo "console.log('AutoDev Sandbox Ready!');" > src/index.js
+                echo "test('sample test', () => { expect(1+1).toBe(2); });" > tests/index.test.js
+            fi
+            ;;
+        "python")
+            echo "🐍 Initializing Python project..."
+            cd /workspace/project
+            if [ ! -f requirements.txt ]; then
+                echo "flask==2.3.3" > requirements.txt
+                echo "pytest==7.4.2" >> requirements.txt
+                echo "print('AutoDev Python Sandbox Ready!')" > src/main.py
+                echo "def test_sample(): assert 1+1 == 2" > tests/test_main.py
+            fi
+            ;;
+    esac
+fi
+
+# Set proper permissions
+chown -R sandbox:sandbox /workspace/project
+
+# Start supervisor for process management
+if [ -f /etc/sandbox/supervisord.conf ]; then
+    echo "👥 Starting supervisor..."
+    supervisord -c /etc/sandbox/supervisord.conf
+fi
+
+echo "✅ Sandbox initialization complete!"
+EOF
+
+# Create supervisor configuration
+RUN mkdir -p /etc/sandbox && cat > /etc/sandbox/supervisord.conf << 'EOF'
+[supervisord]
+nodaemon=true
+user=sandbox
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:sandbox-monitor]
+command=/workspace/monitor-sandbox.sh
+autostart=true
+autorestart=true
+user=sandbox
+stdout_logfile=/var/log/supervisor/monitor.log
+stderr_logfile=/var/log/supervisor/monitor_err.log
+
+[unix_http_server]
+file=/var/run/supervisor.sock
+chmod=0700
+chown=sandbox:sandbox
+username=sandbox
+password=sandbox_secure_2024_$(openssl rand -base64 32 | head -c 16)
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+username=sandbox
+password=sandbox_secure_2024_$(openssl rand -base64 32 | head -c 16)
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+EOF
+
+# Create sandbox monitoring script
+RUN cat > /workspace/monitor-sandbox.sh << 'EOF'
+#!/bin/bash
+
+echo "🔍 Starting sandbox monitoring..."
+
+while true; do
+    # Check resource usage
+    CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+    MEM_USAGE=$(free | grep Mem | awk '{printf "%.2f", $3/$2 * 100.0}')
+    DISK_USAGE=$(df /workspace | tail -1 | awk '{print $5}' | sed 's/%//')
+    
+    # Log metrics
+    echo "$(date): CPU: ${CPU_USAGE}%, Memory: ${MEM_USAGE}%, Disk: ${DISK_USAGE}%" >> /var/log/sandbox-metrics.log
+    
+    # Check if resource limits exceeded
+    if (( $(echo "$CPU_USAGE > 80" | bc -l) )); then
+        echo "⚠️ High CPU usage detected: ${CPU_USAGE}%"
+    fi
+    
+    if (( $(echo "$MEM_USAGE > 80" | bc -l) )); then
+        echo "⚠️ High memory usage detected: ${MEM_USAGE}%"
+    fi
+    
+    sleep 30
+done
+EOF
+
+# Create health check script
+RUN cat > /workspace/health-check.sh << 'EOF'
+#!/bin/bash
+
+# Check if sandbox processes are running
+if ! pgrep -f "supervisord" > /dev/null; then
+    echo "❌ Supervisor not running"
+    exit 1
+fi
+
+# Check workspace accessibility
+if [ ! -w "/workspace/project" ]; then
+    echo "❌ Workspace not writable"
+    exit 1
+fi
+
+# Check network connectivity to main services
+if ! nc -z 172.20.0.10 5432; then
+    echo "⚠️ Cannot reach PostgreSQL"
+fi
+
+if ! nc -z 172.20.0.11 6379; then
+    echo "⚠️ Cannot reach Redis"
+fi
+
+echo "✅ Sandbox health check passed"
+exit 0
+EOF
+
+# Make scripts executable
+RUN chmod +x /workspace/*.sh
+
+# Create log directories
+RUN mkdir -p /var/log/supervisor && \
+    chown -R sandbox:sandbox /var/log/supervisor
+
+# Security: Remove unnecessary packages and clean up
+RUN apt-get remove -y wget sudo && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    # Remove package manager to prevent runtime package installation
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* && \
+    # Remove shells except bash for sandbox user
+    rm -f /bin/sh /usr/bin/dash 2>/dev/null || true
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /workspace/health-check.sh
+
+# Switch to sandbox user
+USER sandbox
+
+# Set default working directory
+WORKDIR /workspace/project
+
+# Default command
+CMD ["/workspace/init-sandbox.sh", "&&", "tail", "-f", "/dev/null"]

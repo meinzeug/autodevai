@@ -1,0 +1,43 @@
+# Cargo configuration for Neural Bridge Platform
+# This file configures build settings, test coverage, and development tools
+
+[build]
+# Enable test coverage collection
+rustflags = [
+    "-C", "instrument-coverage",
+    "-C", "llvm-args=--instrprof-atomic-counter-update-all",
+]
+
+[env]
+# Set environment variables for testing
+LLVM_PROFILE_FILE = "coverage/neural-bridge-%p-%m.profraw"
+RUST_TEST_THREADS = "1"
+RUST_BACKTRACE = "1"
+
+# [target.x86_64-unknown-linux-gnu]
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-dead_strip"]
+
+# Test configuration
+[test]
+# Run tests in single thread for deterministic coverage
+thread-count = 1
+
+# Profile for test coverage builds
+[profile.coverage]
+inherits = "test"
+debug = true
+codegen-units = 1
+incremental = false
+overflow-checks = false
+
+# Profile for benchmark tests
+[profile.bench]
+inherits = "release"
+debug = true
+lto = "thin"

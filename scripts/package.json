@@ -1,0 +1,23 @@
+{
+  "name": "ai-automation-server",
+  "version": "1.0.0",
+  "description": "Automated Vibe-Coding-AI lifecycle management with GitHub integration",
+  "main": "ai-automation-server.js",
+  "scripts": {
+    "start": "node ai-automation-server.js",
+    "dev": "nodemon ai-automation-server.js",
+    "setup": "npm install && chmod +x *.sh",
+    "webhook-setup": "./setup-github-webhooks.sh",
+    "test-webhook": "curl -X POST http://localhost:3000/health"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["ai", "automation", "github", "webhooks", "ci-cd"],
+  "author": "Senior GitHub Developer",
+  "license": "MIT"
+}
