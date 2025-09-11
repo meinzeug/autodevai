@@ -376,8 +376,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.initialize.outputs.maintenance-branch }}
 
       - name: Trigger local environment sync
         id: trigger
