@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Settings, RefreshCw, Container } from 'lucide-react';
 import { TauriService } from '../services/tauri';
-import { ExecutionMode, ClaudeFlowCommand, OrchestrationConfig, DockerContainer } from '../types';
+import { ClaudeFlowCommand, OrchestrationConfig, DockerContainer } from '../types';
 import { cn } from '../utils/cn';
 
 interface OrchestrationPanelProps {

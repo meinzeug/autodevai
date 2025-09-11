@@ -12,11 +12,16 @@ export default defineConfig({
       './tests/setup.ts',
       './tests/unit/setup.ts'
     ],
+    typecheck: {
+      tsconfig: './tsconfig.json'
+    },
+    testTimeout: 15000,
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/frontend/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      'tests/integration/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      'tests/integration/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/accessibility/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ],
     exclude: [
       'node_modules',
@@ -55,10 +60,22 @@ export default defineConfig({
       ],
       thresholds: {
         global: {
-          statements: 80,
-          branches: 75,
-          functions: 75,
-          lines: 80
+          statements: 85,
+          branches: 80,
+          functions: 80,
+          lines: 85
+        },
+        './src/utils/': {
+          statements: 90,
+          branches: 85,
+          functions: 90,
+          lines: 90
+        },
+        './src/hooks/': {
+          statements: 85,
+          branches: 80,
+          functions: 85,
+          lines: 85
         }
       },
       all: true,
@@ -73,7 +90,10 @@ export default defineConfig({
         singleThread: false
       }
     },
-    reporter: ['verbose', 'json', 'html'],
+    reporter: ['verbose', 'json', 'html', 'junit'],
+    benchmark: {
+      reporter: ['verbose']
+    },
     outputFile: {
       json: './tests/coverage/vitest-results.json',
       html: './tests/coverage/vitest-results.html'

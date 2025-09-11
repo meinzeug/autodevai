@@ -188,7 +188,8 @@ export interface ThemeProviderProps {
 }
 
 // Add missing ClaudeFlowCommand extension
-export interface ClaudeFlowCommandExtended extends ClaudeFlowCommand {
+export interface ClaudeFlowCommandExtended {
+  command: ClaudeFlowCommand;
   task?: string;
   mode?: string;
   options?: Record<string, any>;

@@ -26,7 +26,7 @@ export function useTheme() {
 // Simple ThemeProvider function - using createElement instead of JSX
 import { createElement } from 'react';
 
-export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const { theme } = useTheme();
   
   return createElement('div', { 

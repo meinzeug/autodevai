@@ -1,0 +1,241 @@
+/* Responsive Component Utilities */
+
+/* Container Queries Support */
+@container (max-width: 640px) {
+  .container-mobile {
+    @apply flex-col space-y-2;
+  }
+  
+  .container-mobile-text {
+    @apply text-sm;
+  }
+  
+  .container-mobile-buttons {
+    @apply w-full;
+  }
+}
+
+@container (min-width: 641px) and (max-width: 1024px) {
+  .container-tablet {
+    @apply flex-row space-x-4;
+  }
+  
+  .container-tablet-text {
+    @apply text-base;
+  }
+}
+
+@container (min-width: 1025px) {
+  .container-desktop {
+    @apply flex-row space-x-6;
+  }
+  
+  .container-desktop-text {
+    @apply text-lg;
+  }
+}
+
+/* Mobile-First Responsive Breakpoints */
+.responsive-grid-mobile {
+  @apply grid grid-cols-1;
+}
+
+@screen sm {
+  .responsive-grid-mobile {
+    @apply grid-cols-2;
+  }
+}
+
+@screen lg {
+  .responsive-grid-mobile {
+    @apply grid-cols-3;
+  }
+}
+
+@screen xl {
+  .responsive-grid-mobile {
+    @apply grid-cols-4;
+  }
+}
+
+/* Responsive Text Sizes */
+.responsive-text {
+  @apply text-sm;
+}
+
+@screen md {
+  .responsive-text {
+    @apply text-base;
+  }
+}
+
+@screen lg {
+  .responsive-text {
+    @apply text-lg;
+  }
+}
+
+/* Responsive Spacing */
+.responsive-padding {
+  @apply p-4;
+}
+
+@screen md {
+  .responsive-padding {
+    @apply p-6;
+  }
+}
+
+@screen lg {
+  .responsive-padding {
+    @apply p-8;
+  }
+}
+
+/* Responsive Margins */
+.responsive-margin {
+  @apply m-4;
+}
+
+@screen md {
+  .responsive-margin {
+    @apply m-6;
+  }
+}
+
+@screen lg {
+  .responsive-margin {
+    @apply m-8;
+  }
+}
+
+/* Responsive Gaps */
+.responsive-gap {
+  @apply gap-4;
+}
+
+@screen md {
+  .responsive-gap {
+    @apply gap-6;
+  }
+}
+
+@screen lg {
+  .responsive-gap {
+    @apply gap-8;
+  }
+}
+
+/* Component-specific responsive utilities */
+.orchestration-panel {
+  @apply w-full;
+}
+
+@screen xl {
+  .orchestration-panel {
+    @apply w-auto;
+  }
+}
+
+.output-display {
+  @apply h-64;
+}
+
+@screen md {
+  .output-display {
+    @apply h-80;
+  }
+}
+
+@screen lg {
+  .output-display {
+    @apply h-96;
+  }
+}
+
+@screen xl {
+  .output-display {
+    @apply h-full;
+  }
+}
+
+/* Button responsive styles */
+.responsive-button {
+  @apply px-3 py-2 text-sm;
+}
+
+@screen md {
+  .responsive-button {
+    @apply px-4 py-3 text-base;
+  }
+}
+
+/* Form responsive styles */
+.responsive-form-grid {
+  @apply grid grid-cols-1 gap-4;
+}
+
+@screen sm {
+  .responsive-form-grid {
+    @apply grid-cols-2;
+  }
+}
+
+@screen lg {
+  .responsive-form-grid {
+    @apply grid-cols-3;
+  }
+}
+
+/* Sidebar responsive behavior */
+.sidebar-responsive {
+  @apply fixed inset-y-0 left-0 z-50 w-64 transform transition-transform;
+}
+
+@screen lg {
+  .sidebar-responsive {
+    @apply relative transform-none;
+  }
+}
+
+/* Header responsive behavior */
+.header-responsive {
+  @apply flex flex-col space-y-2;
+}
+
+@screen sm {
+  .header-responsive {
+    @apply flex-row space-y-0 space-x-4 items-center justify-between;
+  }
+}
+
+/* Content area responsive behavior */
+.content-responsive {
+  @apply flex flex-col space-y-4;
+}
+
+@screen xl {
+  .content-responsive {
+    @apply grid grid-cols-12 space-y-0 gap-6;
+  }
+}
+
+.content-left-panel {
+  @apply col-span-full;
+}
+
+@screen xl {
+  .content-left-panel {
+    @apply col-span-5;
+  }
+}
+
+.content-right-panel {
+  @apply col-span-full;
+}
+
+@screen xl {
+  .content-right-panel {
+    @apply col-span-7;
+  }
+}

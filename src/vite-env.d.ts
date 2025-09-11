@@ -8,10 +8,6 @@ interface ImportMetaEnv {
   readonly VITE_FEATURE_MONITORING?: string;
 }
 
-interface ImportMetaEnv {
-  readonly env: ImportMetaEnv;
-}
-
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }

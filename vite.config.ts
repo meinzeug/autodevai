@@ -15,13 +15,22 @@ export default defineConfig({
     target: 'esnext',
     minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_DEBUG,
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         globals: {
           __TAURI_INTERNALS__: '__TAURI_INTERNALS__',
         },
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['lucide-react', '@radix-ui/react-progress', '@radix-ui/react-select', '@radix-ui/react-tabs'],
+          utils: ['clsx', 'tailwind-merge', 'class-variance-authority'],
+        },
       },
     },
+    assetsDir: 'assets',
+    emptyOutDir: true,
   },
   resolve: {
     alias: {
@@ -33,5 +42,15 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@store': path.resolve(__dirname, './src/store'),
     },
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'lucide-react',
+      'clsx',
+      'tailwind-merge'
+    ],
   },
 });

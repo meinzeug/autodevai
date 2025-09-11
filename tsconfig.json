@@ -71,7 +71,10 @@
     "github-callback-server.js",
     "scripts/ai-automation-server.js",
     "**/*.config.js",
-    "**/*.config.ts"
+    "**/*.config.ts",
+    "tests/responsive/accessibility-audit.test.ts",
+    "tests/responsive/performance-optimization.test.ts",
+    "tests/responsive/responsive-test-suite.test.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

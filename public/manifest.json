@@ -1,22 +1,75 @@
 {
   "name": "AutoDev-AI Neural Bridge Platform",
   "short_name": "AutoDev-AI",
-  "description": "Advanced AI orchestration platform with neural bridge technology",
+  "description": "Advanced AI orchestration platform with neural bridge technology for autonomous development and intelligent code generation",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0ea5e9",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["developer", "productivity", "utilities"],
   "lang": "en",
   "scope": "/",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Quick Execute",
+      "short_name": "Execute",
+      "description": "Quickly execute Claude Flow commands",
+      "url": "/?action=execute",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "System Monitor",
+      "short_name": "Monitor",
+      "description": "View system health and performance",
+      "url": "/?tab=monitoring",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Main orchestration interface on desktop"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "web",
+      "url": "https://github.com/meinzeug/autodevai"
+    }
+  ]
 }
