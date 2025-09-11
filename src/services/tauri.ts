@@ -1,12 +1,12 @@
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { Command } from '@tauri-apps/api/shell';
-import { 
-  ExecutionOutput, 
-  ToolStatus, 
-  DockerContainer, 
+import { Command } from '@tauri-apps/plugin-shell';
+import {
+  ExecutionOutput,
+  ToolStatus,
+  DockerContainer,
   SystemMetrics,
-  ClaudeFlowCommand 
+  ClaudeFlowCommand,
 } from '../types';
 
 export class TauriService {
@@ -24,20 +24,20 @@ export class TauriService {
   async initialize(): Promise<void> {
     // Set up event listeners for real-time updates
     await this.setupEventListeners();
-    
+
     // Initialize tool status monitoring
     await this.startToolMonitoring();
   }
 
   private async setupEventListeners(): Promise<void> {
     // Listen for execution output
-    await listen('execution-output', (event) => {
+    await listen('execution-output', event => {
       const output = event.payload as ExecutionOutput;
       this.outputListeners.forEach(listener => listener(output));
     });
 
     // Listen for tool status updates
-    await listen('tool-status-update', (event) => {
+    await listen('tool-status-update', event => {
       const status = event.payload as ToolStatus[];
       this.statusListeners.forEach(listener => listener(status));
     });
@@ -49,7 +49,7 @@ export class TauriService {
       const result = await invoke('execute_claude_flow_command', {
         mode: command.mode,
         task: command.task,
-        options: command.options
+        options: command.options,
       });
       return result as string;
     } catch (error) {
@@ -72,7 +72,7 @@ export class TauriService {
     try {
       const result = await invoke('execute_codex_command', {
         prompt,
-        mode
+        mode,
       });
       return result as string;
     } catch (error) {
@@ -95,7 +95,7 @@ export class TauriService {
     try {
       const containerId = await invoke('create_docker_sandbox', {
         image,
-        name
+        name,
       });
       return containerId as string;
     } catch (error) {
@@ -142,7 +142,7 @@ export class TauriService {
         memoryUsage: 0,
         diskUsage: 0,
         networkActivity: 0,
-        activeProcesses: 0
+        activeProcesses: 0,
       };
     }
   }
@@ -150,13 +150,13 @@ export class TauriService {
   // Command Execution
   async executeCommand(command: string, args: string[] = []): Promise<string> {
     try {
-      const cmd = new Command(command, args);
+      const cmd = Command.create(command, args);
       const output = await cmd.execute();
-      
+
       if (output.code !== 0) {
         throw new Error(`Command failed with code ${output.code}: ${output.stderr}`);
       }
-      
+
       return output.stdout;
     } catch (error) {
       throw new Error(`Command execution failed: ${error}`);
