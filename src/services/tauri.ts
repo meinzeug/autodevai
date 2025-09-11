@@ -1,12 +1,16 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Command } from '@tauri-apps/plugin-shell';
-import {
+import type {
   ExecutionOutput,
   ToolStatus,
   DockerContainer,
   SystemMetrics,
   ClaudeFlowCommand,
+  ExecutionResult,
+  PrerequisiteStatus,
+  SystemInfo,
+  Settings,
 } from '../types';
 
 export class TauriService {
@@ -220,4 +224,128 @@ export class TauriService {
       return [];
     }
   }
+
+  // Roadmap-specific service methods
+  async executeClaudeFlow(command: string): Promise<ExecutionResult> {
+    try {
+      return await invoke('execute_claude_flow', { command });
+    } catch (error) {
+      throw new Error(`Claude Flow execution failed: ${error}`);
+    }
+  }
+
+  async executeOpenAICodex(task: string, mode: string): Promise<ExecutionResult> {
+    try {
+      return await invoke('execute_openai_codex', { task, mode });
+    } catch (error) {
+      throw new Error(`OpenAI Codex execution failed: ${error}`);
+    }
+  }
+
+  async orchestrateDualMode(task: string, openrouterKey: string): Promise<ExecutionResult> {
+    try {
+      return await invoke('orchestrate_dual_mode', { task, openrouterKey });
+    } catch (error) {
+      throw new Error(`Dual mode orchestration failed: ${error}`);
+    }
+  }
+
+  async createSandbox(projectId: string): Promise<string> {
+    try {
+      return await invoke('create_sandbox', { projectId });
+    } catch (error) {
+      throw new Error(`Sandbox creation failed: ${error}`);
+    }
+  }
+
+  async stopSandbox(projectId: string): Promise<string> {
+    try {
+      return await invoke('stop_sandbox', { projectId });
+    } catch (error) {
+      throw new Error(`Sandbox stop failed: ${error}`);
+    }
+  }
+
+  async checkPrerequisites(): Promise<PrerequisiteStatus> {
+    try {
+      return await invoke('check_prerequisites');
+    } catch (error) {
+      console.error('Failed to check prerequisites:', error);
+      return {
+        claude_flow_ready: false,
+        codex_ready: false,
+        claude_code_ready: false,
+        docker_ready: false,
+      };
+    }
+  }
+
+  async getSystemInfo(): Promise<SystemInfo> {
+    try {
+      return await invoke('get_system_info');
+    } catch (error) {
+      console.error('Failed to get system info:', error);
+      return {
+        os: 'unknown',
+        kernel: 'unknown',
+        memory_total: 0,
+        memory_available: 0,
+        disk_total: 0,
+        disk_available: 0,
+      };
+    }
+  }
+
+  async saveSettings(settings: Settings): Promise<void> {
+    try {
+      await invoke('save_settings', { settings });
+    } catch (error) {
+      throw new Error(`Failed to save settings: ${error}`);
+    }
+  }
+
+  async loadSettings(): Promise<Settings> {
+    try {
+      return await invoke('load_settings');
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      return {
+        default_mode: 'single',
+        default_tool: 'claude-flow',
+        docker_enabled: false,
+        auto_quality_check: true,
+      };
+    }
+  }
 }
+
+// Export additional service as requested in roadmap
+export const TauriService2 = {
+  async executeClaudeFlow(command: string): Promise<ExecutionResult> {
+    return await invoke('execute_claude_flow', { command });
+  },
+  async executeOpenAICodex(task: string, mode: string): Promise<ExecutionResult> {
+    return await invoke('execute_openai_codex', { task, mode });
+  },
+  async orchestrateDualMode(task: string, openrouterKey: string): Promise<ExecutionResult> {
+    return await invoke('orchestrate_dual_mode', { task, openrouterKey });
+  },
+  async createSandbox(projectId: string): Promise<string> {
+    return await invoke('create_sandbox', { projectId });
+  },
+  async stopSandbox(projectId: string): Promise<string> {
+    return await invoke('stop_sandbox', { projectId });
+  },
+  async checkPrerequisites(): Promise<PrerequisiteStatus> {
+    return await invoke('check_prerequisites');
+  },
+  async getSystemInfo(): Promise<SystemInfo> {
+    return await invoke('get_system_info');
+  },
+  async saveSettings(settings: Settings): Promise<void> {
+    return await invoke('save_settings', { settings });
+  },
+  async loadSettings(): Promise<Settings> {
+    return await invoke('load_settings');
+  },
+};
