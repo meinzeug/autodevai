@@ -1,7 +1,6 @@
 import React from 'react';
 import { Brain, Moon, Sun, Settings, Github } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { cn } from '@/utils/cn';
 
 interface HeaderProps {
   onSettingsClick: () => void;

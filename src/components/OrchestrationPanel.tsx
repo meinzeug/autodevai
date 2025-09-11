@@ -24,7 +24,7 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const tauriService = TauriService.getInstance();
+  const tauriService = TauriService;
 
   const initializePanel = useCallback(async () => {
     try {

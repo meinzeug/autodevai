@@ -25,8 +25,8 @@ const NavigationItemComponent: React.FC<{
         className={`
           w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium rounded-lg transition-colors duration-200
           ${item.active 
-            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-500' 
-            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500' 
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
           }
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         `}
@@ -92,9 +92,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+          fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-white shadow-xl transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:relative lg:translate-x-0 lg:shadow-none lg:border-r lg:border-gray-200
+          lg:fixed lg:translate-x-0 lg:shadow-lg lg:border-r lg:border-gray-200
           w-64 flex flex-col
           ${className}
         `}
@@ -102,11 +102,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         role="navigation"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 lg:hidden">
-          <h2 className="text-lg font-semibold text-gray-900">Navigation</h2>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600 lg:hidden">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Navigation</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-gray-700 dark:text-gray-300"
             aria-label="Close navigation menu"
             type="button"
           >
@@ -131,14 +131,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer/Actions */}
         {children && (
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-600">
             {children}
           </div>
         )}
 
         {/* System Info */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <div className="text-xs text-gray-500">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             <div className="flex justify-between items-center">
               <span>AutoDevAI v1.0</span>
               <div className="flex items-center gap-1">

@@ -10,7 +10,7 @@ export function useTauri() {
 
   const executeCommand = async (
     command: string,
-    args?: any
+    _args?: any
   ): Promise<any> => {
     setIsLoading(true);
     setError(null);

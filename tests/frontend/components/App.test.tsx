@@ -5,7 +5,7 @@ import App from '../../../src/App';
 
 // Mock Tauri API
 const mockInvoke = vi.fn();
-vi.mock('@tauri-apps/api/tauri', () => ({
+vi.mock('@tauri-apps/api/core', () => ({
   invoke: mockInvoke,
 }));
 

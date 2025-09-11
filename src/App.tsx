@@ -68,7 +68,7 @@ function AppContent() {
     showSettings: false,
     showOutput: true,
     showUpdater: false,
-    showSidebar: false,
+    showSidebar: true,
     activeTab: 'orchestration'
   });
   
@@ -395,12 +395,16 @@ function AppContent() {
         className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Content Container */}
+      <div className={cn(
+        "flex-1 flex overflow-hidden transition-all duration-300",
+        // Add left margin on large screens when sidebar is open
+        state.showSidebar && "lg:ml-64"
+      )}>
         {/* Settings Sidebar */}
         {state.showSettings && (
           <div className={cn(
-            "w-80 border-r transition-all duration-300",
+            "w-80 border-r transition-all duration-300 flex-shrink-0",
             theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           )}>
             <ConfigurationPanel 
@@ -414,7 +418,7 @@ function AppContent() {
         {/* Update Manager Sidebar */}
         {state.showUpdater && (
           <div className={cn(
-            "w-96 border-r transition-all duration-300 overflow-y-auto",
+            "w-96 border-r transition-all duration-300 overflow-y-auto flex-shrink-0",
             theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           )}>
             <div className="p-6">
@@ -429,9 +433,9 @@ function AppContent() {
         
         {/* Primary Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden">
+          <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 p-4 lg:p-6 overflow-hidden">
             {/* Left Panel - Orchestration */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5 flex-shrink-0">
               <ErrorBoundary>
                 <OrchestrationPanel
                   onExecute={handleExecute}
@@ -443,7 +447,7 @@ function AppContent() {
             </div>
             
             {/* Right Panel - Output & Monitoring */}
-            <div className="lg:col-span-7 flex flex-col space-y-6 min-h-0">
+            <div className="lg:col-span-7 flex flex-col min-h-0 flex-1">
               {state.showOutput && (
                 <ErrorBoundary>
                   <OutputDisplay
@@ -460,17 +464,23 @@ function AppContent() {
 
       {/* Status Bar with system health */}
       <ErrorBoundary>
-        <StatusBar
-          systemHealth={{
-            cpu: 45.2,
-            memory: 62.8,
-            disk: 78.4,
-            network: 'connected'
-          }}
-          activeConnections={state.outputs.length}
-          lastUpdate={new Date().toISOString()}
-          className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
-        />
+        <div className={cn(
+          "transition-all duration-300",
+          // Add left margin when sidebar is open on large screens
+          state.showSidebar && "lg:ml-64"
+        )}>
+          <StatusBar
+            systemHealth={{
+              cpu: 45.2,
+              memory: 62.8,
+              disk: 78.4,
+              network: 'connected'
+            }}
+            activeConnections={state.outputs.length}
+            lastUpdate={new Date().toISOString()}
+            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
+          />
+        </div>
       </ErrorBoundary>
     </div>
   );

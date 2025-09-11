@@ -27,7 +27,7 @@ export function useTheme() {
 import { createElement } from 'react';
 
 export function ThemeProvider({ children, defaultTheme = 'dark' }: ThemeProviderProps) {
-  const { theme, setTheme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   
   return createElement('div', { 
     'data-theme': theme,

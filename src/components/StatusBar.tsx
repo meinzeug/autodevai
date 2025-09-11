@@ -79,8 +79,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   className = '',
   children
 }) => {
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { 
+  const formatTime = (date: string | Date) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit', 
       second: '2-digit',
@@ -88,9 +89,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     });
   };
 
-  const getTimeSinceUpdate = (date: Date) => {
+  const getTimeSinceUpdate = (date: string | Date) => {
     const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const diff = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
     
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;

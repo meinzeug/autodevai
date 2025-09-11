@@ -26,8 +26,8 @@ export const z = {
 
 // Export namespace for type compatibility
 export namespace z {
-  export type ZodType<_T = any> = any;
-  export type infer<_T> = any;
+  export type ZodType<_T = any> = any; // eslint-disable-line @typescript-eslint/no-unused-vars
+  export type infer<_T> = any; // eslint-disable-line @typescript-eslint/no-unused-vars
 }
 
 export type ZodSchema = any;

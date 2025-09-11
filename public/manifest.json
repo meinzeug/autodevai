@@ -1,0 +1,22 @@
+{
+  "name": "AutoDev-AI Neural Bridge Platform",
+  "short_name": "AutoDev-AI",
+  "description": "Advanced AI orchestration platform with neural bridge technology",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["developer", "productivity", "utilities"],
+  "lang": "en",
+  "scope": "/",
+  "prefer_related_applications": false
+}

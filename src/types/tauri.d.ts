@@ -1,5 +1,5 @@
 // Tauri API Type Declarations
-declare module '@tauri-apps/api/tauri' {
+declare module '@tauri-apps/api/core' {
   export function invoke(command: string, args?: any): Promise<any>;
 }
 

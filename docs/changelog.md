@@ -7,10 +7,36 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Recent Changes (September 11, 2025)
+
+- **Layout & Responsive Design**: Fixed sidebar positioning to ensure menu is fully visible on the left with proper responsive behavior
+  - Implemented dynamic margin system for main content area (`lg:ml-64`) based on sidebar state
+  - Fixed sidebar positioning with proper z-index and transform transitions
+  - Ensured content boxes display correctly beside the sidebar on desktop
+  - Added responsive breakpoints for mobile/tablet/desktop layouts
+
+- **Dark/Light Mode Theming**: Complete theme system overhaul
+  - Fixed header component theming with proper dark mode colors (`bg-gray-800`, `border-gray-700`)
+  - Updated sidebar theming for consistent dark/light mode support
+  - Implemented proper text color contrast in both themes (dark text in light mode, light text in dark mode)
+  - Added comprehensive Tailwind CSS dark mode classes throughout components
+
+- **PWA Manifest & Icons**: Resolved icon and manifest issues
+  - Created SVG icon (`/public/icon.svg`) with gradient background and "AD" branding
+  - Fixed manifest.json to reference correct SVG icon format
+  - Resolved console error: "Resource size is not correct - typo in the Manifest"
+  - Updated HTML meta tags to use SVG icon for better scalability
+
+- **Tauri API Compatibility**: Fixed runtime import errors
+  - Updated Tauri API imports from deprecated `@tauri-apps/api/tauri` to `@tauri-apps/api/core`
+  - Implemented environment detection and browser fallbacks for cross-platform compatibility
+  - Added lazy loading for Tauri APIs to prevent runtime errors in browser environments
+  - Fixed TauriService method implementations with proper error handling
+
 ### Planned
 
 - Machine learning-based task routing optimization
-- Visual design integration for UI/UX generation
+- Visual design integration for UI/UX generation  
 - VS Code extension for real-time AI assistance
 - Advanced security vulnerability detection
 
