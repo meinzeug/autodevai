@@ -1,129 +1,101 @@
 version: 2
 updates:
   # NPM dependencies - grouped by type
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "tuesday"
-      time: "09:00"
-    open-pull-requests-limit: 5
+      interval: 'monthly' # Changed from weekly to monthly
+      day: 'tuesday'
+      time: '09:00'
+    open-pull-requests-limit: 3 # Reduced from 5 to 3
     groups:
-      react-ecosystem:
+      # Group ALL dependencies together to create single PR
+      all-npm-dependencies:
         patterns:
-          - "react*"
-          - "@types/react*"
+          - '*' # Match all packages
         update-types:
-          - "minor"
-          - "patch"
-      
-      testing-tools:
+          - 'minor'
+          - 'patch'
+      # Major updates still separate for safety
+      major-updates:
         patterns:
-          - "*test*"
-          - "vitest*"
-          - "@testing-library/*"
+          - '*'
         update-types:
-          - "minor"
-          - "patch"
-      
-      build-tools:
-        patterns:
-          - "vite*"
-          - "typescript"
-          - "eslint*"
-          - "prettier"
-        update-types:
-          - "minor"
-          - "patch"
-      
-      tauri-frontend:
-        patterns:
-          - "@tauri-apps/*"
-        update-types:
-          - "minor"
-          - "patch"
-    
+          - 'major'
+
     ignore:
       # Major updates need manual review
-      - dependency-name: "react"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@tauri-apps/*"
-        update-types: ["version-update:semver-major"]
-    
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@tauri-apps/*'
+        update-types: ['version-update:semver-major']
+
     labels:
-      - "dependencies"
-      - "npm"
-      - "automated"
-    
+      - 'dependencies'
+      - 'npm'
+      - 'automated'
+
     reviewers:
-      - "meinzeug"
-    
+      - 'meinzeug'
+
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: 'chore'
+      include: 'scope'
 
   # Cargo dependencies
-  - package-ecosystem: "cargo"
-    directory: "/src-tauri"
+  - package-ecosystem: 'cargo'
+    directory: '/src-tauri'
     schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "09:00"
-    open-pull-requests-limit: 3
+      interval: 'monthly' # Changed from weekly to monthly
+      day: 'wednesday'
+      time: '09:00'
+    open-pull-requests-limit: 2 # Reduced from 3 to 2
     groups:
-      tauri-core:
+      # Group ALL Rust dependencies together
+      all-cargo-dependencies:
         patterns:
-          - "tauri*"
+          - '*'
         update-types:
-          - "minor"
-          - "patch"
-      
-      async-runtime:
-        patterns:
-          - "tokio*"
-          - "futures*"
-          - "async-*"
-        update-types:
-          - "minor"
-          - "patch"
-    
+          - 'minor'
+          - 'patch'
+
     ignore:
       # Critical dependencies - manual review
-      - dependency-name: "tauri"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "tokio"
-        update-types: ["version-update:semver-major"]
-    
+      - dependency-name: 'tauri'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'tokio'
+        update-types: ['version-update:semver-major']
+
     labels:
-      - "dependencies"
-      - "rust"
-      - "automated"
-    
+      - 'dependencies'
+      - 'rust'
+      - 'automated'
+
     reviewers:
-      - "meinzeug"
-    
+      - 'meinzeug'
+
     commit-message:
-      prefix: "chore(rust)"
-      include: "scope"
+      prefix: 'chore(rust)'
+      include: 'scope'
 
   # GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "weekly"
-      day: "thursday"
-      time: "09:00"
-    open-pull-requests-limit: 2
+      interval: 'monthly' # Changed from weekly to monthly
+      day: 'thursday'
+      time: '09:00'
+    open-pull-requests-limit: 1 # Reduced from 2 to 1
     labels:
-      - "dependencies"
-      - "ci/cd"
-      - "automated"
-    
+      - 'dependencies'
+      - 'ci/cd'
+      - 'automated'
+
     reviewers:
-      - "meinzeug"
-    
+      - 'meinzeug'
+
     commit-message:
-      prefix: "ci"
-      include: "scope"
+      prefix: 'ci'
+      include: 'scope'
