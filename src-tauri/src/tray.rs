@@ -61,7 +61,7 @@ pub fn create_system_tray(app: &AppHandle) -> tauri::Result<TrayIcon> {
     // Set tray icon from bundled resources - use a simple approach for now
     // In a full implementation, this would load different icons based on platform and theme
     
-    let mut tray_builder = TrayIconBuilder::new()
+    let tray_builder = TrayIconBuilder::new()
         .title(&config.title)
         .tooltip(&config.tooltip)
         .menu(&tray_menu)
@@ -112,11 +112,15 @@ fn create_tray_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         let devtools = MenuItem::with_id(app, "tray_toggle_devtools", "Toggle DevTools", true, Some("F12"))?;
         let reload = MenuItem::with_id(app, "tray_reload_app", "Reload Application", true, Some("Ctrl+R"))?;
         let debug_sep = PredefinedMenuItem::separator(app)?;
-        menu_items.extend_from_slice(&[&devtools, &reload, &debug_sep]);
-        (Some(devtools.clone()), Some(reload.clone()), Some(debug_sep.clone()))
+        (Some(devtools), Some(reload), Some(debug_sep))
     } else {
         (None, None, None)
     };
+    
+    // Add debug items to menu if they exist
+    if let (Some(ref devtools), Some(ref reload), Some(ref debug_sep)) = (&devtools, &reload, &debug_sep) {
+        menu_items.extend_from_slice(&[devtools, reload, debug_sep]);
+    }
     
     // Application section
     let about = MenuItem::with_id(app, "tray_about", "About", true, None::<&str>)?;
@@ -358,7 +362,7 @@ fn reload_application(app: &AppHandle) {
 }
 
 /// Updates the tray menu show/hide text
-fn update_tray_menu_text(app: &AppHandle, text: &str) {
+fn update_tray_menu_text(_app: &AppHandle, text: &str) {
     info!("Updating tray menu text to: {}", text);
     
     // Store the new text in tray state
@@ -532,7 +536,7 @@ fn cleanup_before_quit(app: &AppHandle) {
     }
     
     // Save tray configuration and state
-    if let (Ok(config), Ok(state)) = (TRAY_CONFIG.lock(), TRAY_STATE.lock()) {
+    if let (Ok(_config), Ok(_state)) = (TRAY_CONFIG.lock(), TRAY_STATE.lock()) {
         info!("Saving tray configuration and state");
         // In a full implementation, this would persist to file
     }
@@ -570,7 +574,7 @@ pub fn handle_window_close_to_tray(app: &AppHandle, window_label: &str) -> bool 
 
 /// GTK integration setup for Linux
 #[cfg(target_os = "linux")]
-fn setup_gtk_tray_integration(app: &AppHandle) -> tauri::Result<()> {
+fn setup_gtk_tray_integration(_app: &AppHandle) -> tauri::Result<()> {
     info!("Setting up GTK system tray integration");
     
     // Set up GTK-specific tray behavior

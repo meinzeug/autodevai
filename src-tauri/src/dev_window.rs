@@ -143,7 +143,7 @@ pub fn create_dev_window_with_config(
 }
 
 /// Sets up event handlers specific to development windows
-fn setup_dev_window_events(window: &WebviewWindow, config: DevWindowConfig) -> tauri::Result<()> {
+fn setup_dev_window_events(window: &WebviewWindow, _config: DevWindowConfig) -> tauri::Result<()> {
     let window_label = window.label().to_string();
     let app_handle = window.app_handle().clone();
 
