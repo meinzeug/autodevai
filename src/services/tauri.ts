@@ -44,7 +44,6 @@ class TauriServiceClass {
       // Browser fallback - simulate execution result
       return {
         success: false,
-        message: 'Tauri environment not available - running in browser mode',
         output: 'This would execute Claude Flow command: ' + command,
         timestamp: new Date().toISOString()
       };
@@ -60,7 +59,6 @@ class TauriServiceClass {
     if (!tauriInvoke) {
       return {
         success: false,
-        message: 'Tauri environment not available - running in browser mode',
         output: `This would execute OpenAI Codex task: ${task} in mode: ${mode}`,
         timestamp: new Date().toISOString()
       };
@@ -70,18 +68,17 @@ class TauriServiceClass {
 
   async orchestrateDualMode(
     task: string,
-    openrouterKey: string
+    openrouter_key: string
   ): Promise<ExecutionResult> {
     const tauriInvoke = await getInvoke();
     if (!tauriInvoke) {
       return {
         success: false,
-        message: 'Tauri environment not available - running in browser mode',
         output: `This would orchestrate dual mode task: ${task}`,
         timestamp: new Date().toISOString()
       };
     }
-    return tauriInvoke('orchestrate_dual_mode', { task, openrouterKey });
+    return tauriInvoke('orchestrate_dual_mode', { task, openrouter_key });
   }
 
   async createSandbox(projectId: string): Promise<string> {
@@ -105,10 +102,6 @@ class TauriServiceClass {
     if (!tauriInvoke) {
       // Browser fallback - return mock status
       return {
-        claudeFlow: { available: false, version: 'N/A', message: 'Browser mode' },
-        docker: { available: false, version: 'N/A', message: 'Browser mode' },
-        openrouter: { available: false, version: 'N/A', message: 'Browser mode' },
-        system: { available: true, version: 'Browser', message: 'Running in browser' }
       };
     }
     return tauriInvoke('check_prerequisites');
@@ -119,7 +112,7 @@ class TauriServiceClass {
     if (!tauriInvoke) {
       // Browser fallback - return mock system info
       return {
-        platform: 'browser',
+        os: 'browser',
         version: '1.0.0',
         arch: navigator?.platform || 'unknown',
         nodeVersion: 'N/A',
@@ -153,7 +146,7 @@ class TauriServiceClass {
       }
       // Return default settings
       return {
-        openrouterKey: '',
+        openrouter_key: '',
         claudeFlowPath: '',
         dockerEnabled: false,
         theme: 'dark'

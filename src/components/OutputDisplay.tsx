@@ -24,7 +24,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
   const filteredOutputs = outputs.filter(output => {
     const matchesFilter = filter === 'all' || output.type === filter;
     const matchesSearch = searchTerm === '' || 
-      output.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      output.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (output.source && output.source.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesFilter && matchesSearch;
@@ -48,10 +48,10 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
 
   const handleExport = () => {
     const exportData = outputs.map(output => ({
-      timestamp: output.timestamp.toISOString(),
+      timestamp: typeof output.timestamp === 'string' ? output.timestamp : new Date(output.timestamp).toISOString(),
       type: output.type,
       source: output.source || 'unknown',
-      content: output.content
+      content: output.content || ''
     }));
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -70,14 +70,12 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
 
   const getOutputTypeColor = (type: ExecutionOutput['type']) => {
     switch (type) {
-      case 'stdout':
-        return 'text-green-400';
-      case 'stderr':
-        return 'text-red-400';
       case 'error':
         return 'text-red-500';
       case 'success':
         return 'text-green-500';
+      case 'warning':
+        return 'text-yellow-500';
       case 'info':
       default:
         return 'text-blue-400';
@@ -90,10 +88,8 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
         return '❌';
       case 'success':
         return '✅';
-      case 'stderr':
+      case 'warning':
         return '⚠️';
-      case 'stdout':
-        return '💬';
       case 'info':
       default:
         return 'ℹ️';
@@ -215,12 +211,12 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
                     <span className="text-gray-500 text-xs">
                       {typeof output.timestamp === 'string' ? 
                         new Date(output.timestamp).toLocaleTimeString() : 
-                        output.timestamp?.toLocaleTimeString?.() || output.timestamp}
+                        new Date().toLocaleTimeString()}
                     </span>
                   </div>
                   
                   <button
-                    onClick={() => handleCopy(output.content, output.id)}
+                    onClick={() => handleCopy(output.content || '', output.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded transition-all"
                     title="Copy to clipboard"
                   >
@@ -233,7 +229,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
                 </div>
                 
                 <div className="text-gray-300 whitespace-pre-wrap break-words">
-                  {output.content}
+                  {output.content || 'No content'}
                 </div>
               </div>
             </div>
@@ -248,14 +244,14 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
         <div className="flex justify-between">
           <span>
             Total: {outputs.length} | 
-            Errors: {outputs.filter(o => o.type === 'error' || o.type === 'stderr').length} |
+            Errors: {outputs.filter(o => o.type === 'error').length} |
             Success: {outputs.filter(o => o.type === 'success').length}
           </span>
           <span>
             Last update: {outputs.length > 0 ? (
               typeof outputs[outputs.length - 1]?.timestamp === 'string' 
                 ? new Date(outputs[outputs.length - 1].timestamp).toLocaleTimeString()
-                : outputs[outputs.length - 1]?.timestamp?.toLocaleTimeString?.() || 'Invalid'
+                : new Date().toLocaleTimeString()
             ) : 'Never'}
           </span>
         </div>

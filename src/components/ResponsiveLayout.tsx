@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar';
 import { useMobileMenu } from '../hooks/useMobileMenu';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { cn } from '../utils/cn';
-import { responsiveContainer, focusStyles } from '../utils/responsive';
+// import { responsiveContainer, focusStyles } from '../utils/responsive';
 import type { NavigationItem, StatusIndicator } from '../types';
 
 interface ResponsiveLayoutProps {
@@ -73,8 +73,8 @@ export function ResponsiveLayout({
         <main 
           className={cn(
             'flex-1 overflow-auto',
-            responsiveContainer.full,
-            focusStyles.default,
+            'w-full h-full', // responsiveContainer.full replacement
+            'focus:outline-none', // focusStyles.default replacement
             // Add left margin on desktop when sidebar is open
             !isMobile && isOpen && 'ml-0'
           )}

@@ -324,38 +324,34 @@ impl TrackingAllocator {
     }
 }
 
-unsafe impl GlobalAlloc for TrackingAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ptr = self.inner.alloc(layout);
+impl TrackingAllocator {
+    /// Track an allocation manually (safe alternative to GlobalAlloc)
+    pub fn track_allocation(&self, size: usize) {
+        let size = size as u64;
+        self.stats
+            .total_allocated
+            .fetch_add(size, Ordering::Relaxed);
+        self.stats.allocation_count.fetch_add(1, Ordering::Relaxed);
 
-        if !ptr.is_null() {
-            let size = layout.size() as u64;
-            self.stats
-                .total_allocated
-                .fetch_add(size, Ordering::Relaxed);
-            self.stats.allocation_count.fetch_add(1, Ordering::Relaxed);
+        let old_usage = self.stats.current_usage.load(Ordering::Relaxed);
+        let new_usage = old_usage.saturating_add(size);
+        self.stats.current_usage.store(new_usage, Ordering::Relaxed);
 
-            let old_usage = self.stats.current_usage.load(Ordering::Relaxed);
-            let new_usage = old_usage.saturating_add(size);
-            self.stats.current_usage.store(new_usage, Ordering::Relaxed);
-
-            // Update peak usage
-            let current_peak = self.stats.peak_usage.load(Ordering::Relaxed);
-            if new_usage > current_peak {
-                self.stats.peak_usage.store(new_usage, Ordering::Relaxed);
-            }
-
-            // Track large allocations
-            if layout.size() > 64 * 1024 {
-                self.stats.large_allocations.fetch_add(1, Ordering::Relaxed);
-            }
+        // Update peak usage
+        let current_peak = self.stats.peak_usage.load(Ordering::Relaxed);
+        if new_usage > current_peak {
+            self.stats.peak_usage.store(new_usage, Ordering::Relaxed);
         }
 
-        ptr
+        // Track large allocations
+        if size > 64 * 1024 {
+            self.stats.large_allocations.fetch_add(1, Ordering::Relaxed);
+        }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        let size = layout.size() as u64;
+    /// Track a deallocation manually (safe alternative to GlobalAlloc)
+    pub fn track_deallocation(&self, size: usize) {
+        let size = size as u64;
         self.stats
             .total_deallocated
             .fetch_add(size, Ordering::Relaxed);
@@ -366,8 +362,6 @@ unsafe impl GlobalAlloc for TrackingAllocator {
         let old_usage = self.stats.current_usage.load(Ordering::Relaxed);
         let new_usage = old_usage.saturating_sub(size);
         self.stats.current_usage.store(new_usage, Ordering::Relaxed);
-
-        self.inner.dealloc(ptr, layout);
     }
 }
 

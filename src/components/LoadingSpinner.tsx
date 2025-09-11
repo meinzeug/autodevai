@@ -10,7 +10,7 @@ const SpinnerDefault: React.FC<{ size: string; className: string }> = ({ size, c
 );
 
 const SpinnerDots: React.FC<{ size: string; className: string }> = ({ size, className }) => {
-  const dotSize = size === 'w-4 h-4' ? 'w-2 h-2' : size === 'w-6 h-6' ? 'w-3 h-3' : 'w-4 h-4';
+  const dotSize = size.includes('w-4') ? 'w-2 h-2' : size.includes('w-6') ? 'w-3 h-3' : 'w-4 h-4';
   
   return (
     <div className={`flex space-x-1 ${className}`} role="status" aria-hidden="true">
@@ -50,10 +50,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const getSizeClasses = (size: LoadingSpinnerProps['size']) => {
     switch (size) {
       case 'small':
+      case 'sm':
         return 'w-4 h-4';
       case 'large':
+      case 'lg':
         return 'w-12 h-12';
       case 'medium':
+      case 'md':
       default:
         return 'w-6 h-6';
     }
@@ -80,10 +83,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   const getTextSize = () => {
     switch (size) {
       case 'small':
+      case 'sm':
         return 'text-xs';
       case 'large':
+      case 'lg':
         return 'text-lg';
       case 'medium':
+      case 'md':
       default:
         return 'text-sm';
     }

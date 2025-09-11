@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
-    AppHandle, Manager, Wry,
+    AppHandle, Emitter, Manager, Wry,
 };
 use tracing::{debug, info, warn};
 

@@ -340,19 +340,19 @@ export function TaskList({
                         mode: task.mode,
                         tool: task.tool,
                       }}
-                      actions={showActions ? [
-                        ...(task.status === 'failed' || task.status === 'completed' ? [{
-                          label: 'Rerun',
-                          onClick: () => onTaskRerun?.(task.id),
-                          icon: RefreshCw,
-                        }] : []),
-                        {
-                          label: 'Delete',
-                          onClick: () => onTaskDelete?.(task.id),
-                          variant: 'destructive' as const,
-                          icon: Trash2,
-                        },
-                      ] : []}
+      actions={showActions ? [
+        ...(task.status === "failed" || task.status === "completed" ? [{
+          label: "Rerun",
+          icon: RefreshCw,
+          onClick: () => console.log("Rerun"),
+        }] : []),
+        {
+          label: "Delete",
+          variant: "destructive" as const,
+          icon: Trash2,
+          onClick: () => console.log("Delete"),
+        },
+      ] : []}
                       onViewDetails={() => onTaskSelect?.(task)}
                       compact={true}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"

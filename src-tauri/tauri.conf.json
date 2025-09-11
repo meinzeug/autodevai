@@ -5,7 +5,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build && ./src-tauri/before-build.sh",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:50010",
     "frontendDist": "../dist"
   },
   "app": {

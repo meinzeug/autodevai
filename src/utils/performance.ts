@@ -1,9 +1,8 @@
 // Performance monitoring utilities for AutoDev-AI
-import { getCLS, getFID, getFCP, getLCP, getTTFB, Metric } from 'web-vitals';
+import { onCLS, onFCP, onLCP, onTTFB } from 'web-vitals';
 
 export interface PerformanceMetrics {
   cls: number | null;
-  fid: number | null;
   fcp: number | null;
   lcp: number | null;
   ttfb: number | null;
@@ -20,7 +19,6 @@ export interface PerformanceConfig {
 class PerformanceMonitor {
   private metrics: PerformanceMetrics = {
     cls: null,
-    fid: null,
     fcp: null,
     lcp: null,
     ttfb: null,
@@ -61,14 +59,13 @@ class PerformanceMonitor {
 
   private initWebVitals() {
     // Core Web Vitals
-    getCLS(this.handleMetric.bind(this, 'cls'));
-    getFID(this.handleMetric.bind(this, 'fid'));
-    getFCP(this.handleMetric.bind(this, 'fcp'));
-    getLCP(this.handleMetric.bind(this, 'lcp'));
-    getTTFB(this.handleMetric.bind(this, 'ttfb'));
+    onCLS(this.handleMetric.bind(this, 'cls'));
+    onFCP(this.handleMetric.bind(this, 'fcp'));
+    onLCP(this.handleMetric.bind(this, 'lcp'));
+    onTTFB(this.handleMetric.bind(this, 'ttfb'));
   }
 
-  private handleMetric(name: keyof Omit<PerformanceMetrics, 'timestamp'>, metric: Metric) {
+  private handleMetric(name: keyof Omit<PerformanceMetrics, 'timestamp'>, metric: any) {
     this.metrics[name] = metric.value;
     this.metrics.timestamp = Date.now();
 
@@ -177,7 +174,6 @@ class PerformanceMonitor {
   public reset() {
     this.metrics = {
       cls: null,
-      fid: null,
       fcp: null,
       lcp: null,
       ttfb: null,

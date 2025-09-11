@@ -15,6 +15,10 @@ interface ExecutionControlsProps {
   showSettings?: boolean
   executionTime?: number
   className?: string
+  // Add compatibility for OrchestrationView usage
+  isExecuting?: boolean
+  onExecute?: () => void
+  onPause?: () => void
 }
 
 const statusConfig = {
@@ -61,11 +65,19 @@ export function ExecutionControls({
   disabled = false,
   showSettings = true,
   executionTime,
-  className
+  className,
+  // Compatibility props
+  isExecuting,
+  onExecute,
+  onPause
 }: ExecutionControlsProps) {
   const config = statusConfig[status]
   const canStart = status === 'pending' || status === 'failed' || status === 'completed'
   const canStop = status === 'running'
+  
+  // Handle compatibility with isExecuting prop
+  const effectiveCanStart = canStart && !isExecuting
+  const effectiveCanStop = canStop || isExecuting
 
   return (
     <div className={cn("flex items-center justify-between p-4 border rounded-lg bg-card", className)}>
@@ -87,19 +99,19 @@ export function ExecutionControls({
       </div>
 
       <div className="flex items-center space-x-2">
-        {canStart && (
+        {effectiveCanStart && (
           <Button
-            onClick={onStart}
+            onClick={onExecute || onStart}
             disabled={disabled}
             size="sm"
             variant="default"
           >
             <Play className="h-4 w-4 mr-1" />
-            Start
+            {onExecute ? 'Execute' : 'Start'}
           </Button>
         )}
 
-        {canStop && (
+        {effectiveCanStop && (
           <Button
             onClick={onStop}
             disabled={disabled}
@@ -108,6 +120,18 @@ export function ExecutionControls({
           >
             <Square className="h-4 w-4 mr-1" />
             Stop
+          </Button>
+        )}
+        
+        {isExecuting && onPause && (
+          <Button
+            onClick={onPause}
+            disabled={disabled}
+            size="sm"
+            variant="secondary"
+          >
+            <Square className="h-4 w-4 mr-1" />
+            Pause
           </Button>
         )}
 

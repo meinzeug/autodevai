@@ -582,7 +582,7 @@ impl DatabaseOptimizer {
     }
 
     fn estimate_query_improvement(&self, analysis: &QueryAnalysis) -> f64 {
-        let mut improvement = 0.0;
+        let mut improvement: f64 = 0.0;
 
         if !analysis.uses_index {
             improvement += 50.0; // Indexing can provide significant improvement

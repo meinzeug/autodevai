@@ -1,20 +1,26 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Settings,
-  Sun,
-  Moon,
   Maximize2,
   Minimize2,
   Download
 } from 'lucide-react';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { OrchestrationPanel } from './components/OrchestrationPanel';
-import { OutputDisplay } from './components/OutputDisplay';
+import { ErrorBoundary } from './views/shared/ErrorBoundary';
+// Note: OrchestrationPanel and OutputDisplay are replaced by new views
 import { ProgressTracker } from './components/ProgressTracker';
 import { ConfigurationPanel } from './components/ConfigurationPanel';
 import { UpdateManager } from './components/UpdateManager';
 // Import our new component library
 import { Header, Sidebar, StatusBar, IconButton } from './components';
+// Import the new views
+import {
+  MonitoringDashboard,
+  OrchestrationView,
+  HistoryView,
+  SandboxView,
+  MonitoringView,
+  TerminalView
+} from './views';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { TauriService } from './services/tauri';
@@ -41,11 +47,11 @@ interface AppState {
   showOutput: boolean;
   showUpdater: boolean;
   showSidebar: boolean;
-  activeTab: 'orchestration' | 'monitoring' | 'terminal';
+  activeTab: 'orchestration' | 'monitoring' | 'history' | 'sandbox' | 'logs' | 'terminal';
 }
 
 const defaultConfig: OrchestrationConfig = {
-  mode: 'single' as OrchestrationMode,
+  mode: { type: 'single', primaryModel: 'claude' } as OrchestrationMode,
   tool: 'claude-flow' as Tool,
   executionMode: 'standard' as ExecutionMode,
   primaryModel: 'claude',
@@ -57,7 +63,7 @@ const defaultConfig: OrchestrationConfig = {
 };
 
 function AppContent() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [config, setConfig] = useLocalStorage<OrchestrationConfig>('orchestration-config', defaultConfig);
   const [state, setState] = useState<AppState>({
     isExecuting: false,
@@ -124,10 +130,11 @@ function AppContent() {
 
   // Handle task execution
   const handleExecute = useCallback(async (command: ClaudeFlowCommand) => {
+    const taskName = typeof command === 'object' ? command.task : `${command} execution`;
     setState(prev => ({ 
       ...prev, 
       isExecuting: true, 
-      currentTask: command.task,
+      currentTask: taskName || null,
       progress: 0,
       showOutput: true
     }));
@@ -138,7 +145,7 @@ function AppContent() {
         id: `start-${Date.now()}`,
         timestamp: new Date().toISOString(),
         type: 'info',
-        content: `Starting ${command.mode} execution: ${command.task}`,
+        content: `Starting ${typeof command === 'object' ? command.mode || 'unknown' : command} execution: ${typeof command === 'object' ? command.task || 'No task specified' : command}`,
         source: 'AutoDev-AI'
       };
       
@@ -155,7 +162,8 @@ function AppContent() {
         }));
       }, 1000);
 
-      const result = await tauriService.executeClaudeFlow(command);
+      const commandStr = typeof command === 'object' ? command.command || 'unknown' : command;
+      const result = await tauriService.executeClaudeFlow(commandStr as string);
       
       clearInterval(progressInterval);
       
@@ -224,18 +232,39 @@ function AppContent() {
   // Navigation items for sidebar
   const navigationItems = [
     {
-      id: 'control',
-      label: 'Control Panel',
+      id: 'orchestration',
+      label: 'Task Orchestration',
       icon: '🎛️',
       active: state.activeTab === 'orchestration',
       onClick: () => setState(prev => ({ ...prev, activeTab: 'orchestration' }))
     },
     {
       id: 'monitoring',
-      label: 'System Monitor',
+      label: 'Dashboard',
       icon: '📊',
       active: state.activeTab === 'monitoring',
       onClick: () => setState(prev => ({ ...prev, activeTab: 'monitoring' }))
+    },
+    {
+      id: 'history',
+      label: 'Execution History',
+      icon: '📜',
+      active: state.activeTab === 'history',
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'history' }))
+    },
+    {
+      id: 'sandbox',
+      label: 'Docker Sandbox',
+      icon: '🐳',
+      active: state.activeTab === 'sandbox',
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'sandbox' }))
+    },
+    {
+      id: 'logs',
+      label: 'System Logs',
+      icon: '👁️',
+      active: state.activeTab === 'logs',
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'logs' }))
     },
     {
       id: 'terminal',
@@ -243,31 +272,6 @@ function AppContent() {
       icon: '⌨️',
       active: state.activeTab === 'terminal',
       onClick: () => setState(prev => ({ ...prev, activeTab: 'terminal' }))
-    },
-    {
-      id: 'tools',
-      label: 'Development Tools',
-      icon: '🔧',
-      subItems: [
-        {
-          id: 'claude-flow',
-          label: 'Claude Flow',
-          icon: '🧠',
-          onClick: () => console.log('Claude Flow selected')
-        },
-        {
-          id: 'docker',
-          label: 'Docker Management',
-          icon: '🐳',
-          onClick: () => console.log('Docker selected')
-        },
-        {
-          id: 'git',
-          label: 'Git Integration',
-          icon: '🔀',
-          onClick: () => console.log('Git selected')
-        }
-      ]
     },
     {
       id: 'settings',
@@ -335,10 +339,7 @@ function AppContent() {
 
   return (
     <div className={cn(
-      "min-h-screen bg-gradient-to-br transition-all duration-300 flex flex-col",
-      theme === 'dark' 
-        ? "from-gray-900 via-gray-800 to-gray-900 text-white" 
-        : "from-gray-50 via-white to-gray-100 text-gray-900",
+      "min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white transition-all duration-300 flex flex-col",
       state.isFullscreen && "fixed inset-0 z-50"
     )}>
       {/* Header with our new component */}
@@ -346,16 +347,10 @@ function AppContent() {
         title="AutoDev-AI Neural Bridge"
         statusIndicators={statusIndicators}
         onMenuClick={toggleSidebar}
-        className={theme === 'dark' ? 'bg-gray-800/90 border-gray-700' : 'bg-white/90 border-gray-200'}
+        className='bg-gray-800/90 border-gray-700'
       >
         {/* Header Actions */}
         <div className="flex items-center space-x-2">
-          <IconButton
-            icon={theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            onClick={toggleTheme}
-            variant="ghost"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          />
           <IconButton
             icon={<Download className="w-5 h-5" />}
             onClick={toggleUpdater}
@@ -379,7 +374,7 @@ function AppContent() {
 
       {/* Progress Bar */}
       {state.isExecuting && (
-        <div className="px-6 py-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6 py-2 border-b border-gray-700">
           <ProgressTracker 
             progress={state.progress}
             taskName={state.currentTask || 'Unknown Task'}
@@ -392,7 +387,7 @@ function AppContent() {
         isOpen={state.showSidebar}
         onClose={() => setState(prev => ({ ...prev, showSidebar: false }))}
         navigationItems={navigationItems}
-        className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+        className='bg-gray-800 border-gray-700'
       />
 
       {/* Main Content Container */}
@@ -404,8 +399,7 @@ function AppContent() {
         {/* Settings Sidebar */}
         {state.showSettings && (
           <div className={cn(
-            "w-80 border-r transition-all duration-300 flex-shrink-0",
-            theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+            "w-80 border-r bg-gray-800 border-gray-700 transition-all duration-300 flex-shrink-0"
           )}>
             <ConfigurationPanel 
               config={config}
@@ -418,8 +412,7 @@ function AppContent() {
         {/* Update Manager Sidebar */}
         {state.showUpdater && (
           <div className={cn(
-            "w-96 border-r transition-all duration-300 overflow-y-auto flex-shrink-0",
-            theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+            "w-96 border-r bg-gray-800 border-gray-700 transition-all duration-300 overflow-y-auto flex-shrink-0"
           )}>
             <div className="p-6">
               <ErrorBoundary>
@@ -433,37 +426,71 @@ function AppContent() {
         
         {/* Primary Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:gap-6 p-4 lg:p-6 overflow-hidden">
-            {/* Left Panel - Orchestration */}
-            <div className="lg:col-span-5 flex-shrink-0">
-              <ErrorBoundary>
-                <OrchestrationPanel
-                  onExecute={handleExecute}
-                  isExecuting={state.isExecuting}
+          <div className="flex-1 p-4 lg:p-6 overflow-hidden">
+            <ErrorBoundary level="view" showDetails={true}>
+              {/* Route to different views based on active tab */}
+              {state.activeTab === 'orchestration' && (
+                <OrchestrationView
                   config={config}
                   onConfigChange={setConfig}
+                  onExecute={(command: any) => handleExecute(command)}
+                  isExecuting={state.isExecuting}
                 />
-              </ErrorBoundary>
-            </div>
-            
-            {/* Right Panel - Output & Monitoring */}
-            <div className="lg:col-span-7 flex flex-col min-h-0 flex-1">
-              {state.showOutput && (
-                <ErrorBoundary>
-                  <OutputDisplay
-                    outputs={state.outputs}
-                    onClear={handleClearOutput}
-                    className="flex-1 min-h-0"
-                  />
-                </ErrorBoundary>
               )}
-            </div>
+              
+              {state.activeTab === 'monitoring' && (
+                <MonitoringDashboard
+                  realTime={true}
+                  onAlert={(alert) => {
+                    toast.error(`Alert: ${alert.message}`);
+                  }}
+                />
+              )}
+              
+              {state.activeTab === 'history' && (
+                <HistoryView
+                  outputs={state.outputs}
+                  onClear={handleClearOutput}
+                  onExport={(data) => {
+                    console.log('Exporting history data:', data);
+                    toast.success('History exported successfully');
+                  }}
+                />
+              )}
+              
+              {state.activeTab === 'sandbox' && (
+                <SandboxView
+                  dockerEnabled={config.dockerEnabled}
+                  onDockerToggle={(enabled) => {
+                    setConfig(prev => ({ ...prev, dockerEnabled: enabled }));
+                    toast.success(`Docker ${enabled ? 'enabled' : 'disabled'}`);
+                  }}
+                />
+              )}
+              
+              {state.activeTab === 'logs' && (
+                <MonitoringView
+                  realTime={true}
+                />
+              )}
+              
+              {state.activeTab === 'terminal' && (
+                <TerminalView
+                  onExecute={async (command, sessionId) => {
+                    // Mock terminal command execution
+                    console.log(`Executing command in session ${sessionId}:`, command);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return `Executed: ${command}\nOutput would appear here.`;
+                  }}
+                />
+              )}
+            </ErrorBoundary>
           </div>
         </div>
       </div>
 
       {/* Status Bar with system health */}
-      <ErrorBoundary>
+      <ErrorBoundary level="component">
         <div className={cn(
           "transition-all duration-300",
           // Add left margin when sidebar is open on large screens
@@ -478,7 +505,7 @@ function AppContent() {
             }}
             activeConnections={state.outputs.length}
             lastUpdate={new Date().toISOString()}
-            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}
+            className='bg-gray-800 border-gray-700'
           />
         </div>
       </ErrorBoundary>

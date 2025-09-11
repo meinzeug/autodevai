@@ -165,7 +165,7 @@ export function SettingsModal({
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Default Orchestration Mode</label>
                         <Select
-                          value={localSettings.default_mode}
+                          value={typeof localSettings.default_mode === "string" ? localSettings.default_mode : "single"}
                           onValueChange={(value: OrchestrationMode) => 
                             handleSettingChange('default_mode', value)
                           }
@@ -302,7 +302,6 @@ export function SettingsModal({
                         placeholder="sk-or-..."
                         value={localSettings.openrouter_key || ''}
                         onChange={(e) => handleSettingChange('openrouter_key', e.target.value)}
-                        error={getFieldError('openrouter_key')?.message}
                       />
                       <p className="text-xs text-muted-foreground">
                         Required for OpenAI Codex integration. Get your key from{' '}
@@ -313,14 +312,14 @@ export function SettingsModal({
                       </p>
                     </div>
 
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <div className="p-3 bg-blue-50 bg-blue-950 rounded-lg">
                       <div className="flex items-start space-x-2">
                         <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                         <div className="text-sm">
-                          <p className="font-medium text-blue-900 dark:text-blue-100">
+                          <p className="font-medium text-blue-900 text-blue-100">
                             API Key Security
                           </p>
-                          <p className="text-blue-700 dark:text-blue-200">
+                          <p className="text-blue-700 text-blue-200">
                             API keys are stored locally and never transmitted to our servers.
                           </p>
                         </div>

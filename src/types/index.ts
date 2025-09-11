@@ -3,6 +3,8 @@ export interface ExecutionResult {
   output: string;
   tool_used: string;
   duration_ms: number;
+  timestamp?: string;
+  message?: string;
 }
 
 export interface PrerequisiteStatus {
@@ -10,6 +12,8 @@ export interface PrerequisiteStatus {
   codex_ready: boolean;
   claude_code_ready: boolean;
   docker_ready: boolean;
+  version?: string;
+  claudeFlow?: boolean;
 }
 
 export interface SystemInfo {
@@ -19,20 +23,37 @@ export interface SystemInfo {
   memory_available: number;
   disk_total: number;
   disk_available: number;
+  platform?: string;
 }
 
 export interface Settings {
   default_mode: OrchestrationMode;
   default_tool: string;
   openrouter_key?: string;
+  openrouterKey?: string;
   docker_enabled: boolean;
   auto_quality_check: boolean;
+  claudeFlowPath?: string;
 }
 
-export type OrchestrationMode = 'single' | 'dual';
+// OrchestrationMode can be both string literal and object with properties
+export type OrchestrationMode = 'single' | 'dual' | {
+  type: 'single' | 'dual';
+  primaryModel: string;
+  secondaryModel?: string;
+};
 export type Tool = 'claude-flow' | 'openai-codex';
 export type CodexMode = 'suggest' | 'auto-edit' | 'full-auto';
-export type ClaudeFlowCommand = 'swarm' | 'sparc' | 'hive-mind' | 'memory';
+// ClaudeFlowCommand can be both string and object with task/mode/options
+export type ClaudeFlowCommand = 'swarm' | 'sparc' | 'hive-mind' | 'memory' | {
+  command?: string;
+  task?: string;
+  mode?: string;
+  options?: Record<string, any>;
+};
+
+// Add missing ClaudeFlowCommandType for backwards compatibility
+export type ClaudeFlowCommandType = 'swarm' | 'sparc' | 'hive-mind' | 'memory';
 
 export interface Task {
   id: string;
@@ -58,7 +79,7 @@ export interface DockerContainer {
 
 // Component Interfaces
 export interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'default' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   children?: React.ReactNode;
   onClick?: () => void;
@@ -76,6 +97,7 @@ export interface HeaderProps {
   statusIndicators?: StatusIndicator[];
   onMenuClick?: () => void;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export interface StatusBarProps {
@@ -87,13 +109,25 @@ export interface StatusBarProps {
   systemHealth?: Record<string, any>;
   activeConnections?: number;
   lastUpdate?: string;
+  children?: React.ReactNode;
 }
 
 export interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg';
   message?: string;
   overlay?: boolean;
   className?: string;
+  variant?: 'default' | 'dots' | 'pulse' | 'ring';
+  text?: string;
+  children?: React.ReactNode;
+}
+
+// Add missing interface for ui/button.tsx compatibility
+export interface BadgeProps {
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  className?: string;
+  children?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export interface SidebarProps {
@@ -102,6 +136,7 @@ export interface SidebarProps {
   onClose?: () => void;
   navigationItems?: NavigationItem[];
   className?: string;
+  children?: React.ReactNode;
 }
 
 // Navigation Interfaces
@@ -147,8 +182,8 @@ export interface ExecutionOutput {
   success?: boolean;
   executionTime?: number;
   metadata?: Record<string, any>;
-  type?: 'info' | 'success' | 'warning' | 'error';
-  content?: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  content: string;
   source?: string;
 }
 
@@ -202,3 +237,58 @@ export type ClaudeFlowCommandWithTask = ClaudeFlowCommand | {
   mode?: OrchestrationMode;
   options?: Record<string, any>;
 };
+
+// Add missing interfaces for component props
+export interface ResultCardProps {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  success: boolean;
+  output: string;
+  tool_used: string;
+  duration_ms: number;
+  timestamp?: string;
+  metadata: {
+    created: string;
+    completed: string;
+    mode: OrchestrationMode;
+    tool: Tool;
+  };
+  selected?: boolean;
+  onSelect?: () => void;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+export interface InputProps {
+  type?: string;
+  placeholder?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onError?: (error: string) => void;
+  className?: string;
+  disabled?: boolean;
+}
+
+// Add performance metrics interfaces
+export interface PerformanceMetrics {
+  cls: number;
+  fcp: number;
+  lcp: number;
+  ttfb: number;
+}
+
+// Add layout config interface
+export interface LayoutConfig {
+  desktop?: any;
+  tablet?: any;
+  mobile?: any;
+}
+
+// Add Metric interface
+export interface Metric {
+  name: string;
+  value: number;
+  unit?: string;
+  timestamp?: string;
+}

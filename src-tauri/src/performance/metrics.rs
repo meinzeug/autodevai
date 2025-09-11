@@ -527,7 +527,7 @@ impl MetricsCollector {
         aggregated_metrics: &HashMap<String, Vec<AggregatedMetric>>,
     ) -> PerformanceSummaryMetrics {
         // Calculate performance score based on various metrics
-        let mut performance_score = 100.0;
+        let mut performance_score: f64 = 100.0;
         let mut response_time_p95 = 0.0;
         let mut throughput = 0.0;
         let mut error_rate = 0.0;

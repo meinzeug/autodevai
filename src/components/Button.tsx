@@ -58,7 +58,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       className={`${variantClasses} ${sizeClasses} ${className}`}
     >
-      {loading && <ButtonSpinner size={size} />}
+      {loading && <ButtonSpinner />}
       {children}
     </button>
   );

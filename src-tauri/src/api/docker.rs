@@ -3,11 +3,11 @@
 
 use crate::{errors::Result, types::DockerContainer};
 use bollard::container::{
-    Config, CreateContainerOptions, ListContainersOptions, StartContainerOptions,
+    CreateContainerOptions, ListContainersOptions, StartContainerOptions,
     StopContainerOptions,
 };
 use bollard::image::CreateImageOptions;
-use bollard::models::{ContainerSummary, HostConfig, PortBinding};
+use bollard::models::{ContainerSummary, ContainerCreateBody, HostConfig, PortBinding};
 use bollard::{Docker, API_DEFAULT_VERSION};
 use futures_util::stream::StreamExt;
 use serde_json::Value;
@@ -262,7 +262,7 @@ impl DockerClient {
     }
 
     /// Parse container configuration from JSON
-    fn parse_container_config(&self, image: &str, config: Value) -> Result<Config<String>> {
+    fn parse_container_config(&self, image: &str, config: Value) -> Result<ContainerCreateBody> {
         let env: Option<Vec<String>> = config.get("env").and_then(|v| v.as_array()).map(|arr| {
             arr.iter()
                 .filter_map(|v| v.as_str())
@@ -302,7 +302,7 @@ impl DockerClient {
             None
         };
 
-        Ok(Config {
+        Ok(ContainerCreateBody {
             image: Some(image.to_string()),
             env,
             cmd,
@@ -329,14 +329,10 @@ fn container_summary_to_docker_container(summary: ContainerSummary) -> DockerCon
             .unwrap_or_default()
             .into_iter()
             .filter_map(|port| {
-                if let (Some(private_port), Some(public_port)) =
-                    (port.private_port, port.public_port)
-                {
-                    Some(format!("{}:{}", public_port, private_port))
-                } else if let Some(private_port) = port.private_port {
-                    Some(format!("{}", private_port))
+                if let Some(public_port) = port.public_port {
+                    Some(format!("{}:{}", public_port, port.private_port))
                 } else {
-                    None
+                    Some(format!("{}", port.private_port))
                 }
             })
             .collect(),

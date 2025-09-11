@@ -5,21 +5,21 @@ import { Settings, Layers } from "lucide-react"
 import { cn } from "../../utils/cn"
 
 interface ModeSelectorProps {
-  value?: OrchestrationMode
-  onValueChange?: (value: OrchestrationMode) => void
+  value?: string
+  onValueChange?: (value: string) => void
   disabled?: boolean
   className?: string
 }
 
 const modes = [
   {
-    value: 'single' as OrchestrationMode,
+    value: 'single',
     label: 'Single Agent Mode',
     description: 'Execute tasks with a single AI agent',
     icon: Settings,
   },
   {
-    value: 'dual' as OrchestrationMode,
+    value: 'dual',
     label: 'Dual Agent Mode',
     description: 'Coordinate two agents for enhanced performance',
     icon: Layers,
@@ -38,7 +38,7 @@ export function ModeSelector({
         Orchestration Mode
       </label>
       <Select 
-        value={value} 
+        value={value || ''} 
         onValueChange={onValueChange}
         disabled={disabled}
       >

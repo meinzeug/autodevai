@@ -38,24 +38,25 @@ export {
 } from './ResponsiveGrid';
 
 // Responsive text components
-export {
-  ResponsiveText,
-  type ResponsiveTextProps,
-  TextVariants,
-  HeroText,
-  TitleText,
-  SubtitleText,
-  HeadingText,
-  BodyText,
-  BodyLargeText,
-  BodySmallText,
-  CaptionText,
-  LabelText,
-  CodeText,
-  QuoteText,
-  LinkText,
-  ButtonText,
-} from './ResponsiveText';
+// Temporarily commented out due to build issues
+// export {
+//   ResponsiveText,
+//   type ResponsiveTextProps,
+//   TextVariants,
+//   HeroText,
+//   TitleText,
+//   SubtitleText,
+//   HeadingText,
+//   BodyText,
+//   BodyLargeText,
+//   BodySmallText,
+//   CaptionText,
+//   LabelText,
+//   CodeText,
+//   QuoteText,
+//   LinkText,
+//   ButtonText,
+// } from './ResponsiveText';
 
 // Responsive card components
 export {

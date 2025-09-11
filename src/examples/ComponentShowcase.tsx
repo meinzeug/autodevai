@@ -83,13 +83,13 @@ export const ComponentShowcase: React.FC = () => {
           <IconButton
             icon={<Settings className="w-4 h-4" />}
             variant="ghost"
-            size="small"
+            size="sm"
             aria-label="Settings"
           />
           <IconButton
             icon={<Download className="w-4 h-4" />}
             variant="ghost"
-            size="small"
+            size="sm"
             aria-label="Download"
           />
         </div>
@@ -116,15 +116,15 @@ export const ComponentShowcase: React.FC = () => {
                 <div className="flex flex-wrap gap-4">
                   <Button variant="primary">Primary</Button>
                   <Button variant="secondary">Secondary</Button>
-                  <Button variant="danger">Danger</Button>
-                  <Button variant="success">Success</Button>
+                  <Button variant="destructive">Danger</Button>
+                  <Button variant="primary">Success</Button>
                   <Button variant="ghost">Ghost</Button>
                 </div>
 
                 <div className="flex flex-wrap gap-4">
-                  <Button size="small">Small</Button>
-                  <Button size="medium">Medium</Button>
-                  <Button size="large">Large</Button>
+                  <Button size="sm">Small</Button>
+                  <Button size="md">Medium</Button>
+                  <Button size="lg">Large</Button>
                 </div>
 
                 <div className="flex flex-wrap gap-4">
@@ -160,16 +160,16 @@ export const ComponentShowcase: React.FC = () => {
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="text-center">
-                  <LoadingSpinner variant="default" size="medium" text="Default" />
+                  <LoadingSpinner variant="default" size="md" text="Default" />
                 </div>
                 <div className="text-center">
-                  <LoadingSpinner variant="dots" size="medium" text="Dots" />
+                  <LoadingSpinner variant="dots" size="md" text="Dots" />
                 </div>
                 <div className="text-center">
-                  <LoadingSpinner variant="pulse" size="medium" text="Pulse" />
+                  <LoadingSpinner variant="pulse" size="md" text="Pulse" />
                 </div>
                 <div className="text-center">
-                  <LoadingSpinner variant="ring" size="medium" text="Ring" />
+                  <LoadingSpinner variant="ring" size="md" text="Ring" />
                 </div>
               </div>
 
@@ -229,7 +229,7 @@ export const ComponentShowcase: React.FC = () => {
           network: 'connected'
         }}
         activeConnections={8}
-        lastUpdate={new Date()}
+        lastUpdate={new Date().toISOString()}
       />
 
       {/* Loading Overlay */}

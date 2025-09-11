@@ -3106,6 +3106,7 @@ dependencies = [
  "log",
  "mockito",
  "once_cell",
+ "option-ext",
  "parking_lot",
  "pretty_assertions",
  "proptest",

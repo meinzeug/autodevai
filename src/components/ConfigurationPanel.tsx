@@ -116,7 +116,8 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       newErrors['maxRetries'] = 'Max retries must be between 0 and 10';
     }
 
-    if (cfg.mode.type === 'dual' && !cfg.mode['secondaryModel']) {
+    const configMode = typeof cfg.mode === 'object' ? cfg.mode : { type: cfg.mode, primaryModel: 'claude' };
+    if (configMode.type === 'dual' && !configMode.secondaryModel) {
       newErrors['secondaryModel'] = 'Secondary model is required for dual mode';
     }
 
@@ -176,12 +177,12 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             onClick={() =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: { ...prev.mode, type: 'single' },
+                mode: typeof prev.mode === 'object' ? { ...prev.mode, type: 'single' } : { type: 'single', primaryModel: 'claude' },
               }))
             }
             className={cn(
               'p-4 rounded-lg border text-left transition-colors',
-              tempConfig.mode.type === 'single'
+              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'single'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             )}
@@ -193,16 +194,16 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             onClick={() =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: {
+                mode: typeof prev.mode === 'object' ? {
                   ...prev.mode,
                   type: 'dual',
                   secondaryModel: prev.mode.secondaryModel || 'codex',
-                },
+                } : { type: 'dual', primaryModel: 'claude', secondaryModel: 'codex' },
               }))
             }
             className={cn(
               'p-4 rounded-lg border text-left transition-colors',
-              tempConfig.mode.type === 'dual'
+              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'dual'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             )}
@@ -217,11 +218,13 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       <div className="space-y-3">
         <label className="text-sm font-medium text-gray-900 dark:text-white">Primary Model</label>
         <select
-          value={tempConfig.mode.primaryModel}
+          value={typeof tempConfig.mode === 'object' ? tempConfig.mode.primaryModel : 'claude'}
           onChange={e =>
             setTempConfig(prev => ({
               ...prev,
-              mode: { ...prev.mode, primaryModel: e.target.value as 'claude' | 'codex' },
+              mode: typeof prev.mode === 'object' ? 
+                { ...prev.mode, primaryModel: e.target.value as 'claude' | 'codex' } :
+                { type: prev.mode, primaryModel: e.target.value as 'claude' | 'codex' },
             }))
           }
           className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -232,17 +235,19 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       </div>
 
       {/* Secondary Model (for dual mode) */}
-      {tempConfig.mode.type === 'dual' && (
+      {(typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'dual' && (
         <div className="space-y-3">
           <label className="text-sm font-medium text-gray-900 dark:text-white">
             Secondary Model
           </label>
           <select
-            value={tempConfig.mode['secondaryModel'] || ''}
+            value={typeof tempConfig.mode === 'object' ? tempConfig.mode.secondaryModel || '' : ''}
             onChange={e =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: { ...prev.mode, secondaryModel: e.target.value as 'claude' | 'codex' },
+                mode: typeof prev.mode === 'object' ? 
+                  { ...prev.mode, secondaryModel: e.target.value as 'claude' | 'codex' } :
+                  { type: prev.mode, primaryModel: 'claude', secondaryModel: e.target.value as 'claude' | 'codex' },
               }))
             }
             className={cn(

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Settings, RefreshCw, Container } from 'lucide-react';
 import { TauriService } from '../services/tauri';
-import { ClaudeFlowCommand, OrchestrationConfig, DockerContainer } from '../types';
+import { ClaudeFlowCommand, OrchestrationConfig, DockerContainer, OrchestrationMode } from '../types';
 import { cn } from '../utils/cn';
 
 interface OrchestrationPanelProps {
@@ -54,12 +54,13 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
     if (!taskInput.trim()) return;
 
     const command: ClaudeFlowCommand = {
-      mode: selectedMode,
+      command: selectedMode as any,
       task: taskInput,
+      mode: selectedMode,
       options: {
-        executionMode: config.mode.type,
-        primaryModel: config.mode.primaryModel,
-        secondaryModel: config.mode.secondaryModel,
+        executionMode: typeof config.mode === 'object' ? config.mode.type : config.mode,
+        primaryModel: typeof config.mode === 'object' ? config.mode.primaryModel : 'claude',
+        secondaryModel: typeof config.mode === 'object' ? config.mode.secondaryModel : undefined,
         dockerEnabled: config.dockerEnabled,
         autoRestart: config.autoRestart,
         maxRetries: config.maxRetries,
@@ -70,7 +71,7 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
     await onExecute(command);
   };
 
-  const handleModeChange = (mode: ExecutionMode) => {
+  const handleModeChange = (mode: OrchestrationMode) => {
     onConfigChange({
       ...config,
       mode
@@ -139,11 +140,11 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
           <button
             onClick={() => handleModeChange({ 
               type: 'single', 
-              primaryModel: config.mode.primaryModel 
+              primaryModel: typeof config.mode === 'object' ? config.mode.primaryModel : 'claude'
             })}
             className={cn(
               "p-3 rounded-lg border text-left transition-colors",
-              config.mode.type === 'single'
+              (typeof config.mode === 'object' ? config.mode.type : config.mode) === 'single'
                 ? "border-blue-500 bg-blue-500/10 text-blue-400"
                 : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
             )}
@@ -154,12 +155,12 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
           <button
             onClick={() => handleModeChange({ 
               type: 'dual', 
-              primaryModel: config.mode.primaryModel,
-              secondaryModel: config.mode.secondaryModel || 'codex'
+              primaryModel: typeof config.mode === 'object' ? config.mode.primaryModel : 'claude',
+              secondaryModel: typeof config.mode === 'object' ? config.mode.secondaryModel || 'codex' : 'codex'
             })}
             className={cn(
               "p-3 rounded-lg border text-left transition-colors",
-              config.mode.type === 'dual'
+              (typeof config.mode === 'object' ? config.mode.type : config.mode) === 'dual'
                 ? "border-blue-500 bg-blue-500/10 text-blue-400"
                 : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
             )}
@@ -175,13 +176,13 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
         <label className="text-sm font-medium text-gray-300">Primary Model</label>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => handleModeChange({
+            onClick={() => handleModeChange(typeof config.mode === 'object' ? {
               ...config.mode,
               primaryModel: 'claude'
-            })}
+            } : { type: config.mode, primaryModel: 'claude' })}
             className={cn(
               "p-3 rounded-lg border text-left transition-colors",
-              config.mode.primaryModel === 'claude'
+              (typeof config.mode === 'object' ? config.mode.primaryModel : 'claude') === 'claude'
                 ? "border-green-500 bg-green-500/10 text-green-400"
                 : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
             )}
@@ -190,13 +191,13 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
             <div className="text-xs text-gray-400">Anthropic</div>
           </button>
           <button
-            onClick={() => handleModeChange({
+            onClick={() => handleModeChange(typeof config.mode === 'object' ? {
               ...config.mode,
               primaryModel: 'codex'
-            })}
+            } : { type: config.mode, primaryModel: 'codex' })}
             className={cn(
               "p-3 rounded-lg border text-left transition-colors",
-              config.mode.primaryModel === 'codex'
+              (typeof config.mode === 'object' ? config.mode.primaryModel : 'claude') === 'codex'
                 ? "border-green-500 bg-green-500/10 text-green-400"
                 : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
             )}
@@ -208,18 +209,18 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
       </div>
 
       {/* Secondary Model for Dual Mode */}
-      {config.mode.type === 'dual' && (
+      {(typeof config.mode === 'object' ? config.mode.type : config.mode) === 'dual' && (
         <div className="space-y-3">
           <label className="text-sm font-medium text-gray-300">Secondary Model</label>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => handleModeChange({
+              onClick={() => handleModeChange(typeof config.mode === 'object' ? {
                 ...config.mode,
                 secondaryModel: 'claude'
-              })}
+              } : { type: config.mode, primaryModel: 'claude', secondaryModel: 'claude' })}
               className={cn(
                 "p-3 rounded-lg border text-left transition-colors",
-                config.mode.secondaryModel === 'claude'
+                (typeof config.mode === 'object' ? config.mode.secondaryModel : undefined) === 'claude'
                   ? "border-purple-500 bg-purple-500/10 text-purple-400"
                   : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
               )}
@@ -228,13 +229,13 @@ export const OrchestrationPanel: React.FC<OrchestrationPanelProps> = ({
               <div className="text-xs text-gray-400">Anthropic</div>
             </button>
             <button
-              onClick={() => handleModeChange({
+              onClick={() => handleModeChange(typeof config.mode === 'object' ? {
                 ...config.mode,
                 secondaryModel: 'codex'
-              })}
+              } : { type: config.mode, primaryModel: 'claude', secondaryModel: 'codex' })}
               className={cn(
                 "p-3 rounded-lg border text-left transition-colors",
-                config.mode.secondaryModel === 'codex'
+                (typeof config.mode === 'object' ? config.mode.secondaryModel : undefined) === 'codex'
                   ? "border-purple-500 bg-purple-500/10 text-purple-400"
                   : "border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500"
               )}

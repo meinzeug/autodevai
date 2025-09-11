@@ -56,10 +56,10 @@ const defaultImages = [
 ] as const
 
 const statusColors = {
-  running: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950',
-  stopped: 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-950',
-  paused: 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950',
-  error: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950',
+  running: 'text-green-600 text-green-400 bg-green-50 bg-green-950',
+  stopped: 'text-gray-600 text-gray-400 bg-gray-50 bg-gray-950',
+  paused: 'text-yellow-600 text-yellow-400 bg-yellow-50 bg-yellow-950',
+  error: 'text-red-600 text-red-400 bg-red-50 bg-red-950',
 } as const
 
 function ContainerCard({ 

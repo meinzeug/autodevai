@@ -9,8 +9,8 @@
 /* CSS Custom Properties for comprehensive theming */
 :root {
   /* Brand Colors */
-  --brand-primary: #0ea5e9;
-  --brand-secondary: #3b82f6;
+  --brand-primary: #38bdf8;
+  --brand-secondary: #60a5fa;
   --brand-accent: #d946ef;
 
   /* Semantic Colors */
@@ -19,22 +19,22 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
-  /* Background Colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --bg-overlay: rgba(15, 23, 42, 0.8);
-  --bg-glass: rgba(255, 255, 255, 0.1);
+  /* Background Colors - Dark Mode Only */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-overlay: rgba(15, 23, 42, 0.9);
+  --bg-glass: rgba(15, 23, 42, 0.8);
 
-  /* Text Colors */
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
+  /* Text Colors - Dark Mode Only */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
   --text-tertiary: #94a3b8;
-  --text-inverse: #f8fafc;
+  --text-inverse: #1e293b;
 
-  /* Border Colors */
-  --border-primary: #e2e8f0;
-  --border-secondary: #cbd5e1;
+  /* Border Colors - Dark Mode Only */
+  --border-primary: #334155;
+  --border-secondary: #475569;
   --border-focus: #3b82f6;
 
   /* Shadow Variables */
@@ -122,26 +122,7 @@
   --terminal-text: #00ff88;
 }
 
-/* Dark theme variables */
-[data-theme='dark'],
-.dark {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-overlay: rgba(15, 23, 42, 0.9);
-  --bg-glass: rgba(15, 23, 42, 0.8);
-
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-tertiary: #94a3b8;
-  --text-inverse: #1e293b;
-
-  --border-primary: #334155;
-  --border-secondary: #475569;
-
-  --brand-primary: #38bdf8;
-  --brand-secondary: #60a5fa;
-}
+/* Dark theme is now the only theme - no overrides needed */
 
 /* Enhanced Tailwind base layer */
 @layer base {
@@ -325,11 +306,11 @@
   }
 
   ::selection {
-    @apply bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100;
+    @apply bg-blue-800 text-blue-100;
   }
 
   ::-moz-selection {
-    @apply bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100;
+    @apply bg-blue-800 text-blue-100;
   }
 }
 
@@ -341,11 +322,11 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-gray-800;
+    @apply bg-gray-800;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500;
+    @apply bg-gray-600 rounded-full hover:bg-gray-500;
     transition: background var(--duration-150) var(--ease-out);
   }
 
@@ -371,7 +352,7 @@
   }
 
   .autodev-glass {
-    @apply backdrop-blur-md bg-white/10 dark:bg-gray-900/10 border border-white/20 dark:border-gray-700/50;
+    @apply backdrop-blur-md bg-gray-900/10 border border-gray-700/50;
   }
 
   .autodev-shadow {
@@ -383,7 +364,7 @@
   }
 
   .autodev-border {
-    @apply border border-gray-200 dark:border-gray-700;
+    @apply border border-gray-700;
   }
 
   /* Enhanced button variants */
@@ -392,7 +373,7 @@
   }
 
   .btn-secondary {
-    @apply bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-all duration-150;
+    @apply bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-150;
   }
 
   .btn-danger {
@@ -400,34 +381,34 @@
   }
 
   .btn-ghost {
-    @apply hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium py-2 px-4 rounded-lg transition-all duration-150;
+    @apply hover:bg-gray-800 text-gray-300 font-medium py-2 px-4 rounded-lg transition-all duration-150;
   }
 
   /* Enhanced input styling */
   .input-primary {
-    @apply w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150;
+    @apply w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150;
   }
 
   /* Enhanced card component */
   .card {
-    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:transform hover:scale-[1.02];
+    @apply bg-gray-800 border border-gray-700 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:transform hover:scale-[1.02];
   }
 
   /* Enhanced status indicators */
   .status-active {
-    @apply bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800 rounded-full px-2 py-1 text-xs font-medium;
+    @apply bg-green-900/20 text-green-200 border border-green-800 rounded-full px-2 py-1 text-xs font-medium;
   }
 
   .status-inactive {
-    @apply bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-1 text-xs font-medium;
+    @apply bg-gray-800 text-gray-200 border border-gray-700 rounded-full px-2 py-1 text-xs font-medium;
   }
 
   .status-error {
-    @apply bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800 rounded-full px-2 py-1 text-xs font-medium;
+    @apply bg-red-900/20 text-red-200 border border-red-800 rounded-full px-2 py-1 text-xs font-medium;
   }
 
   .status-warning {
-    @apply bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800 rounded-full px-2 py-1 text-xs font-medium;
+    @apply bg-yellow-900/20 text-yellow-200 border border-yellow-800 rounded-full px-2 py-1 text-xs font-medium;
   }
 
   /* Loading components */
@@ -445,7 +426,7 @@
   }
 
   .loading-skeleton {
-    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+    @apply animate-pulse bg-gray-700 rounded;
   }
 
   .loading-dots {
@@ -800,29 +781,8 @@
 }
 
 /* Enhanced CSS variables for Shadcn/UI compatibility */
+/* Shadcn/UI CSS variables - Dark Mode Only */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-}
-
-.dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
   --card: 222.2 84% 4.9%;
@@ -843,3 +803,5 @@
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 94.1%;
 }
+
+/* No .dark selector needed - dark mode is the only mode */

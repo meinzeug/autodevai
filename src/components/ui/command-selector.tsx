@@ -1,12 +1,12 @@
 import * as React from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
-import { ClaudeFlowCommand } from "../../types"
+import { ClaudeFlowCommand, ClaudeFlowCommandType } from "../../types"
 import { Network, Code, Brain, Database } from "lucide-react"
 import { cn } from "../../utils/cn"
 
 interface CommandSelectorProps {
-  value?: ClaudeFlowCommand
-  onValueChange?: (value: ClaudeFlowCommand) => void
+  value?: string
+  onValueChange?: (value: string) => void
   disabled?: boolean
   className?: string
 }
@@ -54,7 +54,7 @@ export function CommandSelector({
         Command Type
       </label>
       <Select 
-        value={value} 
+        value={value || ''} 
         onValueChange={onValueChange}
         disabled={disabled}
       >

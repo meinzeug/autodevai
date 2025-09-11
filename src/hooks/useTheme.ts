@@ -1,29 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ThemeProviderProps } from '../types';
 
-type Theme = 'light' | 'dark';
+type Theme = 'dark';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('theme');
-    return (stored as Theme) || 'dark';
-  });
+  const theme: Theme = 'dark';
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    root.classList.remove('light');
+    root.classList.add('dark');
+    root.setAttribute('data-theme', 'dark');
+    // Remove any stored theme preference since we're dark mode only
+    localStorage.removeItem('theme');
+  }, []);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
-  return { theme, setTheme, toggleTheme };
+  return { theme };
 }
 
-// Simple ThemeProvider function - using createElement instead of JSX
+// Simple ThemeProvider function - always dark mode
 import { createElement } from 'react';
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
@@ -31,6 +26,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   
   return createElement('div', { 
     'data-theme': theme,
-    className: `theme-provider theme-${theme}` 
+    className: 'theme-provider theme-dark' 
   }, children);
 }

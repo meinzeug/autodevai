@@ -3,6 +3,7 @@
 
 use crate::errors::{NeuralBridgeError, Result};
 use crate::types::LogEntry;
+use option_ext::OptionExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::fs;

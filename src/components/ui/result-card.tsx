@@ -40,25 +40,25 @@ const statusConfig = {
     icon: Clock,
     label: 'Pending',
     variant: 'secondary' as const,
-    color: 'text-yellow-600 dark:text-yellow-400',
+    color: 'text-yellow-600 text-yellow-400',
   },
   running: {
     icon: Clock,
     label: 'Running',
     variant: 'default' as const,
-    color: 'text-blue-600 dark:text-blue-400',
+    color: 'text-blue-600 text-blue-400',
   },
   completed: {
     icon: CheckCircle2,
     label: 'Completed',
     variant: 'default' as const,
-    color: 'text-green-600 dark:text-green-400',
+    color: 'text-green-600 text-green-400',
   },
   failed: {
     icon: XCircle,
     label: 'Failed',
     variant: 'destructive' as const,
-    color: 'text-red-600 dark:text-red-400',
+    color: 'text-red-600 text-red-400',
   },
 } as const
 
