@@ -68,7 +68,7 @@ jobs:
       
       - name: Create npm security issue
         if: steps.npm-audit.outputs.status == 'failure' && github.event_name == 'schedule'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -129,7 +129,7 @@ jobs:
       
       - name: Create cargo security issue
         if: steps.cargo-audit.outputs.status == 'failure' && github.event_name == 'schedule'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
