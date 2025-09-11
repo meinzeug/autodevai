@@ -1,200 +1,345 @@
-name: Create Issue on Workflow Failure
+name: Issue Creation on Failures
 
 on:
   workflow_run:
-    workflows:
-      - 'Main CI/CD Pipeline'
-      - 'PR Validation'
-      - 'Release Pipeline'
-    types:
-      - completed
+    workflows: ["CI/CD Pipeline", "Security Scanning", "Release Automation"]
+    types: [completed]
+    branches: [main, develop]
 
 permissions:
   issues: write
+  actions: read
   contents: read
 
 jobs:
   create-issue-on-failure:
-    name: Create Issue if Workflow Failed
-    runs-on: ubuntu-22.04
+    name: Create Issue on Workflow Failure
+    runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Check for existing issue
-        id: check-issue
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      - name: Get workflow run details
+        id: workflow
+        uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const workflow_name = context.payload.workflow_run.name;
-            const run_id = context.payload.workflow_run.id;
-
-            // Search for existing open issues
-            const issues = await github.rest.issues.listForRepo({
+            const workflowRun = context.payload.workflow_run;
+            const workflow = await github.rest.actions.getWorkflow({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open',
-              labels: 'ci-failure,automated'
+              workflow_id: workflowRun.workflow_id
             });
-
-            // Check if issue already exists for this workflow
-            const existingIssue = issues.data.find(issue => 
-              issue.title.includes(workflow_name) && 
-              issue.body.includes(run_id)
-            );
-
-            if (existingIssue) {
-              console.log(`Issue already exists: #${existingIssue.number}`);
-              return existingIssue.number;
-            }
-
-            return null;
-
-      - name: Create failure issue
-        if: steps.check-issue.outputs.result == 'null'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            // Safely extract data from GitHub context without environment variable injection
-            const workflow_name = context.payload.workflow_run.name || 'Unknown Workflow';
-            const workflow_url = context.payload.workflow_run.html_url || '';
-            const run_id = context.payload.workflow_run.id || '';
-            const run_number = context.payload.workflow_run.run_number || '';
-            const commit_sha = context.payload.workflow_run.head_sha || '';
-            // Sanitize potentially malicious commit message and author
-            const commit_message = (context.payload.workflow_run.head_commit?.message || 'No commit message').replace(/[`$(){}[\]|&;<>]/g, '').substring(0, 200);
-            const author = (context.payload.workflow_run.head_commit?.author?.name || 'Unknown Author').replace(/[`$(){}[\]|&;<>]/g, '').substring(0, 50);
-            const branch = (context.payload.workflow_run.head_branch || 'unknown').replace(/[`$(){}[\]|&;<>]/g, '').substring(0, 100);
-            const event_type = context.payload.workflow_run.event || 'unknown';
-            const created_at = context.payload.workflow_run.created_at || new Date().toISOString();
-
-            // Get workflow run details
-            const run = await github.rest.actions.getWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: run_id
-            });
-
+            
             // Get failed jobs
             const jobs = await github.rest.actions.listJobsForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: run_id,
-              filter: 'latest'
+              run_id: workflowRun.id
             });
-
+            
             const failedJobs = jobs.data.jobs.filter(job => job.conclusion === 'failure');
+            
+            return {
+              workflowName: workflow.data.name,
+              workflowUrl: workflowRun.html_url,
+              runId: workflowRun.id,
+              headSha: workflowRun.head_sha,
+              headBranch: workflowRun.head_branch,
+              actor: workflowRun.actor.login,
+              createdAt: workflowRun.created_at,
+              updatedAt: workflowRun.updated_at,
+              failedJobs: failedJobs.map(job => ({
+                name: job.name,
+                url: job.html_url,
+                steps: job.steps.filter(step => step.conclusion === 'failure').map(step => ({
+                  name: step.name,
+                  number: step.number,
+                  conclusion: step.conclusion
+                }))
+              }))
+            };
 
-            // Build error details
-            let errorDetails = '';
-            for (const job of failedJobs) {
-              errorDetails += `\n### ❌ Failed Job: ${job.name}\n`;
-              errorDetails += `- **Status**: ${job.status}\n`;
-              errorDetails += `- **Started**: ${job.started_at}\n`;
-              errorDetails += `- **Duration**: ${Math.round((new Date(job.completed_at) - new Date(job.started_at)) / 1000)}s\n`;
-              errorDetails += `- **URL**: ${job.html_url}\n`;
+      - name: Download workflow logs
+        id: logs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowRunId = ${{ github.event.workflow_run.id }};
+            
+            try {
+              const logs = await github.rest.actions.downloadWorkflowRunLogs({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflowRunId
+              });
               
-              // Get failed steps
-              const failedSteps = job.steps.filter(step => step.conclusion === 'failure');
-              if (failedSteps.length > 0) {
-                errorDetails += `\n**Failed Steps:**\n`;
-                for (const step of failedSteps) {
-                  errorDetails += `- ⚠️ ${step.name} (${step.conclusion})\n`;
-                }
-              }
+              // The logs are returned as a zip file buffer
+              // We'll just indicate that logs are available
+              return {
+                available: true,
+                url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${workflowRunId}`
+              };
+            } catch (error) {
+              console.log('Could not download logs:', error.message);
+              return {
+                available: false,
+                error: error.message
+              };
             }
 
-            // Create issue title and body with sanitized data
-            const issueTitle = `🚨 CI/CD Failure: ${workflow_name} (Run #${run_number})`;
-
-            const issueBody = `## 🔴 Workflow Failure Detected
-
-            The **${workflow_name}** workflow has failed and requires attention.
-
-            ### 📊 Workflow Information
-            - **Workflow**: ${workflow_name}
-            - **Run Number**: #${run_number}
-            - **Run ID**: ${run_id}
-            - **Branch**: \`${branch}\`
-            - **Event**: ${event_type}
-            - **Created**: ${created_at}
-            - **URL**: [View Workflow Run](${workflow_url})
-
-            ### 💻 Commit Information
-            - **SHA**: \`${commit_sha.substring(0, 7)}\`
-            - **Author**: ${author}
-            - **Message**: ${commit_message.split('\n')[0]}
-
-            ${errorDetails}
-
-            ### 🔧 Suggested Actions
-            1. Review the [failed workflow run](${workflow_url})
-            2. Check the error logs for specific failure reasons
-            3. Fix the identified issues
-            4. Push the fixes to trigger a new workflow run
-            5. Close this issue once the workflow passes
-
-            ### 🏷️ Labels
-            This issue has been automatically labeled with:
-            - \`ci-failure\`: Indicates a CI/CD pipeline failure
-            - \`automated\`: Created by automated workflow
-            - \`priority-high\`: Requires immediate attention
-
-            ### 🤖 Automation
-            This issue was automatically created by the CI/CD failure detection system.
-
-            ---
-            *Generated at: ${new Date().toISOString()}*
-            *Workflow Run: [${run_id}](${workflow_url})*`;
-
-            // Create the issue
-            const issue = await github.rest.issues.create({
+      - name: Check for existing issue
+        id: existing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowName = ${{ steps.workflow.outputs.result }}.workflowName;
+            const headSha = ${{ steps.workflow.outputs.result }}.headSha;
+            
+            // Search for existing issues with the same workflow and commit
+            const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: issueTitle,
-              body: issueBody,
-              labels: ['ci-failure', 'automated', 'priority-high', 'bug'],
-              assignees: []
+              state: 'open',
+              labels: 'workflow-failure,automated',
+              per_page: 100
             });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes(workflowName) && 
+              issue.body.includes(headSha.substring(0, 7))
+            );
+            
+            return existingIssue ? existingIssue.number : null;
 
-            console.log(`Created issue #${issue.data.number}: ${issue.data.html_url}`);
+      - name: Get commit details
+        id: commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const headSha = ${{ steps.workflow.outputs.result }}.headSha;
+            
+            const commit = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: headSha
+            });
+            
+            return {
+              message: commit.data.commit.message,
+              author: commit.data.commit.author.name,
+              authorEmail: commit.data.commit.author.email,
+              url: commit.data.html_url
+            };
 
-            // Add comment with additional context if needed
-            if (failedJobs.length > 1) {
+      - name: Create or update issue
+        uses: actions/github-script@v7
+        env:
+          WORKFLOW_DATA: ${{ steps.workflow.outputs.result }}
+          LOGS_DATA: ${{ steps.logs.outputs.result }}
+          COMMIT_DATA: ${{ steps.commit.outputs.result }}
+          EXISTING_ISSUE: ${{ steps.existing.outputs.result }}
+        with:
+          script: |
+            const workflowData = JSON.parse(process.env.WORKFLOW_DATA);
+            const logsData = JSON.parse(process.env.LOGS_DATA);
+            const commitData = JSON.parse(process.env.COMMIT_DATA);
+            const existingIssue = process.env.EXISTING_ISSUE !== 'null' ? parseInt(process.env.EXISTING_ISSUE) : null;
+            
+            // Format failed jobs information
+            const failedJobsInfo = workflowData.failedJobs.map(job => {
+              const stepsInfo = job.steps.length > 0 
+                ? job.steps.map(step => `    - ❌ Step ${step.number}: ${step.name}`).join('\n')
+                : '    - No specific step failures detected';
+              
+              return `  - **${job.name}**
+            ${stepsInfo}
+            [View job logs](${job.url})`;
+            }).join('\n');
+            
+            const title = `🚨 Workflow Failure: ${workflowData.workflowName} (${workflowData.headSha.substring(0, 7)})`;
+            
+            const body = `## 🚨 Workflow Failure Alert
+            
+            The **${workflowData.workflowName}** workflow has failed on branch \`${workflowData.headBranch}\`.
+            
+            ### 📊 Failure Details
+            
+            | Field | Value |
+            |-------|-------|
+            | **Workflow** | [${workflowData.workflowName}](${workflowData.workflowUrl}) |
+            | **Run ID** | \`${workflowData.runId}\` |
+            | **Branch** | \`${workflowData.headBranch}\` |
+            | **Commit** | [\`${workflowData.headSha.substring(0, 7)}\`](${commitData.url}) |
+            | **Author** | ${commitData.author} |
+            | **Triggered by** | @${workflowData.actor} |
+            | **Failed at** | ${new Date(workflowData.updatedAt).toLocaleString()} |
+            
+            ### 📝 Commit Information
+            
+            **Message:** ${commitData.message.split('\n')[0]}
+            
+            **Full commit:** ${commitData.url}
+            
+            ### ❌ Failed Jobs
+            
+            ${failedJobsInfo}
+            
+            ### 🔍 Debugging Information
+            
+            ${logsData.available 
+              ? `📋 **Workflow logs:** [Download here](${logsData.url})`
+              : `⚠️ **Workflow logs:** Not available (${logsData.error || 'Unknown error'})`
+            }
+            
+            ### 🛠️ Next Steps
+            
+            1. **Review the failed jobs** listed above
+            2. **Check the workflow logs** for detailed error messages
+            3. **Examine the failing commit** for potential issues
+            4. **Fix the underlying issue** and push a new commit
+            5. **Re-run the workflow** if needed
+            
+            ### 🏷️ Auto-generated Tags
+            
+            - \`workflow-failure\` - Indicates this is an automated workflow failure report
+            - \`${workflowData.workflowName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}\` - Specific workflow that failed
+            - \`branch:${workflowData.headBranch}\` - Branch where the failure occurred
+            
+            ---
+            
+            🤖 This issue was automatically created by the Issue Creation on Failures workflow.
+            
+            **Workflow Run:** ${workflowData.workflowUrl}
+            **Created:** ${new Date().toISOString()}`;
+            
+            const labels = [
+              'workflow-failure',
+              'automated',
+              'bug',
+              workflowData.workflowName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+              `branch:${workflowData.headBranch}`
+            ];
+            
+            if (existingIssue) {
+              // Update existing issue
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: issue.data.number,
-                body: `⚠️ **Multiple job failures detected** (${failedJobs.length} jobs failed)\n\nThis indicates a systemic issue that may require broader investigation.`
+                issue_number: existingIssue,
+                body: `## 🔄 Additional Failure
+                
+                The workflow failed again with the same commit. See updated details above.
+                
+                **New failure time:** ${new Date(workflowData.updatedAt).toLocaleString()}
+                **Workflow run:** ${workflowData.workflowUrl}`
               });
+              
+              // Update labels
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue,
+                labels: labels
+              });
+              
+              console.log(`Updated existing issue #${existingIssue}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: labels,
+                assignees: [workflowData.actor] // Assign to the person who triggered the workflow
+              });
+              
+              console.log(`Created new issue #${issue.data.number}`);
             }
 
-      - name: Notify about existing issue
-        if: steps.check-issue.outputs.result != 'null'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        env:
-          # SECURITY FIX: Use environment variables to prevent script injection
-          ISSUE_NUMBER: ${{ steps.check-issue.outputs.result }}
-          WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
-          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+      - name: Notify via comment (if PR)
+        if: ${{ github.event.workflow_run.event == 'pull_request' }}
+        uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // SECURITY: Get values from environment variables instead of direct interpolation
-            const issue_number = process.env.ISSUE_NUMBER || '';
-            const workflow_url = process.env.WORKFLOW_URL || '';
-            const run_number = process.env.RUN_NUMBER || '';
-
-            // Add comment to existing issue
-            await github.rest.issues.createComment({
+            const workflowData = JSON.parse(process.env.WORKFLOW_DATA);
+            
+            // Find the PR associated with this workflow run
+            const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issue_number,
-              body: `🔄 **Another failure detected**\n\nWorkflow run #${run_number} has also failed.\n[View Workflow Run](${workflow_url})\n\n*Failure detected at: ${new Date().toISOString()}*`
+              head: `${context.repo.owner}:${workflowData.headBranch}`,
+              state: 'open'
             });
+            
+            if (prs.data.length > 0) {
+              const pr = prs.data[0];
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `## ⚠️ Workflow Failure
+                
+                The **${workflowData.workflowName}** workflow has failed for this PR.
+                
+                🔍 **Details:** [View workflow run](${workflowData.workflowUrl})
+                📋 **Issue:** An automated issue has been created to track this failure
+                
+                Please check the workflow logs and fix any issues before merging.`
+              });
+            }
+        env:
+          WORKFLOW_DATA: ${{ steps.workflow.outputs.result }}
 
-            console.log(`Updated existing issue #${issue_number}`);
+  # Cleanup old failure issues
+  cleanup-old-issues:
+    name: Cleanup Old Failure Issues
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Close resolved failure issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            // Get all open workflow failure issues older than 7 days
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'workflow-failure,automated',
+              since: sevenDaysAgo.toISOString(),
+              per_page: 100
+            });
+            
+            for (const issue of issues.data) {
+              const issueDate = new Date(issue.created_at);
+              
+              // Close issues older than 7 days
+              if (issueDate < sevenDaysAgo) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+                
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🤖 **Auto-closing stale workflow failure issue**
+                  
+                  This issue has been automatically closed because it's older than 7 days.
+                  
+                  If the workflow is still failing, a new issue will be created automatically.`
+                });
+                
+                console.log(`Closed stale issue #${issue.number}: ${issue.title}`);
+              }
+            }

@@ -1,0 +1,196 @@
+name: Reusable Test
+
+on:
+  workflow_call:
+    inputs:
+      test-type:
+        required: true
+        type: string
+        description: 'Type of test to run (unit, integration, e2e, security, performance)'
+      node-version:
+        required: false
+        type: string
+        default: '18'
+        description: 'Node.js version'
+      rust-version:
+        required: false
+        type: string
+        default: 'stable'
+        description: 'Rust toolchain version'
+      timeout-minutes:
+        required: false
+        type: number
+        default: 30
+        description: 'Test timeout in minutes'
+      upload-coverage:
+        required: false
+        type: boolean
+        default: false
+        description: 'Upload coverage reports'
+    outputs:
+      test-status:
+        description: 'Test completion status'
+        value: ${{ jobs.test.outputs.test-status }}
+      coverage-percentage:
+        description: 'Test coverage percentage'
+        value: ${{ jobs.test.outputs.coverage-percentage }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: ${{ inputs.test-type }} Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    outputs:
+      test-status: ${{ steps.test.outcome }}
+      coverage-percentage: ${{ steps.coverage.outputs.percentage }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        if: contains(inputs.test-type, 'rust') || inputs.test-type == 'integration'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          components: rustfmt, clippy
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Playwright (E2E tests)
+        if: inputs.test-type == 'e2e'
+        run: |
+          npx playwright install --with-deps
+          npx playwright install-deps
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+            node_modules/
+            ~/.cache/ms-playwright/
+          key: ${{ runner.os }}-test-${{ inputs.test-type }}-${{ hashFiles('**/Cargo.lock', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-test-${{ inputs.test-type }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application (if needed)
+        if: inputs.test-type == 'e2e' || inputs.test-type == 'integration'
+        run: |
+          npm run build
+          cd src-tauri && cargo build --release
+
+      - name: Start application (E2E tests)
+        if: inputs.test-type == 'e2e'
+        run: |
+          npm run preview &
+          sleep 10
+          curl -f http://localhost:4173 || exit 1
+
+      - name: Run tests
+        id: test
+        run: |
+          case "${{ inputs.test-type }}" in
+            "unit")
+              npm run test:run
+              ;;
+            "integration")
+              npm run test:ci
+              ;;
+            "e2e")
+              npm run test:e2e
+              ;;
+            "security")
+              npm run test:security
+              ;;
+            "performance")
+              npm run test:performance
+              ;;
+            "rust-unit")
+              cd src-tauri && cargo test --workspace
+              ;;
+            "rust-bench")
+              cd src-tauri && cargo bench --no-run
+              ;;
+            *)
+              echo "Unknown test type: ${{ inputs.test-type }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Generate coverage report
+        id: coverage
+        if: inputs.upload-coverage && (inputs.test-type == 'unit' || inputs.test-type == 'integration')
+        run: |
+          npm run test:coverage
+          
+          # Extract coverage percentage
+          if [[ -f "coverage/lcov.info" ]]; then
+            COVERAGE=$(npm run test:coverage | grep -o '[0-9]*\.[0-9]*%' | tail -1 | sed 's/%//')
+            echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          else
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload coverage to Codecov
+        if: inputs.upload-coverage && (inputs.test-type == 'unit' || inputs.test-type == 'integration')
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          flags: ${{ inputs.test-type }}
+          name: ${{ inputs.test-type }}-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ inputs.test-type }}
+          path: |
+            coverage/
+            test-results/
+            tests/**/reports/
+            playwright-report/
+          retention-days: 7
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## ${{ inputs.test-type }} Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.test.outcome }}" == "success" ]]; then
+            echo "✅ Tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Tests failed!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | ${{ inputs.test-type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ steps.test.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ inputs.upload-coverage }}" == "true" && -n "${{ steps.coverage.outputs.percentage }}" ]]; then
+            echo "| Coverage | ${{ steps.coverage.outputs.percentage }}% |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "| Duration | ${{ inputs.timeout-minutes }} min (max) |" >> $GITHUB_STEP_SUMMARY

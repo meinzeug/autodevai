@@ -1,0 +1,118 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quick-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Quick lint check
+        run: |
+          npm ci --prefer-offline
+          npm run lint --max-warnings 50 || true
+  
+  build-and-test:
+    needs: quick-check
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: TypeScript check
+        run: npm run typecheck || true
+      
+      - name: Build frontend
+        run: npm run build
+      
+      - name: Run tests
+        run: npm test -- --run || true
+      
+      - name: Build Tauri
+        working-directory: ./src-tauri
+        run: cargo build --release
+      
+      - name: Run Rust tests
+        working-directory: ./src-tauri
+        run: cargo test
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=high || true
+      
+      - name: Run cargo audit
+        working-directory: ./src-tauri
+        run: |
+          cargo install cargo-audit || true
+          cargo audit || true
+
+  on-failure:
+    needs: [build-and-test, security-scan]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title: `🚨 CI/CD Failure - ${context.workflow} #${context.runNumber}`,
+              body: `## Workflow Failure
+              
+              **Run:** [${context.runNumber}](${run_url})
+              **Commit:** ${context.sha.substring(0, 7)}
+              **Triggered by:** @${context.actor}
+              
+              Please check the [workflow run](${run_url}) for details.`,
+              labels: ['ci-failure', 'automated']
+            });

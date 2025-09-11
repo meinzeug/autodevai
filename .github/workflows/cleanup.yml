@@ -1,0 +1,270 @@
+name: Cleanup and Maintenance
+
+on:
+  schedule:
+    # Run daily at 1 AM UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: 'Type of cleanup to perform'
+        required: false
+        type: choice
+        options:
+          - all
+          - artifacts
+          - caches
+          - branches
+          - issues
+        default: 'all'
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  cleanup-artifacts:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'artifacts' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Delete old workflow artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get all artifacts older than 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+              owner,
+              repo,
+              per_page: 100
+            });
+            
+            let deletedCount = 0;
+            let totalSize = 0;
+            
+            for (const artifact of artifacts.artifacts) {
+              const artifactDate = new Date(artifact.created_at);
+              
+              if (artifactDate < thirtyDaysAgo) {
+                try {
+                  await github.rest.actions.deleteArtifact({
+                    owner,
+                    repo,
+                    artifact_id: artifact.id
+                  });
+                  
+                  deletedCount++;
+                  totalSize += artifact.size_in_bytes;
+                  console.log(`Deleted artifact: ${artifact.name} (${artifact.id})`);
+                } catch (error) {
+                  console.log(`Failed to delete artifact ${artifact.name}: ${error.message}`);
+                }
+              }
+            }
+            
+            console.log(`Cleanup completed: ${deletedCount} artifacts deleted, ${(totalSize / 1024 / 1024).toFixed(2)} MB freed`);
+
+  cleanup-caches:
+    name: Cleanup Old Caches
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'caches' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cleanup caches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get all caches
+            const { data: caches } = await github.rest.actions.getActionsCacheList({
+              owner,
+              repo,
+              per_page: 100
+            });
+            
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            let deletedCount = 0;
+            let totalSize = 0;
+            
+            for (const cache of caches.actions_caches) {
+              const cacheDate = new Date(cache.last_accessed_at || cache.created_at);
+              
+              // Delete caches older than 7 days or with size > 1GB
+              if (cacheDate < sevenDaysAgo || cache.size_in_bytes > 1024 * 1024 * 1024) {
+                try {
+                  await github.rest.actions.deleteActionsCacheById({
+                    owner,
+                    repo,
+                    cache_id: cache.id
+                  });
+                  
+                  deletedCount++;
+                  totalSize += cache.size_in_bytes;
+                  console.log(`Deleted cache: ${cache.key} (${cache.id})`);
+                } catch (error) {
+                  console.log(`Failed to delete cache ${cache.key}: ${error.message}`);
+                }
+              }
+            }
+            
+            console.log(`Cache cleanup completed: ${deletedCount} caches deleted, ${(totalSize / 1024 / 1024).toFixed(2)} MB freed`);
+
+  cleanup-branches:
+    name: Cleanup Merged Branches
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'branches' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Delete merged branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get all branches
+            const { data: branches } = await github.rest.repos.listBranches({
+              owner,
+              repo,
+              per_page: 100
+            });
+            
+            const protectedBranches = ['main', 'develop', 'master'];
+            let deletedCount = 0;
+            
+            for (const branch of branches) {
+              // Skip protected branches
+              if (protectedBranches.includes(branch.name)) {
+                continue;
+              }
+              
+              try {
+                // Check if branch is merged into main
+                const { data: comparison } = await github.rest.repos.compareCommits({
+                  owner,
+                  repo,
+                  base: 'main',
+                  head: branch.name
+                });
+                
+                // If behind_by is 0 and ahead_by is 0, the branch is fully merged
+                if (comparison.behind_by === 0 && comparison.ahead_by === 0) {
+                  await github.rest.git.deleteRef({
+                    owner,
+                    repo,
+                    ref: `heads/${branch.name}`
+                  });
+                  
+                  deletedCount++;
+                  console.log(`Deleted merged branch: ${branch.name}`);
+                }
+              } catch (error) {
+                console.log(`Could not process branch ${branch.name}: ${error.message}`);
+              }
+            }
+            
+            console.log(`Branch cleanup completed: ${deletedCount} merged branches deleted`);
+
+  cleanup-issues:
+    name: Cleanup Stale Issues
+    runs-on: ubuntu-latest
+    if: github.event.inputs.cleanup_type == 'issues' || github.event.inputs.cleanup_type == 'all' || github.event_name == 'schedule'
+    steps:
+      - name: Close stale automated issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            // Get stale automated issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: 'automated',
+              per_page: 100
+            });
+            
+            let closedCount = 0;
+            
+            for (const issue of issues) {
+              const issueDate = new Date(issue.created_at);
+              const lastUpdate = new Date(issue.updated_at);
+              
+              // Close issues that are old and haven't been updated
+              if (issueDate < thirtyDaysAgo && lastUpdate < thirtyDaysAgo) {
+                // Check if it's a workflow failure issue
+                if (issue.labels.some(label => label.name === 'workflow-failure')) {
+                  await github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    state: 'closed'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    body: `🤖 **Auto-closing stale workflow failure issue**
+                    
+                    This automated issue has been closed because:
+                    - It's older than 30 days
+                    - No recent activity or updates
+                    - Likely resolved by subsequent commits
+                    
+                    If the issue persists, a new automated issue will be created.`
+                  });
+                  
+                  closedCount++;
+                  console.log(`Closed stale issue #${issue.number}: ${issue.title}`);
+                }
+              }
+            }
+            
+            console.log(`Issue cleanup completed: ${closedCount} stale issues closed`);
+
+  cleanup-summary:
+    name: Cleanup Summary
+    runs-on: ubuntu-latest
+    needs: [cleanup-artifacts, cleanup-caches, cleanup-branches, cleanup-issues]
+    if: always()
+    steps:
+      - name: Generate cleanup report
+        run: |
+          echo "# 🧹 Cleanup and Maintenance Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Cleanup Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Task | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | ${{ needs.cleanup-artifacts.result == 'success' && '✅ Completed' || needs.cleanup-artifacts.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Caches | ${{ needs.cleanup-caches.result == 'success' && '✅ Completed' || needs.cleanup-caches.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branches | ${{ needs.cleanup-branches.result == 'success' && '✅ Completed' || needs.cleanup-branches.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Issues | ${{ needs.cleanup-issues.result == 'success' && '✅ Completed' || needs.cleanup-issues.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Next Scheduled Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📅 **Daily at 1:00 AM UTC**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "You can also run cleanup manually using the 'Cleanup and Maintenance' workflow dispatch." >> $GITHUB_STEP_SUMMARY

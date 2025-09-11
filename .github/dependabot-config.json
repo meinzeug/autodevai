@@ -1,0 +1,89 @@
+{
+  "version": "2",
+  "description": "Dependabot configuration settings and policies",
+  "policies": {
+    "auto_merge": {
+      "enabled": true,
+      "conditions": {
+        "update_types": ["version-update:semver-patch"],
+        "dependency_types": ["development"],
+        "ci_status": "success",
+        "security_advisories": "none"
+      }
+    },
+    "security_updates": {
+      "priority": "high",
+      "auto_approve": true,
+      "merge_strategy": "immediate",
+      "notification": "urgent"
+    },
+    "grouping_strategy": {
+      "by_ecosystem": true,
+      "by_update_type": true,
+      "by_dependency_group": true,
+      "max_group_size": 10
+    }
+  },
+  "notification_settings": {
+    "security_updates": {
+      "slack_webhook": null,
+      "email_alerts": true,
+      "github_notifications": true
+    },
+    "regular_updates": {
+      "weekly_summary": true,
+      "pr_comments": true
+    }
+  },
+  "ignored_dependencies": {
+    "permanent": [
+      "node-sass",
+      "gulp"
+    ],
+    "temporary": [],
+    "security_exceptions": []
+  },
+  "update_schedules": {
+    "npm": {
+      "day": "tuesday",
+      "time": "09:00",
+      "timezone": "UTC"
+    },
+    "cargo": {
+      "day": "wednesday", 
+      "time": "09:00",
+      "timezone": "UTC"
+    },
+    "github_actions": {
+      "day": "thursday",
+      "time": "09:00", 
+      "timezone": "UTC"
+    },
+    "docker": {
+      "day": "friday",
+      "time": "09:00",
+      "timezone": "UTC"
+    }
+  },
+  "quality_gates": {
+    "minimum_tests_passing": true,
+    "lint_checks_passing": true,
+    "security_scan_clean": true,
+    "build_successful": true
+  },
+  "risk_assessment": {
+    "major_updates": {
+      "requires_manual_review": true,
+      "breaking_change_analysis": true,
+      "compatibility_check": true
+    },
+    "minor_updates": {
+      "group_similar": true,
+      "auto_approve_dev_deps": true
+    },
+    "patch_updates": {
+      "auto_merge_enabled": true,
+      "fast_track_security": true
+    }
+  }
+}

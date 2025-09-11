@@ -1,0 +1,148 @@
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+        description: 'Target platform (linux, windows, macos)'
+      rust-target:
+        required: true
+        type: string
+        description: 'Rust target triple'
+      node-version:
+        required: false
+        type: string
+        default: '18'
+        description: 'Node.js version'
+      rust-version:
+        required: false
+        type: string
+        default: 'stable'
+        description: 'Rust toolchain version'
+      build-args:
+        required: false
+        type: string
+        default: ''
+        description: 'Additional build arguments'
+      cache-key:
+        required: false
+        type: string
+        default: 'default'
+        description: 'Cache key suffix'
+    outputs:
+      artifact-name:
+        description: 'Name of the uploaded artifact'
+        value: ${{ jobs.build.outputs.artifact-name }}
+      build-status:
+        description: 'Build completion status'
+        value: ${{ jobs.build.outputs.build-status }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build ${{ inputs.platform }}
+    runs-on: ${{ inputs.platform == 'linux' && 'ubuntu-latest' || inputs.platform == 'windows' && 'windows-latest' || 'macos-latest' }}
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      build-status: ${{ steps.build.outcome }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-version }}
+          targets: ${{ inputs.rust-target }}
+
+      - name: Install system dependencies (Linux)
+        if: inputs.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+            node_modules/
+          key: ${{ runner.os }}-${{ inputs.cache-key }}-${{ hashFiles('**/Cargo.lock', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ inputs.cache-key }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri application
+        id: build
+        working-directory: src-tauri
+        env:
+          BUILD_ARGS: ${{ inputs.build-args }}
+        run: |
+          if [[ -n "$BUILD_ARGS" ]]; then
+            cargo build --release --target ${{ inputs.rust-target }} $BUILD_ARGS
+          else
+            cargo build --release --target ${{ inputs.rust-target }}
+          fi
+
+      - name: Prepare artifacts
+        id: artifact
+        run: |
+          ARTIFACT_NAME="build-${{ inputs.platform }}-${{ github.run_number }}"
+          echo "name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          
+          mkdir -p artifacts
+          
+          # Copy built artifacts based on platform
+          if [[ "${{ inputs.platform }}" == "windows" ]]; then
+            cp src-tauri/target/${{ inputs.rust-target }}/release/*.exe artifacts/ 2>/dev/null || true
+          elif [[ "${{ inputs.platform }}" == "macos" ]]; then
+            cp src-tauri/target/${{ inputs.rust-target }}/release/neural-bridge-platform artifacts/ 2>/dev/null || true
+          else
+            cp src-tauri/target/${{ inputs.rust-target }}/release/neural-bridge-platform artifacts/ 2>/dev/null || true
+          fi
+          
+          # Copy frontend build
+          cp -r dist artifacts/frontend/ 2>/dev/null || true
+          
+          ls -la artifacts/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: artifacts/
+          retention-days: 7
+          compression-level: 6
+
+      - name: Generate build summary
+        run: |
+          echo "## Build Summary for ${{ inputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | ${{ inputs.platform }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Target | ${{ inputs.rust-target }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Node Version | ${{ inputs.node-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Version | ${{ inputs.rust-version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact | ${{ steps.artifact.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build completed successfully!" >> $GITHUB_STEP_SUMMARY

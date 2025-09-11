@@ -1,0 +1,129 @@
+version: 2
+updates:
+  # NPM dependencies - grouped by type
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      testing-tools:
+        patterns:
+          - "*test*"
+          - "vitest*"
+          - "@testing-library/*"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      build-tools:
+        patterns:
+          - "vite*"
+          - "typescript"
+          - "eslint*"
+          - "prettier"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      tauri-frontend:
+        patterns:
+          - "@tauri-apps/*"
+        update-types:
+          - "minor"
+          - "patch"
+    
+    ignore:
+      # Major updates need manual review
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@tauri-apps/*"
+        update-types: ["version-update:semver-major"]
+    
+    labels:
+      - "dependencies"
+      - "npm"
+      - "automated"
+    
+    reviewers:
+      - "meinzeug"
+    
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    groups:
+      tauri-core:
+        patterns:
+          - "tauri*"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      async-runtime:
+        patterns:
+          - "tokio*"
+          - "futures*"
+          - "async-*"
+        update-types:
+          - "minor"
+          - "patch"
+    
+    ignore:
+      # Critical dependencies - manual review
+      - dependency-name: "tauri"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tokio"
+        update-types: ["version-update:semver-major"]
+    
+    labels:
+      - "dependencies"
+      - "rust"
+      - "automated"
+    
+    reviewers:
+      - "meinzeug"
+    
+    commit-message:
+      prefix: "chore(rust)"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "ci/cd"
+      - "automated"
+    
+    reviewers:
+      - "meinzeug"
+    
+    commit-message:
+      prefix: "ci"
+      include: "scope"

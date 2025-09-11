@@ -1,0 +1,36 @@
+# ZAP scanning rules for AutoDevAI Neural Bridge Platform
+# Format: RULE_ID	ACTION	CONFIDENCE	THRESHOLD
+
+# General rules
+10003	IGNORE	HIGH	LOW	# Passive Scanner Base - too verbose for CI
+10054	IGNORE	MEDIUM	LOW	# Cookie No HttpOnly Flag - handled by security middleware
+
+# Application-specific rules
+40012	FAIL	HIGH	MEDIUM	# Cross Site Scripting (Reflected)
+40013	FAIL	HIGH	MEDIUM	# Session ID in URL Rewrite  
+40014	FAIL	HIGH	MEDIUM	# Cross Site Scripting (Persistent)
+40016	FAIL	HIGH	MEDIUM	# Cross Site Scripting (Persistent) - Prime
+40017	FAIL	HIGH	MEDIUM	# Cross Site Scripting (Persistent) - Spider
+40018	FAIL	HIGH	MEDIUM	# SQL Injection
+40019	FAIL	HIGH	MEDIUM	# SQL Injection - MySQL
+40020	FAIL	HIGH	MEDIUM	# SQL Injection - Hypersonic SQL
+40021	FAIL	HIGH	MEDIUM	# SQL Injection - Oracle
+40022	FAIL	HIGH	MEDIUM	# SQL Injection - PostgreSQL
+
+# Authentication and session management
+10010	FAIL	HIGH	MEDIUM	# Cookie No Secure Flag
+10015	FAIL	HIGH	MEDIUM	# Incomplete or No Cache-control and Pragma HTTP Header Set
+10016	FAIL	MEDIUM	MEDIUM	# Web Browser XSS Protection Not Enabled
+10017	FAIL	MEDIUM	MEDIUM	# Cross-Domain JavaScript Source File Inclusion
+10020	FAIL	HIGH	MEDIUM	# X-Frame-Options Header Not Set
+10021	FAIL	MEDIUM	MEDIUM	# X-Content-Type-Options Header Missing
+
+# OWASP Top 10 related
+90001	FAIL	HIGH	MEDIUM	# Insecure JSF ViewState
+90011	FAIL	HIGH	MEDIUM	# Charset Mismatch
+90020	FAIL	HIGH	MEDIUM	# Parameter Tampering
+90033	FAIL	HIGH	MEDIUM	# Loosely Scoped Cookie
+
+# Tauri-specific security considerations
+0	IGNORE	LOW	LOW	# File-based protocols (expected for Tauri apps)
+10049	IGNORE	MEDIUM	LOW	# Non-Storable Content - not applicable for desktop apps
