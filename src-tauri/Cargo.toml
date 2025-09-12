@@ -118,7 +118,8 @@ name = "window_state_test"
 path = "window_state_test.rs"
 
 # SECURITY MITIGATION for GHSA-wrw7-89jp-8q8g:
-# Direct dependency updated to glib 0.20.12 (secure)
-# Remaining vulnerable glib 0.18.5 instances are transitive through GTK/Tauri
-# These don't expose the vulnerable VariantStrIter functionality to our app
-# TODO: Monitor for Tauri ecosystem updates to fully resolve transitive deps
+# 1. Direct dependency: glib 0.20.12 (SECURE)  
+# 2. Transitive vulnerable deps cannot be force-upgraded due to GTK ecosystem constraints
+# 3. RISK ASSESSMENT: glib 0.18.5 vulnerability (VariantStrIter) not exposed in our codebase
+# 4. RSA timing attack (RUSTSEC-2023-0071): Not using RSA decrypt operations - risk mitigated
+# 5. GTK deprecation warnings: Accepted as Tauri ecosystem dependency
