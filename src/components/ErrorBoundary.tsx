@@ -1,165 +1,173 @@
-import React from 'react';
-import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
-import { cn } from '../utils/cn';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { Button } from './common/Button';
+import { Card } from './common/Card';
 
-interface ErrorBoundaryState {
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
   hasError: boolean;
-  error?: Error | undefined;
-  errorInfo?: React.ErrorInfo | undefined;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  errorCount: number;
 }
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<ErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  className?: string;
-}
-
-interface ErrorFallbackProps {
-  error: Error;
-  errorInfo?: React.ErrorInfo | undefined;
-  resetError: () => void;
-}
-
-const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ 
-  error, 
-  errorInfo, 
-  resetError 
-}) => {
-  const [showDetails, setShowDetails] = React.useState(false);
-
-  return (
-    <div className="min-h-[400px] flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="flex-shrink-0">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-red-900 dark:text-red-200">
-              Something went wrong
-            </h3>
-            <p className="text-sm text-red-700 dark:text-red-300">
-              An unexpected error occurred in this component
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm text-red-800 dark:text-red-200">
-            <strong>Error:</strong> {error.message}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={resetError}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Try Again</span>
-            </button>
-
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center space-x-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-            >
-              <Bug className="w-4 h-4" />
-              <span>{showDetails ? 'Hide' : 'Show'} Details</span>
-            </button>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center space-x-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              <span>Reload</span>
-            </button>
-          </div>
-
-          {showDetails && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium text-red-700 dark:text-red-300 mb-2">
-                Technical Details
-              </summary>
-              <div className="bg-red-100 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded p-3">
-                <div className="text-xs font-mono text-red-800 dark:text-red-200 whitespace-pre-wrap">
-                  {error.stack}
-                </div>
-                {errorInfo && (
-                  <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
-                    <div className="text-xs font-medium text-red-700 dark:text-red-300 mb-1">
-                      Component Stack:
-                    </div>
-                    <div className="text-xs font-mono text-red-800 dark:text-red-200 whitespace-pre-wrap">
-                      {errorInfo.componentStack}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </details>
-          )}
-
-          <div className="text-xs text-red-600 dark:text-red-400">
-            If this error persists, please report it with the technical details above.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      errorCount: 0,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { 
+      hasError: true,
+      error,
+    };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    this.setState((prevState) => ({ 
-      ...prevState, 
-      error, 
-      errorInfo 
-    }));
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
     
-    // Log to console in development
-    if (import.meta.env.DEV) {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
-    }
+    this.setState(prevState => ({
+      errorInfo,
+      errorCount: prevState.errorCount + 1,
+    }));
 
-    // Call custom error handler if provided
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
-
-    // Report to monitoring service in production
-    if (import.meta.env.PROD) {
-      // Example: Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+    // Log to monitoring service if available
+    if (window.electronAPI?.logError) {
+      window.electronAPI.logError({
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString(),
+      });
     }
   }
 
-  resetError = () => {
-    this.setState({ 
-      hasError: false, 
-      error: undefined, 
-      errorInfo: undefined 
+  handleReset = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
     });
+  };
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  handleGoHome = () => {
+    window.location.href = '/';
   };
 
   render() {
     if (this.state.hasError) {
-      const FallbackComponent = this.props.fallback || DefaultErrorFallback;
-      
+      if (this.props.fallback) {
+        return <>{this.props.fallback}</>;
+      }
+
+      const { error, errorInfo, errorCount } = this.state;
+
       return (
-        <div className={cn("error-boundary", this.props.className)}>
-          <FallbackComponent
-            error={this.state.error || new Error('Unknown error')}
-            errorInfo={this.state.errorInfo}
-            resetError={this.resetError}
-          />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+          <Card className="max-w-2xl w-full p-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  Something went wrong
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  An unexpected error occurred. Please try again.
+                </p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-2">Error Details</h2>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="font-mono text-sm text-red-600 dark:text-red-400">
+                    {error.message}
+                  </p>
+                  {errorCount > 1 && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      This error has occurred {errorCount} times
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {process.env.NODE_ENV === 'development' && errorInfo && (
+              <details className="mb-6">
+                <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200">
+                  Show technical details
+                </summary>
+                <div className="mt-4 bg-gray-900 dark:bg-black rounded-lg p-4 overflow-auto max-h-64">
+                  <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
+                    {error?.stack}
+                    {'\n\n'}
+                    Component Stack:
+                    {errorInfo.componentStack}
+                  </pre>
+                </div>
+              </details>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                onClick={this.handleReset}
+                variant="primary"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </Button>
+              <Button
+                onClick={this.handleReload}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                Reload Page
+              </Button>
+              <Button
+                onClick={this.handleGoHome}
+                variant="ghost"
+                className="flex items-center gap-2"
+              >
+                <Home className="w-4 h-4" />
+                Go Home
+              </Button>
+            </div>
+
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                <strong>Need help?</strong> If this problem persists, please contact support or check the 
+                {' '}
+                <a 
+                  href="https://github.com/meinzeug/autodevai/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:no-underline"
+                >
+                  GitHub issues
+                </a>
+                {' '}
+                for known problems.
+              </p>
+            </div>
+          </Card>
         </div>
       );
     }
@@ -168,47 +176,4 @@ class ErrorBoundaryClass extends React.Component<ErrorBoundaryProps, ErrorBounda
   }
 }
 
-// Higher-order component for wrapping functional components
-// eslint-disable-next-line react-refresh/only-export-components
-export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<ErrorBoundaryProps, 'children'>
-) {
-  const WrappedComponent = (props: P) => (
-    <ErrorBoundaryClass {...errorBoundaryProps}>
-      <Component {...props} />
-    </ErrorBoundaryClass>
-  );
-
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-
-  return WrappedComponent;
-}
-
-// Hook for handling errors in functional components
-// eslint-disable-next-line react-refresh/only-export-components
-export function useErrorHandler() {
-  const [error, setError] = React.useState<Error | null>(null);
-
-  const resetError = React.useCallback(() => {
-    setError(null);
-  }, []);
-
-  const handleError = React.useCallback((error: Error | string) => {
-    const errorObject = typeof error === 'string' ? new Error(error) : error;
-    setError(errorObject);
-  }, []);
-
-  React.useEffect(() => {
-    if (error) {
-      throw error;
-    }
-  }, [error]);
-
-  return { handleError, resetError };
-}
-
-// Export functional component wrapper
-export const ErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
-  return <ErrorBoundaryClass {...props} />;
-};
+export default ErrorBoundary;
