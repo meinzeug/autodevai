@@ -5924,7 +5924,7 @@ export function SandboxManager() {
 EOF
 ```
 
-- [ ] ### Schritt 287: Monitoring Dashboard Component
+- [x] ### Schritt 287: Monitoring Dashboard Component
 
 ```bash
 cat > src/components/monitoring/MonitoringDashboard.tsx << 'EOF'
@@ -6006,7 +6006,7 @@ EOF
 
 ## 4.5 Main Views (10 Schritte)
 
-- [ ] ### Schritt 288: Orchestration View
+- [x] ### Schritt 288: Orchestration View
 
 ```bash
 cat > src/views/OrchestrationView.tsx << 'EOF'
@@ -6161,7 +6161,7 @@ EOF
 basierend auf Mode. Error-Handling mit Toast-Notifications. Task zu Store für History. Async/await
 mit try/catch für API-Calls.
 
-- [ ] ### Schritt 289: History View
+- [x] ### Schritt 289: History View
 
 ```bash
 cat > src/views/HistoryView.tsx << 'EOF'
@@ -6214,7 +6214,7 @@ export function HistoryView() {
 EOF
 ```
 
-- [ ] ### Schritt 290: Sandbox View
+- [x] ### Schritt 290: Sandbox View
 
 ```bash
 cat > src/views/SandboxView.tsx << 'EOF'
@@ -6238,7 +6238,7 @@ export function SandboxView() {
 EOF
 ```
 
-- [ ] ### Schritt 291: Monitoring View
+- [x] ### Schritt 291: Monitoring View
 
 ```bash
 cat > src/views/MonitoringView.tsx << 'EOF'
@@ -6256,7 +6256,7 @@ export function MonitoringView() {
 EOF
 ```
 
-- [ ] ### Schritt 292: Terminal View
+- [x] ### Schritt 292: Terminal View
 
 ```bash
 cat > src/views/TerminalView.tsx << 'EOF'
@@ -6304,7 +6304,7 @@ export function TerminalView() {
 EOF
 ```
 
-- [ ] ### Schritt 293: Main App Component
+- [x] ### Schritt 293: Main App Component
 
 ```bash
 cat > src/App.tsx << 'EOF'
@@ -6368,7 +6368,7 @@ export default App;
 EOF
 ```
 
-- [ ] ### Schritt 294: Error Boundary
+- [x] ### Schritt 294: Error Boundary
 
 ```bash
 cat > src/components/ErrorBoundary.tsx << 'EOF'
@@ -6428,7 +6428,7 @@ EOF
 **Erläuterung:** Class Component für Error-Boundary (Hooks nicht möglich). getDerivedStateFromError
 für State-Update. componentDidCatch für Logging. Reset-Handler für Recovery. Fallback-UI bei Errors.
 
-- [ ] ### Schritt 295: Update Main with ErrorBoundary
+- [x] ### Schritt 295: Update Main with ErrorBoundary
 
 ```bash
 cat > src/main.tsx << 'EOF'
@@ -6471,7 +6471,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 EOF
 ```
 
-- [ ] ### Schritt 296: Build Frontend
+- [x] ### Schritt 296: Build Frontend
 
 ```bash
 npm run build
