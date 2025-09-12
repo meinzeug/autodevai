@@ -98,7 +98,7 @@
     "health:check": "curl -f http://localhost:50010/health || exit 1"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.3",
+    "@anthropic-ai/sdk": "^0.62.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-select": "^2.2.6",
@@ -118,7 +118,7 @@
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.543.0",
+    "lucide-react": "^0.544.0",
     "node-fetch": "^3.3.2",
     "openai": "^4.68.0",
     "react": ">=18.0.0",
@@ -133,7 +133,7 @@
     "web-vitals": "^5.1.0",
     "winston": "^3.17.0",
     "ws": "^8.18.0",
-    "zod": "^4.1.7",
+    "zod": "^4.1.8",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
