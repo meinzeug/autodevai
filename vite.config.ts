@@ -14,8 +14,17 @@ export default defineConfig({
   clearScreen: false,
   server: {
     port: 5173,
-    strictPort: true,
+    strictPort: false,
     host: 'localhost',
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173
+    },
+    watch: {
+      ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**']
+    }
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {

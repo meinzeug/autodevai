@@ -5,6 +5,11 @@ const CACHE_NAME = 'autodev-ai-v1.0.0';
 const STATIC_CACHE_NAME = 'autodev-ai-static-v1.0.0';
 const DYNAMIC_CACHE_NAME = 'autodev-ai-dynamic-v1.0.0';
 
+// Detect if running in development mode
+const isDevelopment = self.location.hostname === 'localhost' || 
+                      self.location.hostname === '127.0.0.1' ||
+                      self.location.port === '5173';
+
 // Files to cache immediately
 const STATIC_ASSETS = [
   '/',
@@ -67,6 +72,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
+  // In development mode, skip Service Worker interception entirely
+  if (isDevelopment) {
+    return;
+  }
+  
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
@@ -74,6 +84,23 @@ self.addEventListener('fetch', (event) => {
   
   // Skip chrome-extension and other protocols
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+  
+  // Skip WebSocket requests
+  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
+    return;
+  }
+  
+  // Skip Vite HMR and dev server requests
+  if (url.pathname.includes('/@vite') || 
+      url.pathname.includes('__vite') || 
+      url.port === '5173' ||
+      url.port === '50011' ||
+      url.pathname.includes('node_modules') ||
+      url.pathname.includes('.tsx') ||
+      url.pathname.includes('.ts') ||
+      url.pathname.includes('/@fs/')) {
     return;
   }
   
@@ -118,36 +145,61 @@ async function handleFetch(request) {
 
 // Cache strategies implementation
 async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  
-  if (cached) {
-    return cached;
-  }
-  
-  const response = await fetch(request);
-  if (response.ok) {
-    await cache.put(request, response.clone());
-  }
-  
-  return response;
-}
-
-async function networkFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
   try {
-    const response = await fetch(request);
-    if (response.ok) {
-      await cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
+    const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
+    
     if (cached) {
       return cached;
     }
-    throw error;
+    
+    const response = await fetch(request, {
+      mode: 'no-cors',
+      credentials: 'same-origin'
+    });
+    
+    if (response.ok || response.type === 'opaque') {
+      await cache.put(request, response.clone());
+    }
+    
+    return response;
+  } catch (error) {
+    console.warn('[SW] cacheFirst failed, returning error response:', error.message);
+    return new Response('Resource unavailable', { status: 503 });
+  }
+}
+
+async function networkFirst(request, cacheName) {
+  try {
+    const cache = await caches.open(cacheName);
+    
+    // Skip caching for WebSocket and hot-reload requests
+    if (request.url.includes('ws://') || request.url.includes('/@vite') || request.url.includes('__vite')) {
+      return await fetch(request);
+    }
+    
+    try {
+      const response = await fetch(request, {
+        mode: 'cors',
+        credentials: 'same-origin',
+        cache: 'no-cache'
+      });
+      
+      if (response.ok) {
+        await cache.put(request, response.clone());
+      }
+      return response;
+    } catch (networkError) {
+      const cached = await cache.match(request);
+      if (cached) {
+        console.log('[SW] Network failed, serving from cache:', request.url);
+        return cached;
+      }
+      throw networkError;
+    }
+  } catch (error) {
+    console.warn('[SW] networkFirst failed:', error.message);
+    return new Response('Network error', { status: 503 });
   }
 }
 
