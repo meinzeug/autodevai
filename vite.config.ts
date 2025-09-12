@@ -13,18 +13,20 @@ export default defineConfig({
   })],
   clearScreen: false,
   server: {
-    port: 5173,
+    port: parseInt(process.env.VITE_DEV_PORT || '5173'),
     strictPort: false,
     host: 'localhost',
     hmr: {
       protocol: 'ws',
       host: 'localhost',
-      port: 5173,
-      clientPort: 5173
+      port: parseInt(process.env.VITE_HMR_PORT || '5173'),
+      clientPort: parseInt(process.env.VITE_HMR_PORT || '5173')
     },
     watch: {
-      ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**']
-    }
+      ignored: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/src-tauri/**']
+    },
+    cors: true,
+    open: false
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {
