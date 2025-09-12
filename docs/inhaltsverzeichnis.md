@@ -89,6 +89,7 @@ Kurze, problemorientierte Anleitungen und Best Practices.
 1. [security-implementation.md](./architecture/security-implementation.md) - Framework
 2. [security-best-practices.md](./howtos/security-best-practices.md) - Best Practices
 3. [security-remediation-plan.md](./howtos/security-remediation-plan.md) - Remediation
+4. [known-vulnerabilities.md](./security/known-vulnerabilities.md) - Bekannte Vulnerabilities
 
 ---
 

@@ -56,7 +56,9 @@ regex = "1.10"
 rand = "0.9"
 url = "2.4"
 # Monitoring and metrics dependencies
-prometheus = "0.13"
+prometheus = "0.13" # KNOWN VULNERABILITY: protobuf 2.28.0 (RUSTSEC-2024-0437)
+# NOTE: Required for monitoring according to project architecture
+# TODO: Monitor for prometheus update or implement custom metrics without protobuf
 hyper = { version = "1.0", features = ["full"] }
 axum = "0.7"
 tower = "0.4"
