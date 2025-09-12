@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card } from '../common/Card';
 import { ProgressBar } from '../ui/ProgressBar';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui/badge';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useSystemCheck } from '../../hooks/useSystemCheck';
 import { formatBytes, formatDuration } from '../../utils/format';

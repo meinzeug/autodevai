@@ -383,7 +383,7 @@ export function withPerformanceOptimization<P extends object>(
   
   const OptimizedComponent = React.memo((props: P) => {
     const optimizedRender = React.useMemo(
-      () => performanceOptimizer.optimizeReactComponent(optimizedName, () => <WrappedComponent {...props} />),
+      () => performanceOptimizer.optimizeReactComponent(optimizedName, () => React.createElement(WrappedComponent, props)),
       [props]
     );
     
