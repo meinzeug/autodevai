@@ -48,7 +48,7 @@ import { useBreakpoint } from '@/hooks/useMediaQuery';
 
 const MyComponent = () => {
   const { isMobile, isTablet, isDesktop, current } = useBreakpoint();
-  
+
   return (
     <div className={`
       ${isMobile ? 'flex-col' : 'flex-row'}
@@ -66,12 +66,14 @@ const MyComponent = () => {
 ### Header Component
 
 #### Mobile Layout (< 768px)
+
 - Hamburger menu button visible
 - Collapsed status indicators
 - Single-row layout
 - Touch-friendly targets (44px minimum)
 
 #### Desktop Layout (≥ 768px)
+
 - Full navigation visible
 - Multi-column status indicators
 - Expanded header controls
@@ -80,7 +82,7 @@ const MyComponent = () => {
 // Responsive Header Implementation
 const Header = ({ statusIndicators, onMenuClick }) => {
   const isMobile = useIsMobile();
-  
+
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-gray-800/90">
       <div className="flex items-center justify-between px-4 py-3">
@@ -93,10 +95,10 @@ const Header = ({ statusIndicators, onMenuClick }) => {
             <Menu className="w-6 h-6" />
           </button>
         )}
-        
+
         <div className="flex-1 flex items-center justify-between">
           <h1 className="text-lg font-semibold">AutoDev-AI</h1>
-          
+
           {/* Responsive status indicators */}
           <div className={`flex items-center gap-2 ${isMobile ? 'hidden sm:flex' : ''}`}>
             {statusIndicators.map((indicator, index) => (
@@ -113,12 +115,14 @@ const Header = ({ statusIndicators, onMenuClick }) => {
 ### Sidebar Component
 
 #### Mobile Behavior
+
 - Overlay navigation (z-index: 1000)
 - Full-height slide-in from left
 - Backdrop dismissal
 - Focus trapping
 
 #### Desktop Behavior
+
 - Persistent sidebar (width: 256px)
 - Collapsible with smooth transitions
 - Push content layout
@@ -126,22 +130,22 @@ const Header = ({ statusIndicators, onMenuClick }) => {
 ```typescript
 const Sidebar = ({ isOpen, onClose, navigationItems }) => {
   const isMobile = useIsMobile();
-  
+
   return (
     <>
       {/* Mobile backdrop */}
       {isMobile && isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
-      
+
       {/* Sidebar */}
       <nav
         className={`
-          ${isMobile ? 'fixed' : 'sticky'} 
+          ${isMobile ? 'fixed' : 'sticky'}
           top-0 left-0 h-full w-64 bg-white dark:bg-gray-800
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -159,12 +163,14 @@ const Sidebar = ({ isOpen, onClose, navigationItems }) => {
 ### AI Orchestration Panel
 
 #### Mobile Layout
+
 - Stacked card layout
 - Full-width form elements
 - Collapsible sections
 - Swipeable tabs
 
 #### Desktop Layout
+
 - Grid-based layout (12-column)
 - Side-by-side forms and output
 - Persistent panels
@@ -172,7 +178,7 @@ const Sidebar = ({ isOpen, onClose, navigationItems }) => {
 ```typescript
 const AiOrchestrationPanel = () => {
   const { isMobile, isTablet } = useBreakpoint();
-  
+
   return (
     <div className={`
       ${isMobile ? 'flex flex-col space-y-4' : 'grid grid-cols-12 gap-6'}
@@ -182,7 +188,7 @@ const AiOrchestrationPanel = () => {
       <div className={isMobile ? 'w-full' : 'col-span-5'}>
         <ControlPanel />
       </div>
-      
+
       {/* Output Display */}
       <div className={isMobile ? 'w-full min-h-[400px]' : 'col-span-7'}>
         <OutputDisplay />
@@ -197,6 +203,7 @@ const AiOrchestrationPanel = () => {
 ### Lazy Loading Implementation
 
 #### Images
+
 ```typescript
 const LazyImage = ({ src, alt }) => {
   const [imageRef, isVisible] = useIntersectionObserver();
@@ -221,6 +228,7 @@ const LazyImage = ({ src, alt }) => {
 ```
 
 #### Components
+
 ```typescript
 // Code splitting with React.lazy
 const HeavyComponent = React.lazy(() => import('./HeavyComponent'));
@@ -241,7 +249,7 @@ For large lists (1000+ items):
 ```typescript
 const VirtualList = ({ items, itemHeight, containerHeight }) => {
   const [scrollTop, setScrollTop] = React.useState(0);
-  
+
   const startIndex = Math.floor(scrollTop / itemHeight);
   const endIndex = Math.min(
     items.length - 1,
@@ -251,8 +259,8 @@ const VirtualList = ({ items, itemHeight, containerHeight }) => {
   const visibleItems = items.slice(startIndex, endIndex + 1);
 
   return (
-    <div 
-      className="overflow-auto" 
+    <div
+      className="overflow-auto"
       style={{ height: containerHeight }}
       onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
     >
@@ -278,6 +286,7 @@ const VirtualList = ({ items, itemHeight, containerHeight }) => {
 ### CSS Optimizations
 
 #### GPU Acceleration
+
 ```scss
 .hardware-accelerated {
   transform: translateZ(0); // Force GPU layer
@@ -296,6 +305,7 @@ const VirtualList = ({ items, itemHeight, containerHeight }) => {
 ```
 
 #### CSS Containment
+
 ```scss
 .isolated-component {
   contain: layout style paint;
@@ -385,6 +395,7 @@ const StatusUpdates = ({ status }) => (
 ### Automated Testing
 
 #### Responsive Breakpoint Tests
+
 ```typescript
 // tests/responsive/responsive-test-suite.test.ts
 const BREAKPOINTS = {
@@ -399,10 +410,10 @@ describe('Responsive Design', () => {
     it(`should render correctly at ${name} (${width}x${height})`, () => {
       setViewport(width, height);
       render(<App />);
-      
+
       // Verify no horizontal scroll
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-      
+
       // Check touch targets on mobile
       if (width <= 768) {
         const buttons = screen.getAllByRole('button');
@@ -417,22 +428,23 @@ describe('Responsive Design', () => {
 ```
 
 #### Performance Tests
+
 ```typescript
 it('should not cause layout thrashing during resize', async () => {
   let layoutCount = 0;
   const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-  
-  Element.prototype.getBoundingClientRect = function() {
+
+  Element.prototype.getBoundingClientRect = function () {
     layoutCount++;
     return originalGetBoundingClientRect.call(this);
   };
-  
+
   // Simulate rapid resizes
   for (let i = 0; i < 10; i++) {
     setViewport(800 + i * 10, 600);
     await waitForTimeout(50);
   }
-  
+
   expect(layoutCount).toBeLessThan(100);
 });
 ```
@@ -440,6 +452,7 @@ it('should not cause layout thrashing during resize', async () => {
 ### Manual Testing Checklist
 
 #### Mobile Testing (375px - 768px)
+
 - [ ] Navigation menu works correctly
 - [ ] All buttons are at least 44px tall
 - [ ] Text remains readable (minimum 14px)
@@ -448,12 +461,14 @@ it('should not cause layout thrashing during resize', async () => {
 - [ ] Forms are easy to complete
 
 #### Tablet Testing (768px - 1024px)
+
 - [ ] Layout adapts appropriately
 - [ ] Navigation is accessible
 - [ ] Content remains readable
 - [ ] Interactive elements are appropriately sized
 
 #### Desktop Testing (1024px+)
+
 - [ ] Full functionality is available
 - [ ] Layout uses available space efficiently
 - [ ] Hover states work correctly
@@ -462,16 +477,19 @@ it('should not cause layout thrashing during resize', async () => {
 ### Cross-Browser Testing
 
 #### Chrome/Chromium
+
 - [ ] CSS Grid support
 - [ ] Flexbox behavior
 - [ ] Modern CSS features (backdrop-filter, etc.)
 
 #### Firefox
+
 - [ ] CSS Grid implementation differences
 - [ ] Scrollbar styling
 - [ ] CSS custom properties
 
 #### Safari/WebKit
+
 - [ ] Mobile Safari specific issues
 - [ ] Backdrop-filter support
 - [ ] Touch behavior on iOS
@@ -525,7 +543,7 @@ import { useBreakpoint } from '@/hooks/useMediaQuery';
 
 const ResponsiveLayout = ({ children }) => {
   const { isMobile, isTablet } = useBreakpoint();
-  
+
   return (
     <div className={`
       container mx-auto px-4
@@ -551,7 +569,7 @@ const ResponsiveLayout = ({ children }) => {
 ```typescript
 const ImageGallery = ({ images }) => {
   const { current } = useBreakpoint();
-  
+
   const getColumnsClass = () => {
     switch (current) {
       case 'xs':
@@ -640,8 +658,10 @@ const Navigation = () => {
 ### Common Issues
 
 #### Horizontal Scrolling on Mobile
+
 **Symptoms:** Content overflows viewport width
 **Solutions:**
+
 - Check for fixed widths that exceed viewport
 - Use `max-width: 100%` on containers
 - Implement CSS containment
@@ -661,8 +681,10 @@ const Navigation = () => {
 ```
 
 #### Touch Targets Too Small
+
 **Symptoms:** Difficult to tap buttons on mobile
 **Solutions:**
+
 - Ensure minimum 44px touch targets
 - Add padding instead of changing font size
 - Use `min-height` and `min-width`
@@ -676,8 +698,10 @@ const Navigation = () => {
 ```
 
 #### Layout Shifts During Resize
+
 **Symptoms:** Content jumps during viewport changes
 **Solutions:**
+
 - Use CSS containment
 - Pre-define dimensions for dynamic content
 - Implement smooth transitions
@@ -690,8 +714,10 @@ const Navigation = () => {
 ```
 
 #### Performance Issues on Mobile
+
 **Symptoms:** Slow rendering, janky animations
 **Solutions:**
+
 - Use `transform` instead of changing layout properties
 - Implement `will-change` judiciously
 - Use `transform3d()` for GPU acceleration
@@ -711,17 +737,20 @@ const Navigation = () => {
 ### Debugging Tools
 
 #### Chrome DevTools
+
 1. Open DevTools (F12)
 2. Toggle device toolbar (Ctrl+Shift+M)
 3. Test different viewport sizes
 4. Use Performance tab to identify bottlenecks
 
 #### Firefox Responsive Design Mode
+
 1. Press F12 to open DevTools
 2. Click responsive design mode icon
 3. Test various device presets
 
 #### Accessibility Testing
+
 ```bash
 # Install axe-cli for accessibility testing
 npm install -g @axe-core/cli
@@ -738,26 +767,26 @@ if (process.env.NODE_ENV === 'development') {
   // Monitor layout thrashing
   let layoutCount = 0;
   const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-  
-  Element.prototype.getBoundingClientRect = function() {
+
+  Element.prototype.getBoundingClientRect = function () {
     layoutCount++;
     if (layoutCount > 100) {
       console.warn('Potential layout thrashing detected');
     }
     return originalGetBoundingClientRect.call(this);
   };
-  
+
   // Monitor frame rate
   let lastFrameTime = Date.now();
   function measureFPS() {
     const now = Date.now();
     const fps = 1000 / (now - lastFrameTime);
     lastFrameTime = now;
-    
+
     if (fps < 30) {
       console.warn(`Low FPS detected: ${fps.toFixed(2)}`);
     }
-    
+
     requestAnimationFrame(measureFPS);
   }
   measureFPS();
@@ -784,5 +813,5 @@ if (process.env.NODE_ENV === 'development') {
 
 ---
 
-*Last updated: [Current Date]*
-*Version: 1.0.0*
+_Last updated: [Current Date]_
+_Version: 1.0.0_

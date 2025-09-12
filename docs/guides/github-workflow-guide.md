@@ -29,12 +29,12 @@ The AutoDev-AI platform uses a comprehensive GitHub Actions workflow system desi
 
 ### Current Workflows
 
-| Workflow | Purpose | Triggers | Estimated Runtime |
-|----------|---------|----------|-------------------|
-| **ci.yml** | Main CI/CD Pipeline | Push to main, PRs | 15-20 minutes |
-| **security.yml** | Security scanning & compliance | Push, PRs, daily schedule | 25-35 minutes |
-| **build-automation.yml** | Multi-platform builds & releases | Tags, main branch | 45-60 minutes |
-| **issue-on-failure.yml** | Automated issue creation | Workflow failures | 1-2 minutes |
+| Workflow                 | Purpose                          | Triggers                  | Estimated Runtime |
+| ------------------------ | -------------------------------- | ------------------------- | ----------------- |
+| **ci.yml**               | Main CI/CD Pipeline              | Push to main, PRs         | 15-20 minutes     |
+| **security.yml**         | Security scanning & compliance   | Push, PRs, daily schedule | 25-35 minutes     |
+| **build-automation.yml** | Multi-platform builds & releases | Tags, main branch         | 45-60 minutes     |
+| **issue-on-failure.yml** | Automated issue creation         | Workflow failures         | 1-2 minutes       |
 
 ### Key Features
 
@@ -52,52 +52,52 @@ The AutoDev-AI platform uses a comprehensive GitHub Actions workflow system desi
 ```mermaid
 graph TD
     A[Push/PR Trigger] --> B{Event Type}
-    
+
     B -->|Push to main| C[CI/CD Pipeline]
     B -->|Pull Request| D[PR Validation]
     B -->|Tag v*| E[Release Build]
     B -->|Scheduled| F[Security Scan]
-    
+
     C --> G[Quick Check]
     C --> H[Build & Test]
     C --> I[Security Scan]
-    
+
     G --> J{Quick Check Pass?}
     J -->|Yes| H
     J -->|No| K[Create Issue]
-    
+
     H --> L[Frontend Build]
     H --> M[Tauri Build]
     H --> N[Run Tests]
-    
+
     I --> O[NPM Audit]
     I --> P[Cargo Audit]
     I --> Q[CodeQL Analysis]
-    
+
     L --> R{All Jobs Pass?}
     M --> R
     N --> R
     O --> R
     P --> R
     Q --> R
-    
+
     R -->|Yes| S[Success]
     R -->|No| K
-    
+
     D --> T[TypeScript Check]
     D --> U[Lint Check]
     D --> V[Test Suite]
-    
+
     T --> W{PR Validation Pass?}
     U --> W
     V --> W
-    
+
     W -->|Yes| X[PR Ready]
     W -->|No| Y[Block PR]
-    
+
     E --> Z[Multi-Platform Build]
     Z --> AA[Release Creation]
-    
+
     F --> BB[Comprehensive Security]
     BB --> CC[Vulnerability Report]
 ```
@@ -112,12 +112,12 @@ sequenceDiagram
     participant Security as Security Scanner
     participant Build as Build System
     participant Deploy as Deployment
-    
+
     Dev->>GH: Push Code/Create PR
     GH->>CI: Trigger Workflow
-    
+
     CI->>CI: Quick Check (Lint)
-    
+
     par Frontend Build
         CI->>Build: npm ci & build
     and Backend Build
@@ -125,15 +125,15 @@ sequenceDiagram
     and Testing
         CI->>CI: Run test suite
     end
-    
+
     par Security Scanning
         CI->>Security: NPM Audit
         CI->>Security: Cargo Audit
         CI->>Security: CodeQL Analysis
     end
-    
+
     CI->>CI: Aggregate Results
-    
+
     alt All Checks Pass
         CI->>GH: Success Status
         Note over Dev,GH: Ready for merge
@@ -141,7 +141,7 @@ sequenceDiagram
         CI->>GH: Create Failure Issue
         CI->>Dev: Notification
     end
-    
+
     opt Release Tag
         GH->>Build: Multi-platform Build
         Build->>Deploy: Release Artifacts
@@ -178,6 +178,7 @@ git push origin feature/my-new-feature
 ```
 
 **Automated Checks on PR:**
+
 - ✅ TypeScript compilation
 - ✅ ESLint validation (max 50 warnings)
 - ✅ Test suite execution
@@ -194,6 +195,7 @@ git push origin main
 ```
 
 **Automated Actions on Main:**
+
 - ✅ Full CI/CD pipeline execution
 - ✅ Multi-platform builds
 - ✅ Comprehensive security scanning
@@ -212,6 +214,7 @@ git push origin v1.0.1
 ```
 
 **Automated Release Process:**
+
 - ✅ Multi-platform builds (Windows, macOS, Linux)
 - ✅ Code signing (where configured)
 - ✅ Release artifact creation
@@ -223,12 +226,14 @@ git push origin v1.0.1
 #### Workflow Configuration Updates
 
 1. **Modifying CI/CD Pipeline**
+
    ```yaml
    # .github/workflows/ci.yml
    # Update Node.js version, add new steps, modify triggers
    ```
 
 2. **Adding Security Checks**
+
    ```yaml
    # .github/workflows/security.yml
    # Add new security tools, update scan schedules
@@ -260,16 +265,17 @@ gh run view <run-id>
 
 ### Environment Variables
 
-| Variable | Purpose | Required | Default |
-|----------|---------|----------|---------|
-| `NODE_VERSION` | Node.js version for builds | No | 22 |
-| `GITHUB_TOKEN` | GitHub API access | Yes | Auto-provided |
-| `TAURI_PRIVATE_KEY` | Code signing key | No | - |
-| `TAURI_KEY_PASSWORD` | Code signing password | No | - |
+| Variable             | Purpose                    | Required | Default       |
+| -------------------- | -------------------------- | -------- | ------------- |
+| `NODE_VERSION`       | Node.js version for builds | No       | 22            |
+| `GITHUB_TOKEN`       | GitHub API access          | Yes      | Auto-provided |
+| `TAURI_PRIVATE_KEY`  | Code signing key           | No       | -             |
+| `TAURI_KEY_PASSWORD` | Code signing password      | No       | -             |
 
 ### Workflow Triggers
 
 #### CI Pipeline (`ci.yml`)
+
 ```yaml
 on:
   push:
@@ -279,6 +285,7 @@ on:
 ```
 
 #### Security Scanning (`security.yml`)
+
 ```yaml
 on:
   push:
@@ -286,11 +293,12 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 6 * * *'  # Daily at 6 AM UTC
+    - cron: '0 6 * * *' # Daily at 6 AM UTC
   workflow_dispatch:
 ```
 
 #### Build Automation (`build-automation.yml`)
+
 ```yaml
 on:
   push:
@@ -326,6 +334,7 @@ concurrency:
 ```
 
 This ensures:
+
 - Only one workflow runs per branch
 - New pushes cancel previous runs
 - Saves compute resources
@@ -339,11 +348,13 @@ This ensures:
 #### 1. Build Failures
 
 **Issue**: TypeScript compilation errors
+
 ```
 Error: Type 'string' is not assignable to type 'number'
 ```
 
 **Solution**:
+
 ```bash
 # Run locally first
 npm run typecheck
@@ -351,11 +362,13 @@ npm run typecheck
 ```
 
 **Issue**: Rust compilation errors
+
 ```
 error[E0277]: the trait bound is not satisfied
 ```
 
 **Solution**:
+
 ```bash
 cd src-tauri
 cargo check
@@ -366,11 +379,13 @@ cargo test
 #### 2. Test Failures
 
 **Issue**: Frontend tests failing
+
 ```
 FAIL src/components/App.test.tsx
 ```
 
 **Solution**:
+
 ```bash
 # Run tests locally
 npm test
@@ -379,11 +394,13 @@ npm test -- --verbose
 ```
 
 **Issue**: Cargo tests failing
+
 ```
 test result: FAILED. 0 passed; 1 failed
 ```
 
 **Solution**:
+
 ```bash
 cd src-tauri
 cargo test -- --nocapture
@@ -393,11 +410,13 @@ cargo test -- --nocapture
 #### 3. Security Scan Issues
 
 **Issue**: High-severity vulnerabilities found
+
 ```
 npm audit found 5 high severity vulnerabilities
 ```
 
 **Solution**:
+
 ```bash
 # Check vulnerabilities
 npm audit
@@ -407,11 +426,13 @@ npm audit fix
 ```
 
 **Issue**: CodeQL analysis errors
+
 ```
 CodeQL analysis failed: Language not detected
 ```
 
 **Solution**:
+
 - Ensure proper file extensions (.ts, .tsx, .rs)
 - Check `.github/codeql/codeql-config.yml`
 - Verify repository languages
@@ -419,11 +440,13 @@ CodeQL analysis failed: Language not detected
 #### 4. Workflow Permission Issues
 
 **Issue**: GitHub Actions permission denied
+
 ```
 Error: Resource not accessible by integration
 ```
 
 **Solution**:
+
 1. Check repository settings → Actions → General
 2. Ensure "Read and write permissions" is enabled
 3. Verify workflow file permissions in YAML
@@ -431,11 +454,13 @@ Error: Resource not accessible by integration
 #### 5. Cache Issues
 
 **Issue**: Build taking too long due to cache misses
+
 ```
 Cache not found for input keys: node-modules-...
 ```
 
 **Solution**:
+
 ```yaml
 # Clear cache manually or update cache key
 - uses: actions/cache@v4
@@ -447,6 +472,7 @@ Cache not found for input keys: node-modules-...
 ### Debug Workflows
 
 Enable debug logging:
+
 ```yaml
 env:
   ACTIONS_STEP_DEBUG: true
@@ -454,6 +480,7 @@ env:
 ```
 
 View detailed logs:
+
 ```bash
 gh run view <run-id> --log
 ```
@@ -463,12 +490,14 @@ gh run view <run-id> --log
 #### Slow Builds
 
 1. **Optimize Dependencies**
+
    ```bash
    # Use npm ci instead of npm install
    npm ci --prefer-offline
    ```
 
 2. **Parallel Jobs**
+
    ```yaml
    strategy:
      matrix:
@@ -485,10 +514,11 @@ gh run view <run-id> --log
 #### Timeout Issues
 
 Increase timeout for heavy operations:
+
 ```yaml
 jobs:
   build:
-    timeout-minutes: 60  # Increase from default 360
+    timeout-minutes: 60 # Increase from default 360
 ```
 
 ---
@@ -497,12 +527,12 @@ jobs:
 
 ### Workflow Status Overview
 
-| Metric | Current Status | Target | Action Required |
-|--------|---------------|---------|-----------------|
-| Success Rate | 94% | >95% | Monitor failing builds |
-| Average Duration | 18 min | <15 min | Optimize caching |
-| Security Score | A+ | A+ | Maintain current level |
-| Test Coverage | 87% | >80% | Good |
+| Metric           | Current Status | Target  | Action Required        |
+| ---------------- | -------------- | ------- | ---------------------- |
+| Success Rate     | 94%            | >95%    | Monitor failing builds |
+| Average Duration | 18 min         | <15 min | Optimize caching       |
+| Security Score   | A+             | A+      | Maintain current level |
+| Test Coverage    | 87%            | >80%    | Good                   |
 
 ### Real-time Monitoring
 
@@ -511,6 +541,7 @@ jobs:
 Access via: `https://github.com/meinzeug/autodevai/actions`
 
 Key metrics to monitor:
+
 - ✅ **Workflow run frequency**
 - ✅ **Success/failure ratios**
 - ✅ **Duration trends**
@@ -543,6 +574,7 @@ fi
 #### Webhook Integration
 
 Set up webhook for external monitoring:
+
 ```yaml
 # In workflow
 - name: Notify external monitoring
@@ -558,12 +590,14 @@ Set up webhook for external monitoring:
 Track these key performance indicators:
 
 1. **Build Times**
+
    ```bash
    # Average build duration over last 10 runs
    gh run list --limit=10 --json duration | jq '[.[].duration] | add / length'
    ```
 
 2. **Cache Hit Rates**
+
    ```yaml
    - name: Cache Statistics
      run: |
@@ -583,6 +617,7 @@ Track these key performance indicators:
 ### Trigger Points
 
 #### 1. Code Changes
+
 ```mermaid
 graph LR
     A[Developer Push] --> B[Git Hook]
@@ -592,6 +627,7 @@ graph LR
 ```
 
 **Automated Actions:**
+
 - Lint checking
 - Type validation
 - Test execution
@@ -599,6 +635,7 @@ graph LR
 - Build verification
 
 #### 2. Dependency Updates
+
 ```mermaid
 graph LR
     A[Dependabot Schedule] --> B[Update Check]
@@ -608,11 +645,13 @@ graph LR
 ```
 
 **Configuration** (`.github/dependabot.yml`):
+
 - **NPM**: Monthly updates, grouped by type
 - **Cargo**: Monthly updates, security-focused
 - **GitHub Actions**: Monthly updates, version-pinned
 
 #### 3. Security Monitoring
+
 ```mermaid
 graph LR
     A[Daily Schedule] --> B[Security Scan]
@@ -622,6 +661,7 @@ graph LR
 ```
 
 **Automated Security Checks:**
+
 - NPM vulnerability audit
 - Cargo security audit
 - CodeQL static analysis
@@ -629,6 +669,7 @@ graph LR
 - License compliance
 
 #### 4. Issue Management
+
 ```mermaid
 graph LR
     A[Workflow Failure] --> B[Failure Detection]
@@ -638,6 +679,7 @@ graph LR
 ```
 
 **Automated Issue Handling:**
+
 - Failure detection and reporting
 - Duplicate issue prevention
 - Auto-labeling and assignment
@@ -646,12 +688,14 @@ graph LR
 ### Integration Points
 
 #### 1. GitHub Integration
+
 - **Issues**: Auto-creation on failures
 - **PRs**: Status checks and auto-merge
 - **Releases**: Automated release creation
 - **Discussions**: Community updates
 
 #### 2. External Services
+
 ```yaml
 # Slack notification example
 - name: Notify Slack
@@ -663,6 +707,7 @@ graph LR
 ```
 
 #### 3. Deployment Integration
+
 ```yaml
 # Deploy to staging on main push
 - name: Deploy to Staging
@@ -675,6 +720,7 @@ graph LR
 ### Automation Rules
 
 #### 1. Auto-merge Rules
+
 ```yaml
 # Auto-merge dependabot PRs if tests pass
 - name: Auto-merge dependabot PRs
@@ -684,6 +730,7 @@ graph LR
 ```
 
 #### 2. Label Automation
+
 ```yaml
 # Auto-label PRs based on files changed
 - name: Label PR
@@ -693,6 +740,7 @@ graph LR
 ```
 
 #### 3. Milestone Management
+
 ```yaml
 # Auto-add to milestone
 - name: Add to Milestone
@@ -707,14 +755,16 @@ graph LR
 ### Secrets Management
 
 #### Required Secrets
-| Secret | Purpose | Security Level |
-|--------|---------|----------------|
-| `GITHUB_TOKEN` | API access | Auto-provided |
-| `TAURI_PRIVATE_KEY` | Code signing | Critical |
-| `TAURI_KEY_PASSWORD` | Key decryption | Critical |
-| `SLACK_WEBHOOK` | Notifications | Low |
+
+| Secret               | Purpose        | Security Level |
+| -------------------- | -------------- | -------------- |
+| `GITHUB_TOKEN`       | API access     | Auto-provided  |
+| `TAURI_PRIVATE_KEY`  | Code signing   | Critical       |
+| `TAURI_KEY_PASSWORD` | Key decryption | Critical       |
+| `SLACK_WEBHOOK`      | Notifications  | Low            |
 
 #### Best Practices
+
 ```yaml
 # ✅ Good: Environment-specific secrets
 environment: production
@@ -723,16 +773,18 @@ secrets:
 
 # ❌ Bad: Hardcoded secrets
 env:
-  API_KEY: "hardcoded-key-here"
+  API_KEY: 'hardcoded-key-here'
 ```
 
 ### Input Sanitization
 
 The custom action includes input sanitization:
+
 ```javascript
 const sanitize = (input, maxLength = 200) => {
   if (!input) return '';
-  return input.toString()
+  return input
+    .toString()
     .replace(/[`$(){}[\]|&;<>]/g, '') // Remove dangerous characters
     .substring(0, maxLength) // Limit length
     .trim();
@@ -742,6 +794,7 @@ const sanitize = (input, maxLength = 200) => {
 ### Action Security
 
 #### SHA-pinned Actions
+
 ```yaml
 # ✅ Good: SHA-pinned for security
 - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -751,6 +804,7 @@ const sanitize = (input, maxLength = 200) => {
 ```
 
 #### Permission Restrictions
+
 ```yaml
 permissions:
   contents: read
@@ -761,16 +815,18 @@ permissions:
 ### Vulnerability Scanning
 
 #### Multi-layer Security
+
 1. **Static Analysis**: CodeQL for code vulnerabilities
 2. **Dependency Scanning**: NPM audit, Cargo audit
 3. **Container Scanning**: Trivy (if using containers)
 4. **License Compliance**: Automated license checking
 
 #### Security Workflow Configuration
+
 ```yaml
 # Schedule daily security scans
 schedule:
-  - cron: '0 6 * * *'  # 6 AM UTC daily
+  - cron: '0 6 * * *' # 6 AM UTC daily
 
 # Multiple security tools
 jobs:
@@ -778,10 +834,10 @@ jobs:
     steps:
       - name: NPM Audit
         run: npm audit --audit-level=high
-      
+
       - name: Cargo Audit
         run: cargo audit
-      
+
       - name: CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 ```
@@ -793,21 +849,23 @@ jobs:
 ### Build Performance
 
 #### Current Performance Metrics
+
 - **Frontend Build**: ~3-5 minutes
-- **Tauri Build**: ~8-12 minutes  
+- **Tauri Build**: ~8-12 minutes
 - **Test Suite**: ~2-4 minutes
 - **Security Scans**: ~5-8 minutes
 
 #### Optimization Strategies
 
 1. **Caching Strategy**
+
    ```yaml
    # Node.js dependencies
    - uses: actions/cache@v4
      with:
        path: ~/.npm
        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-   
+
    # Rust dependencies
    - uses: Swatinem/rust-cache@v2
      with:
@@ -815,6 +873,7 @@ jobs:
    ```
 
 2. **Parallel Execution**
+
    ```yaml
    strategy:
      matrix:
@@ -822,10 +881,11 @@ jobs:
    ```
 
 3. **Conditional Execution**
+
    ```yaml
    # Skip builds for documentation changes
    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-   
+
    # Path-based conditions
    paths:
      - 'src/**'
@@ -838,6 +898,7 @@ jobs:
 ### Resource Usage
 
 #### Current Usage
+
 - **Peak Memory**: ~4GB (Rust builds)
 - **CPU Usage**: 2-4 cores
 - **Storage**: ~10GB cache
@@ -846,6 +907,7 @@ jobs:
 #### Optimization Techniques
 
 1. **Memory Management**
+
    ```yaml
    # Rust builds with memory optimization
    env:
@@ -854,6 +916,7 @@ jobs:
    ```
 
 2. **Disk Space**
+
    ```yaml
    # Clean up after builds
    - name: Cleanup
@@ -872,6 +935,7 @@ jobs:
 ### Monitoring Performance
 
 #### Performance Tracking Script
+
 ```bash
 #!/bin/bash
 # Track workflow performance over time
@@ -897,12 +961,14 @@ echo "Runs over 30 minutes: $slow_runs"
 ### Regular Maintenance Tasks
 
 #### Weekly Tasks
+
 - [ ] Review workflow success rates
 - [ ] Check for failed runs and investigate
 - [ ] Monitor security scan results
 - [ ] Update documentation if needed
 
 #### Monthly Tasks
+
 - [ ] Review and update action versions
 - [ ] Analyze performance trends
 - [ ] Clean up old workflow artifacts
@@ -910,6 +976,7 @@ echo "Runs over 30 minutes: $slow_runs"
 - [ ] Update dependencies via Dependabot
 
 #### Quarterly Tasks
+
 - [ ] Full security audit
 - [ ] Performance optimization review
 - [ ] Workflow architecture review
@@ -919,6 +986,7 @@ echo "Runs over 30 minutes: $slow_runs"
 ### Version Management
 
 #### Action Updates
+
 ```bash
 # Check for action updates
 gh workflow view ci.yml --yaml | grep "uses:" | sort | uniq
@@ -931,19 +999,21 @@ gh workflow view ci.yml --yaml | grep "uses:" | sort | uniq
 ```
 
 #### Dependency Management
+
 ```yaml
 # Dependabot configuration maintenance
 version: 2
 updates:
   # Review and adjust schedules
-  - package-ecosystem: "npm"
+  - package-ecosystem: 'npm'
     schedule:
-      interval: "monthly"  # Adjust based on stability needs
+      interval: 'monthly' # Adjust based on stability needs
 ```
 
 ### Backup and Recovery
 
 #### Configuration Backup
+
 ```bash
 # Backup workflow configurations
 mkdir -p backups/$(date +%Y%m%d)
@@ -953,6 +1023,7 @@ cp -r .github/ backups/$(date +%Y%m%d)/
 #### Recovery Procedures
 
 1. **Workflow Corruption**
+
    ```bash
    # Restore from backup
    git checkout HEAD~1 -- .github/workflows/
@@ -974,12 +1045,13 @@ cp -r .github/ backups/$(date +%Y%m%d)/
 ### Health Monitoring
 
 #### Automated Health Checks
+
 ```yaml
 # Weekly health check workflow
 name: Workflow Health Check
 on:
   schedule:
-    - cron: '0 9 * * 1'  # Monday 9 AM
+    - cron: '0 9 * * 1' # Monday 9 AM
 
 jobs:
   health-check:
@@ -989,7 +1061,7 @@ jobs:
         run: |
           # Calculate success rates
           # Send alerts if below threshold
-      
+
       - name: Performance Analysis
         run: |
           # Analyze average durations
@@ -997,6 +1069,7 @@ jobs:
 ```
 
 #### Manual Health Assessment
+
 ```bash
 # Monthly health check script
 #!/bin/bash
@@ -1030,18 +1103,21 @@ find .github/workflows -name "*.yml" -exec grep -h "uses:" {} \; | \
 ### Planned Enhancements
 
 #### Short-term (Next Quarter)
+
 - [ ] **Enhanced Caching**: Cross-workflow artifact sharing
 - [ ] **Performance Monitoring**: Real-time metrics dashboard
 - [ ] **Security Automation**: Auto-fix for low-risk vulnerabilities
 - [ ] **Documentation**: Interactive workflow guides
 
 #### Medium-term (Next 6 Months)
+
 - [ ] **Multi-environment Deployment**: Staging/production pipelines
 - [ ] **Advanced Testing**: Visual regression, performance benchmarks
 - [ ] **AI Integration**: Intelligent failure analysis
 - [ ] **Custom Actions**: Reusable organization-wide actions
 
 #### Long-term (Next Year)
+
 - [ ] **Microservice Architecture**: Distributed build system
 - [ ] **Advanced Security**: Zero-trust security model
 - [ ] **ML-powered Optimization**: Predictive build optimization
@@ -1050,6 +1126,7 @@ find .github/workflows -name "*.yml" -exec grep -h "uses:" {} \; | \
 ### Experimental Features
 
 #### Feature Flags
+
 ```yaml
 # Experimental features with feature flags
 - name: Experimental Feature
@@ -1059,6 +1136,7 @@ find .github/workflows -name "*.yml" -exec grep -h "uses:" {} \; | \
 ```
 
 #### A/B Testing
+
 ```yaml
 # Test different configurations
 strategy:
@@ -1067,7 +1145,7 @@ strategy:
     include:
       - config: stable
         node-version: 18
-      - config: experimental  
+      - config: experimental
         node-version: 20
 ```
 
@@ -1076,16 +1154,19 @@ strategy:
 ## Support and Contact
 
 ### Documentation Resources
+
 - **GitHub Actions Docs**: https://docs.github.com/en/actions
 - **Tauri Docs**: https://tauri.app/
 - **Repository Issues**: https://github.com/meinzeug/autodevai/issues
 
 ### Team Contacts
+
 - **DevOps Lead**: @meinzeug
 - **Security Team**: Create issue with `security` label
 - **General Support**: Repository discussions
 
 ### Emergency Procedures
+
 1. **Critical Build Failures**: Create high-priority issue
 2. **Security Incidents**: Contact security team immediately
 3. **Performance Issues**: Check monitoring dashboard first
@@ -1096,4 +1177,4 @@ strategy:
 **Next Review**: 2025-12-11  
 **Version**: 1.0.0
 
-*This guide is maintained automatically and updated with each significant workflow change.*
+_This guide is maintained automatically and updated with each significant workflow change._
