@@ -1,3 +1,10 @@
+<!--
+AutoDev-AI - Dual License
+GNU General Public License v3.0 for open-source use
+Commercial license available for proprietary use
+See LICENSE-GPL and LICENSE-COMMERCIAL for details
+-->
+
 # Contributing to AutoDev-AI Neural Bridge Platform
 
 We welcome contributions to the AutoDev-AI Neural Bridge Platform! This guide will help you get

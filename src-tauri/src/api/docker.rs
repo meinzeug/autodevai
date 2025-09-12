@@ -6,6 +6,7 @@ use bollard::container::{
     CreateContainerOptions, ListContainersOptions, StartContainerOptions,
     StopContainerOptions,
 };
+use bollard::exec::StartExecResults;
 use bollard::image::CreateImageOptions;
 use bollard::models::{ContainerSummary, ContainerCreateBody, HostConfig, PortBinding};
 use bollard::{Docker, API_DEFAULT_VERSION};
@@ -196,18 +197,30 @@ impl DockerClient {
                 crate::errors::NeuralBridgeError::docker(format!("Failed to create exec: {}", e))
             })?;
 
-        let mut stream = self.client.start_exec(&exec.id, None);
+        let exec_result = self.client.start_exec(&exec.id, None).await.map_err(|e| {
+            crate::errors::NeuralBridgeError::docker(format!("Failed to start exec: {}", e))
+        })?;
+        
         let mut output = String::new();
 
-        while let Some(result) = stream.next().await {
-            match result {
-                Ok(log_output) => {
-                    output.push_str(&format!("{}", log_output));
+        match exec_result {
+            StartExecResults::Attached { output: mut stream, input: _ } => {
+                use futures::StreamExt;
+                while let Some(result) = stream.next().await {
+                    match result {
+                        Ok(log_output) => {
+                            output.push_str(&format!("{}", log_output));
+                        }
+                        Err(e) => {
+                            warn!("Error reading exec output: {}", e);
+                            break;
+                        }
+                    }
                 }
-                Err(e) => {
-                    warn!("Error reading exec output: {}", e);
-                    break;
-                }
+            }
+            StartExecResults::Detached => {
+                // For detached executions, we can't get output
+                warn!("Exec started in detached mode, no output available");
             }
         }
 

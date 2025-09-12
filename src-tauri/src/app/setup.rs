@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use tauri::{App, Manager, Position, Size, Window, WindowEvent};
+use tauri::{App, Manager, Position, Size, WebviewWindow};
 use tokio::fs;
 use tokio::time::{interval, Duration};
 
@@ -212,7 +212,7 @@ impl SetupManager {
     /// Setup window state restoration
     async fn setup_window_restoration(&self, app: &App) -> Result<(), Box<dyn std::error::Error>> {
         // Get all current windows
-        let windows: Vec<Window> = app.webview_windows().values().cloned().collect();
+        let windows: Vec<WebviewWindow> = app.webview_windows().values().cloned().collect();
 
         for window in windows {
             self.restore_window_state(&window).await;
@@ -223,7 +223,7 @@ impl SetupManager {
     }
 
     /// Restore individual window state
-    pub async fn restore_window_state(&self, window: &Window) {
+    pub async fn restore_window_state(&self, window: &WebviewWindow) {
         let window_label = window.label();
 
         if let Some(state) = self.get_window_state(window_label) {
@@ -271,7 +271,7 @@ impl SetupManager {
     /// Save current window state
     pub async fn save_current_window_state(
         &self,
-        window: &Window,
+        window: &WebviewWindow,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let window_label = window.label().to_string();
 
@@ -335,7 +335,7 @@ impl SetupManager {
                 }
 
                 // Save all current window states
-                let windows: Vec<Window> = app_handle.webview_windows().values().cloned().collect();
+                let windows: Vec<WebviewWindow> = app_handle.webview_windows().values().cloned().collect();
 
                 for window in &windows {
                     let window_label = window.label().to_string();
@@ -403,7 +403,7 @@ impl SetupManager {
 
         log::info!(
             "Auto-save system started with interval: {} seconds",
-            config.read().unwrap().auto_save_interval
+            self.config.read().unwrap().auto_save_interval
         );
     }
 
@@ -488,7 +488,7 @@ pub async fn update_setup_config(
 /// Tauri command to save current window state
 #[tauri::command]
 pub async fn save_window_state(
-    window: Window,
+    window: WebviewWindow,
     setup: tauri::State<'_, SetupManager>,
 ) -> Result<(), String> {
     setup
@@ -511,7 +511,7 @@ pub async fn get_window_state(
 /// Tauri command to restore window state
 #[tauri::command]
 pub async fn restore_window_state(
-    window: Window,
+    window: WebviewWindow,
     setup: tauri::State<'_, SetupManager>,
 ) -> Result<(), String> {
     setup.restore_window_state(&window).await;

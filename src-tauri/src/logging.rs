@@ -144,7 +144,7 @@ pub async fn search_logs(
                 true
             } else {
                 entry.message.to_lowercase().contains(&query.to_lowercase())
-                    || entry.target.to_lowercase().contains(&query.to_lowercase())
+                    || entry.target.as_ref().map(|t| t.to_lowercase()).unwrap_or_default().contains(&query.to_lowercase())
             };
 
             // Apply date filters
@@ -190,7 +190,7 @@ pub async fn analyze_log_patterns() -> Result<LogAnalysis> {
         // Count by target/module
         *analysis
             .target_counts
-            .entry(entry.target.clone())
+            .entry(entry.target.as_ref().unwrap_or(&"unknown".to_string()).clone())
             .or_insert(0) += 1;
 
         // Detect error patterns
@@ -439,7 +439,7 @@ async fn export_as_csv(entries: &[LogEntry], output_path: &str) -> Result<String
             entry.timestamp.to_rfc3339(),
             entry.level,
             entry.message.replace(',', ";"),
-            entry.target
+            entry.target.as_ref().unwrap_or(&"unknown".to_string())
         ));
     }
 
@@ -458,7 +458,7 @@ async fn export_as_text(entries: &[LogEntry], output_path: &str) -> Result<Strin
             "[{}] {} {}: {}\n",
             entry.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
             entry.level.to_uppercase(),
-            entry.target,
+            entry.target.as_ref().unwrap_or(&"unknown".to_string()),
             entry.message
         ));
     }

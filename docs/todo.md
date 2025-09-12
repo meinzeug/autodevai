@@ -1,6 +1,7 @@
 # AutoDev-AI Sprint Planning & TODO
 
 ## Current Sprint: Foundation Integration (Sprint 1)
+
 **Sprint Duration**: September 10-24, 2025  
 **Sprint Goal**: Complete core integration system with OpenRouter, Claude-Flow, and Codex services
 
@@ -9,8 +10,9 @@
 ### ✅ COMPLETED - Sprint 1 Successfully Finished!
 
 #### Task 1: Core Integration Implementation
+
 - [x] OpenRouter API client with intelligent model selection
-- [x] Claude-Flow orchestrator for agent coordination  
+- [x] Claude-Flow orchestrator for agent coordination
 - [x] Codex integration for specialized code generation
 - [x] Comprehensive testing framework setup
 - [x] Configuration management system
@@ -19,6 +21,7 @@
 - [x] **COMPLETED**: CI/CD pipeline configuration
 
 #### Task 2: Testing and Validation
+
 - [x] Integration test suite implementation
 - [x] Mock response handling system
 - [x] Error recovery testing scenarios
@@ -27,6 +30,7 @@
 - [x] **COMPLETED**: Security testing framework
 
 #### Task 3: Documentation and Deployment
+
 - [x] Comprehensive API documentation
 - [x] Project roadmap and planning
 - [x] Changelog and version tracking
@@ -35,24 +39,28 @@
 - [x] **COMPLETED**: Developer contribution guidelines
 
 ## Next Sprint: Advanced Features (Sprint 2)
+
 **Planned Start**: September 25, 2025  
 **Sprint Goal**: Enhance system capabilities with ML-based routing and advanced monitoring
 
 ### 📋 BACKLOG
 
 #### Epic 1: Machine Learning Integration
+
 - [ ] ML-based task complexity analysis
 - [ ] Predictive model selection optimization
 - [ ] Agent performance learning algorithms
 - [ ] Historical data analysis for improvements
 
 #### Epic 2: Advanced Monitoring and Analytics
+
 - [ ] Real-time performance dashboard
 - [ ] Cost analysis and optimization tools
 - [ ] Quality metrics tracking system
 - [ ] Predictive failure detection
 
 #### Epic 3: Developer Experience Improvements
+
 - [ ] VS Code extension development
 - [ ] CLI tool for local development
 - [ ] Interactive debugging tools
@@ -63,18 +71,21 @@
 ### 🎯 HIGH PRIORITY
 
 #### P1: Core Functionality Enhancements
+
 - [ ] **Multi-language Support**: Expand language coverage for code generation
 - [ ] **Custom Model Training**: Enable organization-specific model fine-tuning
 - [ ] **Advanced Error Recovery**: Implement sophisticated fallback strategies
 - [ ] **Real-time Collaboration**: Multi-user swarm coordination features
 
 #### P2: Integration Expansions
+
 - [ ] **GitHub Actions Integration**: Automated CI/CD workflows
 - [ ] **Docker Optimization**: Container-aware code generation
 - [ ] **Cloud Provider Integration**: AWS/Azure/GCP deployment automation
 - [ ] **Database Integration**: Advanced SQL and NoSQL support
 
 #### P3: Enterprise Features
+
 - [ ] **SSO Integration**: Enterprise authentication support
 - [ ] **Audit Logging**: Comprehensive compliance tracking
 - [ ] **Role-based Access Control**: Fine-grained permission system
@@ -83,18 +94,21 @@
 ### 🔧 MEDIUM PRIORITY
 
 #### P4: Developer Tools
+
 - [ ] **IDE Plugins**: JetBrains, Vim, Emacs integrations
 - [ ] **Browser Extension**: Web-based development assistance
 - [ ] **Mobile App**: On-the-go development support
 - [ ] **API Gateway**: Advanced request routing and management
 
 #### P5: AI Capabilities Enhancement
+
 - [ ] **Vision Integration**: Image-to-code generation
 - [ ] **Voice Commands**: Speech-to-code functionality
 - [ ] **Natural Language Planning**: Plain English to project plans
 - [ ] **Code Review Automation**: Intelligent PR analysis
 
 #### P6: Performance Optimizations
+
 - [ ] **Caching Layer**: Intelligent response caching
 - [ ] **Connection Pooling**: Optimized API connections
 - [ ] **Batch Processing**: Efficient multi-task execution
@@ -103,6 +117,7 @@
 ### 📈 LOW PRIORITY
 
 #### P7: Experimental Features
+
 - [ ] **Quantum Computing Integration**: Future-ready development tools
 - [ ] **AR/VR Development Support**: Immersive development environments
 - [ ] **Blockchain Integration**: Web3 and smart contract development
@@ -113,18 +128,21 @@
 ### 🔧 DEBT ITEMS
 
 #### High Impact
+
 - [ ] **Type Safety Improvements**: Strengthen TypeScript coverage
 - [ ] **Error Handling Standardization**: Consistent error patterns
 - [ ] **Configuration Validation**: Runtime config verification
 - [ ] **Memory Usage Optimization**: Reduce baseline memory footprint
 
 #### Medium Impact
+
 - [ ] **Code Documentation**: Comprehensive inline documentation
 - [ ] **Test Coverage Expansion**: Achieve 98%+ code coverage
 - [ ] **Logging Standardization**: Consistent logging patterns
 - [ ] **Dependency Management**: Regular security updates
 
 #### Low Impact
+
 - [ ] **Code Style Consistency**: Prettier/ESLint rule refinements
 - [ ] **Performance Micro-optimizations**: Minor speed improvements
 - [ ] **Documentation Updates**: Keep docs current with features
@@ -135,19 +153,23 @@
 ### 🐛 KNOWN ISSUES
 
 #### Critical
+
 - [ ] **No critical bugs identified** ✅
 
 #### High
+
 - [ ] **Memory leak in long-running sessions**: Investigation needed
 - [ ] **Rate limiting edge cases**: Handle burst requests better
 - [ ] **Model fallback delays**: Optimize fallback response times
 
 #### Medium
+
 - [ ] **Configuration hot-reload**: Not supported in production mode
 - [ ] **Error message clarity**: Improve user-facing error messages
 - [ ] **Token counting accuracy**: Minor discrepancies in cost estimation
 
 #### Low
+
 - [ ] **Documentation typos**: Periodic review and corrections needed
 - [ ] **Example code updates**: Some examples use outdated patterns
 - [ ] **Log message formatting**: Inconsistent log levels in some modules
@@ -157,18 +179,21 @@
 ### 🔬 RESEARCH ITEMS
 
 #### AI/ML Research
+
 - [ ] **Multimodal Model Integration**: Vision + text capabilities
 - [ ] **Reinforcement Learning**: Agent self-improvement
 - [ ] **Federated Learning**: Distributed model training
 - [ ] **Few-shot Learning**: Rapid adaptation to new domains
 
 #### Technology Investigation
+
 - [ ] **WebAssembly Integration**: Client-side AI processing
 - [ ] **GraphQL API Design**: Alternative to REST endpoints
 - [ ] **Microservices Architecture**: Scalability improvements
 - [ ] **Event-driven Architecture**: Real-time coordination
 
 #### Market Research
+
 - [ ] **Competitor Analysis**: Feature gap identification
 - [ ] **User Research**: Developer workflow analysis
 - [ ] **Technology Trends**: Emerging development practices
@@ -179,6 +204,7 @@
 ### 🎯 QA CHECKLIST
 
 #### Code Quality
+
 - [x] TypeScript strict mode enabled
 - [x] ESLint rules configured and enforced
 - [x] Prettier formatting standardized
@@ -189,6 +215,7 @@
 - [ ] Security vulnerability scanning
 
 #### Documentation Quality
+
 - [x] API documentation complete
 - [x] README files comprehensive
 - [x] Code comments for complex logic
@@ -199,6 +226,7 @@
 - [ ] Troubleshooting guides
 
 #### User Experience
+
 - [x] Error messages user-friendly
 - [x] Configuration options documented
 - [x] Examples provided for all features
@@ -213,21 +241,25 @@
 ### 📅 SPRINT SCHEDULE
 
 #### Sprint 1: Foundation (Sep 10-24, 2025)
+
 **Velocity**: 40 story points  
 **Focus**: Core integration completion  
 **Demo**: Basic orchestration workflow
 
 #### Sprint 2: Enhancement (Sep 25 - Oct 9, 2025)
+
 **Planned Velocity**: 45 story points  
 **Focus**: ML integration and monitoring  
 **Demo**: Intelligent task routing
 
 #### Sprint 3: Integration (Oct 10-24, 2025)
+
 **Planned Velocity**: 50 story points  
 **Focus**: Developer tools and IDE integration  
 **Demo**: VS Code extension
 
 #### Sprint 4: Enterprise (Oct 25 - Nov 8, 2025)
+
 **Planned Velocity**: 55 story points  
 **Focus**: Enterprise features and compliance  
 **Demo**: SSO and audit logging
@@ -237,6 +269,7 @@
 ### ✅ COMPLETION CRITERIA
 
 #### Feature Development
+
 - [ ] **Code Complete**: All implementation finished
 - [ ] **Tests Written**: Unit and integration tests
 - [ ] **Code Review**: Peer review completed
@@ -246,6 +279,7 @@
 - [ ] **Demo Ready**: Feature demonstrable
 
 #### Bug Fixes
+
 - [ ] **Root Cause Identified**: Issue fully understood
 - [ ] **Fix Implemented**: Solution coded and tested
 - [ ] **Regression Tests**: Prevent future occurrences
@@ -253,6 +287,7 @@
 - [ ] **Stakeholder Notification**: Affected users informed
 
 #### Research Items
+
 - [ ] **Findings Documented**: Research results recorded
 - [ ] **Recommendations Made**: Next steps identified
 - [ ] **Prototypes Built**: Concept validation completed
@@ -264,6 +299,7 @@
 ### 👥 TEAM STRUCTURE
 
 #### Core Development Team
+
 - **Lead Engineer**: Architecture and technical direction
 - **AI Specialist**: Model integration and optimization
 - **Backend Engineer**: API and orchestration services
@@ -272,6 +308,7 @@
 - **DevOps Engineer**: Infrastructure and deployment
 
 #### Supporting Roles
+
 - **Product Manager**: Requirements and roadmap
 - **UX Designer**: User experience and interface design
 - **Technical Writer**: Documentation and guides
@@ -282,6 +319,7 @@
 ### 📊 METRICS AND KPIs
 
 #### Development Metrics
+
 - **Velocity**: Story points per sprint
 - **Burndown**: Progress tracking
 - **Code Quality**: Coverage and complexity metrics
@@ -289,6 +327,7 @@
 - **Cycle Time**: Feature development duration
 
 #### Product Metrics
+
 - **User Adoption**: Active developers using the system
 - **Performance**: Response times and reliability
 - **Cost Efficiency**: Development cost reduction
@@ -302,6 +341,7 @@
 ### 🚀 QUICK START FOR CONTRIBUTORS
 
 1. **Setup Development Environment**
+
    ```bash
    git clone https://github.com/autodevai/autodevai
    cd autodevai
@@ -310,6 +350,7 @@
    ```
 
 2. **Run Tests**
+
    ```bash
    npm test
    npm run test:integration
@@ -317,6 +358,7 @@
    ```
 
 3. **Start Development Server**
+
    ```bash
    npm run dev
    ```
@@ -345,3 +387,14 @@
 **Sprint**: Foundation Integration (Sprint 1)  
 **Next Review**: September 17, 2025  
 **Team Lead**: AutoDev-AI Core Team
+
+---
+
+## 📜 Lizenz / License
+
+Dieses Projekt wird unter einem **Dual-Lizenzmodell** angeboten:
+
+- **GPL-3.0**: Für Open-Source-Projekte (kostenlos)
+- **Kommerzielle Lizenz**: Für proprietäre/unternehmensinterne Nutzung (kostenpflichtig)
+
+Siehe [README.md](../README.md#-lizenz--license) für Details.

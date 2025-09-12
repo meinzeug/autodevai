@@ -6,6 +6,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::path::PathBuf;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncWriteExt, BufWriter};
@@ -13,7 +14,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Security event severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum SecuritySeverity {
     Info,
     Warning,
@@ -64,6 +65,40 @@ pub enum SecurityEventType {
 
     // Custom events
     Custom(String),
+}
+
+impl Display for SecurityEventType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let display_str = match self {
+            SecurityEventType::LoginAttempt => "Login Attempt",
+            SecurityEventType::LoginSuccess => "Login Success",
+            SecurityEventType::LoginFailure => "Login Failure",
+            SecurityEventType::SessionCreated => "Session Created",
+            SecurityEventType::SessionExpired => "Session Expired",
+            SecurityEventType::SessionTerminated => "Session Terminated",
+            SecurityEventType::PermissionGranted => "Permission Granted",
+            SecurityEventType::PermissionDenied => "Permission Denied",
+            SecurityEventType::PrivilegeEscalation => "Privilege Escalation",
+            SecurityEventType::CommandValidation => "Command Validation",
+            SecurityEventType::CommandExecuted => "Command Executed",
+            SecurityEventType::CommandBlocked => "Command Blocked",
+            SecurityEventType::RateLimitExceeded => "Rate Limit Exceeded",
+            SecurityEventType::InputSanitized => "Input Sanitized",
+            SecurityEventType::InputRejected => "Input Rejected",
+            SecurityEventType::InjectionAttempt => "Injection Attempt",
+            SecurityEventType::ConfigurationChanged => "Configuration Changed",
+            SecurityEventType::SecurityPolicyUpdated => "Security Policy Updated",
+            SecurityEventType::AuditLogAccessed => "Audit Log Accessed",
+            SecurityEventType::SystemShutdown => "System Shutdown",
+            SecurityEventType::EmergencyShutdown => "Emergency Shutdown",
+            SecurityEventType::SuspiciousActivity => "Suspicious Activity",
+            SecurityEventType::AttackDetected => "Attack Detected",
+            SecurityEventType::SecurityViolation => "Security Violation",
+            SecurityEventType::DataExfiltration => "Data Exfiltration",
+            SecurityEventType::Custom(ref custom) => custom,
+        };
+        write!(f, "{}", display_str)
+    }
 }
 
 /// Security audit event structure
@@ -135,6 +170,7 @@ pub struct AuditStats {
 }
 
 /// Security Audit Logger implementation
+#[derive(Debug)]
 pub struct SecurityAuditLogger {
     config: AuditConfig,
     log_writer: RwLock<Option<BufWriter<File>>>,

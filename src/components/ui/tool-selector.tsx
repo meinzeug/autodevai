@@ -40,8 +40,8 @@ export function ToolSelector({
         AI Tool
       </label>
       <Select 
-        value={value} 
-        onValueChange={onValueChange}
+        value={value || undefined} 
+        onValueChange={onValueChange || undefined}
         disabled={disabled}
       >
         <SelectTrigger className="w-full">

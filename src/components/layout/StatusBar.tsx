@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useStore } from '@/store';
 import { formatBytes } from '@/utils/format';
@@ -43,7 +42,9 @@ export function StatusBar() {
                 Memory: {formatBytes(systemInfo.memory_available)} /{' '}
                 {formatBytes(systemInfo.memory_total)}
               </span>
-              <span>{systemInfo.os} - {systemInfo.kernel}</span>
+              <span>
+                {systemInfo.os} - {systemInfo.kernel}
+              </span>
             </>
           )}
         </div>

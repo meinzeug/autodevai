@@ -1,0 +1,35 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Strict settings for CI/production builds
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    
+    // Enable declarations for production
+    "declaration": true,
+    "declarationMap": true,
+    "removeComments": false
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "src-tauri",
+    ".claude",
+    "github-callback-server.js",
+    "scripts/ai-automation-server.js",
+    "**/*.config.js",
+    "**/*.config.ts",
+    "tests/responsive/accessibility-audit.test.ts",
+    "tests/responsive/performance-optimization.test.ts", 
+    "tests/responsive/responsive-test-suite.test.ts"
+  ]
+}

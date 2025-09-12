@@ -1,14 +1,5 @@
-import React from 'react';
 import { cn } from '@/utils/cn';
-import {
-  Cpu,
-  Zap,
-  Box,
-  History,
-  BarChart3,
-  FileCode,
-  Terminal,
-} from 'lucide-react';
+import { Cpu, Zap, Box, History, BarChart3, FileCode, Terminal } from 'lucide-react';
 
 interface SidebarProps {
   activeView: string;
@@ -29,7 +20,7 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   return (
     <aside className="w-64 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
       <nav className="p-4 space-y-2">
-        {menuItems.map((item) => {
+        {menuItems.map(item => {
           const Icon = item.icon;
           return (
             <button

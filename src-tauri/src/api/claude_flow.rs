@@ -187,12 +187,12 @@ pub async fn spawn_agent(
     let client = ApiClient::new(config)?;
 
     let mut request_data = HashMap::new();
-    request_data.insert("type", agent_type.to_string());
+    request_data.insert("type".to_string(), agent_type.to_string());
     request_data.insert(
-        "capabilities",
+        "capabilities".to_string(),
         serde_json::to_string(&capabilities).unwrap_or_default(),
     );
-    request_data.insert("swarmId", swarm_id.to_string());
+    request_data.insert("swarmId".to_string(), swarm_id.to_string());
 
     #[derive(Deserialize)]
     struct SpawnResponse {
@@ -253,7 +253,7 @@ pub async fn scale_swarm(swarm_id: &str, target_agents: u32) -> Result<()> {
     let client = ApiClient::new(config)?;
 
     let mut request_data = HashMap::new();
-    request_data.insert("targetAgents", target_agents.to_string());
+    request_data.insert("targetAgents".to_string(), target_agents.to_string());
 
     match client
         .put::<HashMap<String, String>, serde_json::Value>(
@@ -308,12 +308,12 @@ pub async fn store_memory(key: &str, value: &str, namespace: Option<&str>) -> Re
     let client = ApiClient::new(config)?;
 
     let mut request_data = HashMap::new();
-    request_data.insert("action", "store".to_string());
-    request_data.insert("key", key.to_string());
-    request_data.insert("value", value.to_string());
+    request_data.insert("action".to_string(), "store".to_string());
+    request_data.insert("key".to_string(), key.to_string());
+    request_data.insert("value".to_string(), value.to_string());
 
     if let Some(ns) = namespace {
-        request_data.insert("namespace", ns.to_string());
+        request_data.insert("namespace".to_string(), ns.to_string());
     }
 
     match client

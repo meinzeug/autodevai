@@ -114,7 +114,7 @@ pub async fn execute_sparc_mode(
         context: Some(format!("sparc_{:?}", mode)),
         temperature: Some(0.7),
         swarm_config,
-        sparc_mode: Some(mode),
+        sparc_mode: Some(mode.clone()),
         hive_mind_commands: Vec::new(),
         memory_context: Some(format!(
             "sparc_{}_{}",

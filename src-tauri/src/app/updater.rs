@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind, MessageDialogButtons};
 use tauri_plugin_notification::{NotificationExt, PermissionState};
 use tauri_plugin_updater::{Update, UpdaterExt};
 use tokio::time::interval;
@@ -108,7 +108,6 @@ pub struct RollbackInfo {
 }
 
 /// Enhanced update manager with Tauri v2 compatibility and rollback support
-#[derive(Debug)]
 pub struct UpdateManager {
     config: Arc<RwLock<UpdateConfig>>,
     status: Arc<RwLock<UpdateStatus>>,
@@ -539,13 +538,14 @@ impl UpdateManager {
                     Ok(Some(update)) => {
                         // Download with progress tracking
                         let mut downloaded = 0u64;
-                        let total = update.content_length().unwrap_or(0);
 
                         update
-                            .download_and_install(|chunk_length, content_length| {
+                            .download_and_install(
+                                |chunk_length, content_length| {
                                 downloaded += chunk_length as u64;
-                                let progress = if content_length > 0 {
-                                    (downloaded as f64 / content_length as f64 * 100.0) as f32
+                                let total = content_length.unwrap_or(0);
+                                let progress = if total > 0 {
+                                    (downloaded as f64 / total as f64 * 100.0) as f32
                                 } else {
                                     0.0
                                 };
@@ -556,7 +556,7 @@ impl UpdateManager {
                                         version: _update_info.version.clone(),
                                         progress,
                                         downloaded,
-                                        total: content_length.unwrap_or(total),
+                                        total,
                                     };
                                 }
 
@@ -569,7 +569,9 @@ impl UpdateManager {
                                         "total": content_length.unwrap_or(total)
                                     }),
                                 );
-                            })
+                                },
+                                || {} // on_finished callback
+                            )
                             .await
                             .context("Failed to download and install update")?;
 
@@ -607,7 +609,7 @@ impl UpdateManager {
 
     /// Request notification permission
     async fn request_notification_permission(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Ok(permission) = self.app_handle.notification().request_permission().await {
+        if let Ok(permission) = self.app_handle.notification().request_permission() {
             match permission {
                 PermissionState::Granted => {
                     log::info!("Notification permission granted");
@@ -682,14 +684,15 @@ impl UpdateManager {
                 match updater.check().await {
                     Ok(Some(update)) => {
                         let mut downloaded = 0u64;
-                        let total = update.content_length().unwrap_or(update_info.size);
 
                         // Download only (don't install yet)
                         match update
-                            .download(|chunk_length, content_length| {
+                            .download(
+                                |chunk_length, content_length| {
                                 downloaded += chunk_length as u64;
-                                let progress = if content_length > 0 {
-                                    (downloaded as f64 / content_length as f64 * 100.0) as f32
+                                let total = content_length.unwrap_or(update_info.size);
+                                let progress = if total > 0 {
+                                    (downloaded as f64 / total as f64 * 100.0) as f32
                                 } else {
                                     0.0
                                 };
@@ -700,7 +703,7 @@ impl UpdateManager {
                                         version: update_info.version.clone(),
                                         progress,
                                         downloaded,
-                                        total: content_length.unwrap_or(total),
+                                        total,
                                     };
                                 }
 
@@ -714,7 +717,9 @@ impl UpdateManager {
                                         "silent": true
                                     }),
                                 );
-                            })
+                                },
+                                || {} // on_finished callback
+                            )
                             .await
                         {
                             Ok(_) => {
@@ -841,6 +846,8 @@ impl UpdateManager {
                 size,
                 checksum: None, // TODO: Extract from release assets
                 is_critical,
+                backup_path: None,
+                rollback_version: None,
             }))
         } else {
             Ok(None)
@@ -892,6 +899,9 @@ impl UpdateManager {
                 last_check,
                 update_history,
                 pending_update,
+                rollback_info: Arc::new(RwLock::new(None)),
+                backup_directory: PathBuf::from("/tmp/autodevai-backups"),
+                native_updater: None,
             };
 
             loop {
@@ -996,18 +1006,19 @@ pub async fn restart_app(app_handle: AppHandle) -> Result<(), String> {
     log::info!("App restart requested");
 
     // Show confirmation dialog if user hasn't disabled prompts
-    if let Ok(result) = app_handle
+    let dialog_result = app_handle
         .dialog()
         .message("The application will restart to apply updates. Continue?")
         .kind(MessageDialogKind::Info)
-        .ok_button_label("Restart")
-        .cancel_button_label("Cancel")
-        .blocking_show()
-    {
-        if result {
-            // Perform graceful shutdown
+        .buttons(MessageDialogButtons::OkCancel)
+        .blocking_show();
+    
+    match dialog_result {
+        true => {
+            // User confirmed, perform graceful shutdown
             app_handle.exit(0);
-        } else {
+        }
+        false => {
             return Err("Restart cancelled by user".to_string());
         }
     }
@@ -1078,13 +1089,11 @@ pub async fn download_update(updater: State<'_, UpdateManager>) -> Result<(), St
         .get_pending_update()
         .ok_or_else(|| "No pending update available".to_string())?;
 
-    // Start background download
-    let updater_clone = updater.inner().clone();
-    tokio::spawn(async move {
-        if let Err(e) = updater_clone.download_update_silently(&update_info).await {
-            log::error!("Background download failed: {}", e);
-        }
-    });
+    // Perform download directly without spawning a task with lifetime issues
+    if let Err(e) = updater.download_update_silently(&update_info).await {
+        log::error!("Download failed: {}", e);
+        return Err(format!("Download failed: {}", e));
+    }
 
     Ok(())
 }

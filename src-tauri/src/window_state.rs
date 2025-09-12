@@ -198,7 +198,7 @@ impl WindowStateManager {
 
         {
             let mut monitors = self.monitors.write().unwrap();
-            *monitors = available_monitors.unwrap_or_default();
+            *monitors = available_monitors;
         }
 
         // Update monitor info in collection
@@ -209,7 +209,7 @@ impl WindowStateManager {
             states.monitors = monitors
                 .iter()
                 .map(|m| MonitorInfo {
-                    name: m.name().clone(),
+                    name: m.name().map(|n| n.clone()),
                     x: m.position().x,
                     y: m.position().y,
                     width: m.size().width,
@@ -441,7 +441,7 @@ impl WindowStateManager {
 
         // Try to get current monitor
         let current_monitor = window.current_monitor().map_err(WindowStateError::Tauri)?;
-        let monitor_id = current_monitor.and_then(|m| m.name());
+        let monitor_id = current_monitor.and_then(|m| m.name().map(|name| name.to_string()));
 
         let state = WindowState {
             width: size.width as f64,
@@ -717,8 +717,8 @@ pub async fn handle_window_event<R: Runtime>(
         match event {
             tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_) => {
                 // Save state on move/resize with debouncing
-                if let Some(window) = app.get_webview_window(window_label) {
-                    if let Err(e) = manager.save_window_state(window_label, &window).await {
+                if let Some(webview_window) = app.get_webview_window(window_label) {
+                    if let Err(e) = manager.save_window_state(window_label, &webview_window.as_ref().window()).await {
                         error!("Failed to save window state for '{}': {}", window_label, e);
                     }
                 }
@@ -730,8 +730,8 @@ pub async fn handle_window_event<R: Runtime>(
             }
             tauri::WindowEvent::CloseRequested { .. } => {
                 // Save state before closing
-                if let Some(window) = app.get_webview_window(window_label) {
-                    if let Err(e) = manager.save_window_state(window_label, &window).await {
+                if let Some(webview_window) = app.get_webview_window(window_label) {
+                    if let Err(e) = manager.save_window_state(window_label, &webview_window.as_ref().window()).await {
                         error!(
                             "Failed to save window state on close for '{}': {}",
                             window_label, e

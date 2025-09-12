@@ -45,11 +45,6 @@ interface MetricsDisplayProps {
   showCharts?: boolean
 }
 
-const statusColors = {
-  good: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950',
-  warning: 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950',
-  error: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950',
-} as const
 
 const trendIcons = {
   up: TrendingUp,
@@ -222,6 +217,7 @@ export function MetricsDisplay({
 
       return () => clearInterval(interval)
     }
+    return undefined
   }, [autoRefresh, onRefresh, refreshInterval])
 
   const handleRefresh = () => {

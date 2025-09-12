@@ -28,11 +28,11 @@ export function ResponsiveLayout({
   headerActions,
   sidebarFooter,
   children,
-  className = ''
+  className = '',
 }: ResponsiveLayoutProps) {
   const { isOpen, isMobile, openMenu, closeMenu } = useMobileMenu();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  
+
   // Auto-open sidebar on desktop
   useEffect(() => {
     if (isDesktop && !isOpen) {
@@ -46,7 +46,7 @@ export function ResponsiveLayout({
       <Header
         title={title}
         statusIndicators={statusIndicators}
-        onMenuClick={isMobile ? openMenu : undefined}
+        onMenuClick={isMobile ? openMenu : () => {}}
         className="shrink-0"
       >
         {headerActions}
@@ -70,7 +70,7 @@ export function ResponsiveLayout({
         </Sidebar>
 
         {/* Main Content */}
-        <main 
+        <main
           className={cn(
             'flex-1 overflow-auto',
             'w-full h-full', // responsiveContainer.full replacement
@@ -81,9 +81,7 @@ export function ResponsiveLayout({
           role="main"
           tabIndex={-1}
         >
-          <div className="h-full">
-            {children}
-          </div>
+          <div className="h-full">{children}</div>
         </main>
       </div>
     </div>
@@ -96,7 +94,7 @@ export function ResponsiveLayout({
 export function useResponsiveLayout() {
   const { isOpen, isMobile, isDesktop, openMenu, closeMenu, toggleMenu } = useMobileMenu();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+
   const collapseSidebar = () => setSidebarCollapsed(true);
   const expandSidebar = () => setSidebarCollapsed(false);
   const toggleSidebarCollapse = () => setSidebarCollapsed(prev => !prev);
@@ -109,16 +107,16 @@ export function useResponsiveLayout() {
     openMenu,
     closeMenu,
     toggleMenu,
-    
+
     // Desktop sidebar collapse state
     sidebarCollapsed,
     collapseSidebar,
     expandSidebar,
     toggleSidebarCollapse,
-    
+
     // Combined state helpers
     sidebarVisible: isOpen && !sidebarCollapsed,
-    sidebarWidth: sidebarCollapsed ? 'w-16' : 'w-64'
+    sidebarWidth: sidebarCollapsed ? 'w-16' : 'w-64',
   };
 }
 

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Brain, Moon, Sun, Settings, Github } from 'lucide-react';
+import { Brain, Settings, Github, Sun } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
 interface HeaderProps {
@@ -7,7 +6,7 @@ interface HeaderProps {
 }
 
 export function Header({ onSettingsClick }: HeaderProps) {
-  const { theme, toggleTheme } = useTheme();
+  useTheme(); // Apply dark theme
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -18,9 +17,7 @@ export function Header({ onSettingsClick }: HeaderProps) {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               AutoDev-AI Neural Bridge
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              AI Orchestration Platform
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">AI Orchestration Platform</p>
           </div>
         </div>
 
@@ -35,15 +32,12 @@ export function Header({ onSettingsClick }: HeaderProps) {
           </a>
 
           <button
-            onClick={toggleTheme}
+            onClick={() => {}}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             aria-label="Toggle theme"
+            disabled
           >
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5" />
-            ) : (
-              <Sun className="w-5 h-5" />
-            )}
+            <Sun className="w-5 h-5" />
           </button>
 
           <button

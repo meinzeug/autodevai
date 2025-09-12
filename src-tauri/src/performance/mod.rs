@@ -478,20 +478,18 @@ pub async fn initialize_performance_manager(config: PerformanceConfig) -> anyhow
 }
 
 pub async fn start_operation(operation: &str) -> Option<OperationTracker> {
-    let manager = PERFORMANCE_MANAGER.read().await;
-    if let Some(manager) = manager.as_ref() {
-        let mut manager_mut = unsafe { &mut *(manager as *const _ as *mut PerformanceManager) };
-        Some(manager_mut.start_operation(operation))
+    let mut manager = PERFORMANCE_MANAGER.write().await;
+    if let Some(ref mut manager) = manager.as_mut() {
+        Some(manager.start_operation(operation))
     } else {
         None
     }
 }
 
 pub async fn collect_global_metrics() -> anyhow::Result<Option<PerformanceMetrics>> {
-    let manager = PERFORMANCE_MANAGER.read().await;
-    if let Some(manager) = manager.as_ref() {
-        let mut manager_mut = unsafe { &mut *(manager as *const _ as *mut PerformanceManager) };
-        Ok(Some(manager_mut.collect_metrics().await?))
+    let mut manager = PERFORMANCE_MANAGER.write().await;
+    if let Some(ref mut manager) = manager.as_mut() {
+        Ok(Some(manager.collect_metrics().await?))
     } else {
         Ok(None)
     }

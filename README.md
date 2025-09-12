@@ -3,7 +3,7 @@
 <div align="center">
 
 ![AutoDev-AI Banner](https://img.shields.io/badge/AutoDev--AI-Neural%20Bridge%20Platform-blue?style=for-the-badge)
-[![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL%20+%20Commercial-green.svg?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0--alpha-orange.svg?style=flat-square)](https://github.com/meinzeug/autodevai/releases)
 [![Rust](https://img.shields.io/badge/rust-%E2%9C%93-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Tauri](https://img.shields.io/badge/tauri-%E2%9C%93-blue.svg?style=flat-square)](https://tauri.app)
@@ -23,7 +23,7 @@
 **AutoDev-AI is a revolutionary AI-powered software development platform that orchestrates multiple AI coding tools seamlessly. It solves the fragmentation problem in AI-assisted development by creating an intelligent coordination layer that manages Claude-Flow, OpenAI Codex, OpenRouter, and other AI tools without complex configuration.**
 
 ![AutoDev-AI Interface](docs/images/autodevai_screen_1.png)
-***AutoDev-AI Neural Bridge Platform - Unified AI Development Interface***
+**_AutoDev-AI Neural Bridge Platform - Unified AI Development Interface_**
 
 ### <h3 style="font-size: 1.5em;">🚀 Why AutoDev-AI?</h3>
 
@@ -301,6 +301,44 @@ npm test
 # Submit PR with your improvements
 ```
 
+### Production Deployment with PM2
+
+For production deployments, you can use PM2 to manage the application with automatic restart on system boot:
+
+```bash
+# Install PM2 globally (if not already installed)
+npm install -g pm2
+
+# Start the application with PM2
+pm2 start npm --name "autodevai-app" -- run tauri:dev
+
+# Configure PM2 to start on system boot
+pm2 startup
+
+# Save the current PM2 process list
+pm2 save
+
+# Check application status
+pm2 status
+
+# View logs
+pm2 logs autodevai-app
+
+# Restart application
+pm2 restart autodevai-app
+
+# Stop application
+pm2 stop autodevai-app
+```
+
+The PM2 configuration ensures:
+
+- ✅ Automatic restart on failures
+- ✅ System boot startup
+- ✅ Process monitoring and logging
+- ✅ Memory and CPU monitoring
+- ✅ Zero-downtime deployments
+
 ### Areas for Contribution
 
 - 🔌 AI tool integrations
@@ -329,7 +367,49 @@ AutoDev-AI prioritizes security:
 
 ## <h2 style="font-size: 2em;">📄 License</h2>
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📜 Lizenz / License
+
+### Dual-Lizenzmodell / Dual License Model
+
+Dieses Projekt wird unter einem **Dual-Lizenzmodell** angeboten:
+
+#### 🆓 GPL-3.0 Lizenz (Open Source)
+
+- **Kostenlose Nutzung** für Open-Source-Projekte
+- Jeder darf die Software frei nutzen, modifizieren und verteilen
+- Alle Änderungen müssen unter GPL-3.0 veröffentlicht werden
+- Ideal für persönliche, akademische und Open-Source-Projekte
+- Siehe [LICENSE-GPL](LICENSE-GPL) für Details
+
+#### 💼 Kommerzielle Lizenz (Proprietär)
+
+- **Erforderlich für**:
+  - Proprietäre/Closed-Source-Anwendungen
+  - Unternehmensweite Nutzung
+  - Kommerzielle Produkte ohne GPL-Verpflichtungen
+  - Software-as-a-Service (SaaS) Angebote
+- **Vorteile**:
+  - Keine Copyleft-Verpflichtungen
+  - Proprietäre Modifikationen erlaubt
+  - Kommerzieller Support verfügbar
+  - Erweiterte Features und Prioritäts-Updates
+- **Kontakt**: Für kommerzielle Lizenzen kontaktieren Sie bitte [meinzeug@example.com](mailto:meinzeug@example.com)
+
+### ⚖️ Welche Lizenz benötigen Sie?
+
+| Nutzungsart           | Erforderliche Lizenz |
+| --------------------- | -------------------- |
+| Persönliche Projekte  | GPL-3.0 (kostenlos)  |
+| Open-Source-Projekte  | GPL-3.0 (kostenlos)  |
+| Akademische Forschung | GPL-3.0 (kostenlos)  |
+| Proprietäre Software  | Kommerzielle Lizenz  |
+| Unternehmenseinsatz   | Kommerzielle Lizenz  |
+| SaaS-Anwendungen      | Kommerzielle Lizenz  |
+| Weiterverkauf         | Kommerzielle Lizenz  |
+
+### 📝 Hinweis
+
+Durch die Nutzung dieser Software akzeptieren Sie die Bedingungen der gewählten Lizenz. Bei Unsicherheiten bezüglich der Lizenzwahl kontaktieren Sie uns bitte.
 
 ## <h2 style="font-size: 2em;">🙏 Acknowledgments</h2>
 

@@ -315,17 +315,26 @@ pub async fn submit_performance_task(
 
     let duration = estimated_duration_ms.map(|ms| Duration::from_millis(ms));
     let resource_reqs = ResourceRequirements::default();
+    
+    // Clone name for closure and submission
+    let task_name = name.clone();
 
     match performance::concurrency::submit_concurrent_task(
-        name.clone(),
+        name,
         task_priority,
         duration,
         resource_reqs,
-        move || async move {
-            // Simulate task execution
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            info!("Performance task '{}' completed", name);
-            Ok(())
+        {
+            let task_name = task_name.clone();
+            move || {
+                let task_name = task_name.clone();
+                async move {
+                    // Simulate task execution
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    info!("Performance task '{}' completed", task_name);
+                    Ok(())
+                }
+            }
         },
     )
     .await
@@ -439,20 +448,30 @@ pub async fn run_performance_benchmark() -> Result<String, String> {
     }
 
     // Run various benchmark tasks
-    let benchmark_tasks = vec![
-        ("CPU Intensive Task", run_cpu_benchmark()),
-        ("Memory Allocation Test", run_memory_benchmark()),
-        ("I/O Operations Test", run_io_benchmark()),
-        ("Concurrency Test", run_concurrency_benchmark()),
-        ("Cache Performance Test", run_cache_benchmark()),
+    let mut results = Vec::new();
+    
+    // Run each benchmark individually to avoid async future type issues
+    let benchmark_tasks = [
+        "CPU Intensive Task",
+        "Memory Allocation Test", 
+        "I/O Operations Test",
+        "Concurrency Test",
+        "Cache Performance Test",
     ];
 
-    let mut results = Vec::new();
-
-    for (name, task) in benchmark_tasks {
+    for name in benchmark_tasks {
         let start_time = std::time::Instant::now();
 
-        match task.await {
+        let result = match name {
+            "CPU Intensive Task" => run_cpu_benchmark().await,
+            "Memory Allocation Test" => run_memory_benchmark().await,
+            "I/O Operations Test" => run_io_benchmark().await,
+            "Concurrency Test" => run_concurrency_benchmark().await,
+            "Cache Performance Test" => run_cache_benchmark().await,
+            _ => Err("Unknown benchmark task".to_string()),
+        };
+
+        match result {
             Ok(_) => {
                 let duration = start_time.elapsed();
                 results.push(format!("{}: {:.2}ms", name, duration.as_millis()));

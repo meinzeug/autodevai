@@ -24,11 +24,12 @@ const NavigationItemComponent: React.FC<{
         onClick={handleClick}
         className={`
           w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium rounded-lg transition-colors duration-200
-          ${item.active 
-            ? 'bg-blue-900/20 text-blue-300 border-r-2 border-blue-500' 
-            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+          ${
+            item.active
+              ? 'bg-blue-900/20 text-blue-300 border-r-2 border-blue-500'
+              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
           }
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          focus:outline-none
         `}
         style={{ paddingLeft: `${paddingLeft}px` }}
         aria-expanded={item.subItems ? isExpanded : undefined}
@@ -42,12 +43,12 @@ const NavigationItemComponent: React.FC<{
           )}
           <span>{item.label}</span>
         </div>
-        
+
         {item.subItems && item.subItems.length > 0 && (
-          <svg 
+          <svg
             className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
-            fill="none" 
-            stroke="currentColor" 
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
@@ -58,12 +59,8 @@ const NavigationItemComponent: React.FC<{
 
       {item.subItems && isExpanded && (
         <div className="mt-1 space-y-1" role="menu">
-          {item.subItems.map((subItem) => (
-            <NavigationItemComponent
-              key={subItem.id}
-              item={subItem}
-              depth={depth + 1}
-            />
+          {item.subItems.map(subItem => (
+            <NavigationItemComponent key={subItem.id} item={subItem} depth={depth + 1} />
           ))}
         </div>
       )}
@@ -76,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   navigationItems,
   className = '',
-  children
+  children,
 }) => {
   return (
     <>
@@ -94,8 +91,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className={`
           fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:fixed lg:translate-x-0 lg:shadow-lg lg:border-r lg:border-gray-700
-          w-64 flex flex-col
+          lg:translate-x-0 lg:shadow-lg lg:border-r lg:border-gray-700
+          w-80 flex flex-col
           ${className}
         `}
         aria-label="Main navigation"
@@ -106,35 +103,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <h2 className="text-lg font-semibold text-white">Navigation</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-gray-300"
+            className="p-2 rounded-md hover:bg-gray-700 focus:outline-none text-gray-300"
             aria-label="Close navigation menu"
             type="button"
           >
-            <svg 
-              className="w-5 h-5" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto" role="menubar">
-          {navigationItems.map((item) => (
-            <NavigationItemComponent key={item.id} item={item} />
-          ))}
+          {navigationItems?.map(item => <NavigationItemComponent key={item.id} item={item} />) ??
+            []}
         </nav>
 
         {/* Footer/Actions */}
-        {children && (
-          <div className="p-4 border-t border-gray-600">
-            {children}
-          </div>
-        )}
+        {children && <div className="p-4 border-t border-gray-600">{children}</div>}
 
         {/* System Info */}
         <div className="p-4 border-t border-gray-600 bg-gray-800">

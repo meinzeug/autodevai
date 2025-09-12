@@ -10,8 +10,8 @@ import { cn } from '../utils/cn';
 // Intersection Observer hook for lazy loading
 export const useIntersectionObserver = (
   options: IntersectionObserverInit = {}
-): [React.RefObject<HTMLDivElement>, boolean] => {
-  const elementRef = React.useRef<HTMLDivElement>(null);
+): [React.RefObject<HTMLDivElement | null>, boolean] => {
+  const elementRef = React.useRef<HTMLDivElement | null>(null);
   const [isIntersecting, setIsIntersecting] = React.useState(false);
 
   React.useEffect(() => {
@@ -20,12 +20,14 @@ export const useIntersectionObserver = (
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsIntersecting(entry.isIntersecting);
+        if (entry) {
+          setIsIntersecting(entry.isIntersecting);
+        }
       },
       {
         threshold: 0.1,
         rootMargin: '50px',
-        ...options
+        ...options,
       }
     );
 
@@ -57,7 +59,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   placeholder,
   blurDataURL,
   onLoad,
-  onError
+  onError,
 }) => {
   const [imageRef, isVisible] = useIntersectionObserver();
   const [imageLoaded, setImageLoaded] = React.useState(false);
@@ -135,7 +137,7 @@ export const LazyVideo: React.FC<LazyVideoProps> = ({
   autoPlay = false,
   loop = false,
   muted = true,
-  controls = true
+  controls = true,
 }) => {
   const [videoRef, isVisible] = useIntersectionObserver();
   const [isLoaded, setIsLoaded] = React.useState(false);
@@ -179,7 +181,7 @@ export const LazyComponent: React.FC<LazyComponentProps> = ({
   children,
   fallback = <LoadingSkeleton />,
   className,
-  delay = 0
+  delay = 0,
 }) => {
   const [componentRef, isVisible] = useIntersectionObserver();
   const [shouldRender, setShouldRender] = React.useState(false);
@@ -195,13 +197,12 @@ export const LazyComponent: React.FC<LazyComponentProps> = ({
         setShouldRender(true);
       }
     }
+    return undefined;
   }, [isVisible, delay]);
 
   return (
     <div ref={componentRef} className={className}>
-      <React.Suspense fallback={fallback}>
-        {shouldRender ? children : fallback}
-      </React.Suspense>
+      <React.Suspense fallback={fallback}>{shouldRender ? children : fallback}</React.Suspense>
     </div>
   );
 };
@@ -222,7 +223,7 @@ export function VirtualList<T>({
   containerHeight,
   renderItem,
   className,
-  overscan = 3
+  overscan = 3,
 }: VirtualListProps<T>) {
   const [scrollTop, setScrollTop] = React.useState(0);
   const scrollElementRef = React.useRef<HTMLDivElement>(null);
@@ -257,7 +258,7 @@ export function VirtualList<T>({
                 position: 'absolute',
                 top: actualIndex * itemHeight,
                 height: itemHeight,
-                width: '100%'
+                width: '100%',
               }}
               data-testid={`list-item-${actualIndex}`}
             >
@@ -286,11 +287,11 @@ export const InfiniteScroll: React.FC<InfiniteScrollProps> = ({
   loadMore,
   loading = false,
   threshold = 0.8,
-  className
+  className,
 }) => {
   const [loadingRef, isLoadingVisible] = useIntersectionObserver({
     threshold,
-    rootMargin: '100px'
+    rootMargin: '100px',
   });
 
   React.useEffect(() => {
@@ -327,7 +328,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   lowQualitySrc,
   highQualitySrc,
   alt,
-  className
+  className,
 }) => {
   const [imageRef, isVisible] = useIntersectionObserver();
   const [highQualityLoaded, setHighQualityLoaded] = React.useState(false);
@@ -378,7 +379,7 @@ interface LazyRouteProps {
 export const LazyRoute: React.FC<LazyRouteProps> = ({
   component: Component,
   fallback = <LoadingSkeleton lines={5} />,
-  preload = false
+  preload = false,
 }) => {
   const [isPreloaded, setIsPreloaded] = React.useState(preload);
 
@@ -390,6 +391,7 @@ export const LazyRoute: React.FC<LazyRouteProps> = ({
       }, 100);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [preload, isPreloaded]);
 
   if (!isPreloaded && !preload) {
@@ -415,14 +417,14 @@ export const ResponsiveLazy: React.FC<ResponsiveLazyProps> = ({
   mobile,
   tablet,
   desktop: Desktop,
-  fallback = <LoadingSkeleton />
+  fallback = <LoadingSkeleton />,
 }) => {
   const [currentComponent, setCurrentComponent] = React.useState<React.ComponentType | null>(null);
 
   React.useEffect(() => {
     const updateComponent = () => {
       const width = window.innerWidth;
-      
+
       if (width < 768 && mobile) {
         setCurrentComponent(mobile);
       } else if (width < 1024 && tablet) {

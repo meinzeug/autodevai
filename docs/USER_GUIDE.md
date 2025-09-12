@@ -1,3 +1,10 @@
+<!--
+AutoDev-AI - Dual License
+GNU General Public License v3.0 for open-source use
+Commercial license available for proprietary use
+See LICENSE-GPL and LICENSE-COMMERCIAL for details
+-->
+
 # AutoDev-AI User Guide
 
 ## Getting Started

@@ -53,7 +53,6 @@ export function TaskList({
   tasks = [],
   onTaskSelect,
   onTaskDelete,
-  onTaskRerun,
   onRefresh,
   className,
   showFilters = true,
@@ -356,7 +355,6 @@ export function TaskList({
                       onViewDetails={() => onTaskSelect?.(task)}
                       compact={true}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => onTaskSelect?.(task)}
                     />
                   </div>
                 </div>

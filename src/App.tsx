@@ -1,10 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Settings,
-  Maximize2,
-  Minimize2,
-  Download
-} from 'lucide-react';
+import { Settings, Maximize2, Minimize2, Download } from 'lucide-react';
 import { ErrorBoundary } from './views/shared/ErrorBoundary';
 // Note: OrchestrationPanel and OutputDisplay are replaced by new views
 import { ProgressTracker } from './components/ProgressTracker';
@@ -19,10 +14,11 @@ import {
   HistoryView,
   SandboxView,
   MonitoringView,
-  TerminalView
+  TerminalView,
 } from './views';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useSystemMonitor } from './hooks/useSystemMonitor';
 import { TauriService } from './services/tauri';
 import { cn } from './utils/cn';
 import { hiveCoordinator } from './utils/hive-coordination';
@@ -33,7 +29,7 @@ import {
   NotificationMessage,
   OrchestrationMode,
   Tool,
-  ExecutionMode
+  ExecutionMode,
 } from './types';
 import toast from 'react-hot-toast';
 
@@ -47,7 +43,14 @@ interface AppState {
   showOutput: boolean;
   showUpdater: boolean;
   showSidebar: boolean;
-  activeTab: 'orchestration' | 'monitoring' | 'history' | 'sandbox' | 'logs' | 'terminal';
+  activeTab:
+    | 'orchestration'
+    | 'monitoring'
+    | 'history'
+    | 'sandbox'
+    | 'logs'
+    | 'terminal'
+    | 'configuration';
 }
 
 const defaultConfig: OrchestrationConfig = {
@@ -59,12 +62,16 @@ const defaultConfig: OrchestrationConfig = {
   dockerEnabled: false,
   autoRestart: true,
   maxRetries: 3,
-  timeout: 300
+  timeout: 300,
 };
 
 function AppContent() {
-  const { theme } = useTheme();
-  const [config, setConfig] = useLocalStorage<OrchestrationConfig>('orchestration-config', defaultConfig);
+  useTheme(); // Theme is managed globally
+  const [config, setConfig] = useLocalStorage<OrchestrationConfig>(
+    'orchestration-config',
+    defaultConfig
+  );
+  const { systemStats, dockerStatus, aiStatus } = useSystemMonitor();
   const [state, setState] = useState<AppState>({
     isExecuting: false,
     outputs: [],
@@ -75,9 +82,9 @@ function AppContent() {
     showOutput: true,
     showUpdater: false,
     showSidebar: true,
-    activeTab: 'orchestration'
+    activeTab: 'orchestration',
   });
-  
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_notifications, _setNotifications] = useState<NotificationMessage[]>([]);
   const tauriService = useMemo(() => TauriService, []);
@@ -88,29 +95,29 @@ function AppContent() {
       try {
         // TauriService doesn't have initialize method
         // await tauriService.initialize();
-        
+
         // Initialize hive coordination
-        hiveCoordinator.subscribe('integration-coordinator', (message) => {
+        hiveCoordinator.subscribe('integration-coordinator', message => {
           const output: ExecutionOutput = {
             id: `hive-${Date.now()}`,
             timestamp: new Date().toISOString(),
             type: message.type === 'error' ? 'error' : 'info',
             content: `Hive Message from ${message.from}: ${JSON.stringify(message.payload)}`,
-            source: 'Hive Mind'
+            source: 'Hive Mind',
           };
-          
+
           setState(prev => ({
             ...prev,
-            outputs: [...prev.outputs, output]
+            outputs: [...prev.outputs, output],
           }));
         });
 
         // Update hive state based on app initialization
         hiveCoordinator.updateState('window', {
           state: 'active',
-          securityLevel: 'medium'
+          securityLevel: 'medium',
         });
-        
+
         // Set up execution output listener
         // TauriService doesn't have onExecutionOutput method
         const unsubscribeOutput = () => {}; // No-op
@@ -129,85 +136,87 @@ function AppContent() {
   }, [tauriService]);
 
   // Handle task execution
-  const handleExecute = useCallback(async (command: ClaudeFlowCommand) => {
-    const taskName = typeof command === 'object' ? command.task : `${command} execution`;
-    setState(prev => ({ 
-      ...prev, 
-      isExecuting: true, 
-      currentTask: taskName || null,
-      progress: 0,
-      showOutput: true
-    }));
-    
-    try {
-      // Add starting message
-      const startOutput: ExecutionOutput = {
-        id: `start-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        type: 'info',
-        content: `Starting ${typeof command === 'object' ? command.mode || 'unknown' : command} execution: ${typeof command === 'object' ? command.task || 'No task specified' : command}`,
-        source: 'AutoDev-AI'
-      };
-      
+  const handleExecute = useCallback(
+    async (command: ClaudeFlowCommand) => {
+      const taskName = typeof command === 'object' ? command.task : `${command} execution`;
       setState(prev => ({
         ...prev,
-        outputs: [...prev.outputs, startOutput]
+        isExecuting: true,
+        currentTask: taskName || null,
+        progress: 0,
+        showOutput: true,
       }));
 
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
+      try {
+        // Add starting message
+        const startOutput: ExecutionOutput = {
+          id: `start-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: 'info',
+          content: `Starting ${typeof command === 'object' ? command.mode || 'unknown' : command} execution: ${typeof command === 'object' ? command.task || 'No task specified' : command}`,
+          source: 'AutoDev-AI',
+        };
+
         setState(prev => ({
           ...prev,
-          progress: Math.min(prev.progress + Math.random() * 20, 95)
+          outputs: [...prev.outputs, startOutput],
         }));
-      }, 1000);
 
-      const commandStr = typeof command === 'object' ? command.command || 'unknown' : command;
-      const result = await tauriService.executeClaudeFlow(commandStr as string);
-      
-      clearInterval(progressInterval);
-      
-      // Add success message
-      const successOutput: ExecutionOutput = {
-        id: `success-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        type: 'success',
-        content: `Task completed successfully: ${result}`,
-        source: 'AutoDev-AI'
-      };
-      
-      setState(prev => ({
-        ...prev,
-        outputs: [...prev.outputs, successOutput],
-        progress: 100
-      }));
-      
-      toast.success('Task completed successfully!');
-      
-    } catch (error) {
-      const errorOutput: ExecutionOutput = {
-        id: `error-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        type: 'error',
-        content: `Execution failed: ${error}`,
-        source: 'AutoDev-AI'
-      };
-      
-      setState(prev => ({
-        ...prev,
-        outputs: [...prev.outputs, errorOutput]
-      }));
-      
-      toast.error('Task execution failed');
-    } finally {
-      setState(prev => ({ 
-        ...prev, 
-        isExecuting: false, 
-        currentTask: null,
-        progress: 0
-      }));
-    }
-  }, [tauriService]);
+        // Simulate progress updates
+        const progressInterval = setInterval(() => {
+          setState(prev => ({
+            ...prev,
+            progress: Math.min(prev.progress + Math.random() * 20, 95),
+          }));
+        }, 1000);
+
+        const commandStr = typeof command === 'object' ? command.command || 'unknown' : command;
+        const result = await tauriService.executeClaudeFlow(commandStr as string);
+
+        clearInterval(progressInterval);
+
+        // Add success message
+        const successOutput: ExecutionOutput = {
+          id: `success-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: 'success',
+          content: `Task completed successfully: ${result}`,
+          source: 'AutoDev-AI',
+        };
+
+        setState(prev => ({
+          ...prev,
+          outputs: [...prev.outputs, successOutput],
+          progress: 100,
+        }));
+
+        toast.success('Task completed successfully!');
+      } catch (error) {
+        const errorOutput: ExecutionOutput = {
+          id: `error-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: 'error',
+          content: `Execution failed: ${error}`,
+          source: 'AutoDev-AI',
+        };
+
+        setState(prev => ({
+          ...prev,
+          outputs: [...prev.outputs, errorOutput],
+        }));
+
+        toast.error('Task execution failed');
+      } finally {
+        setState(prev => ({
+          ...prev,
+          isExecuting: false,
+          currentTask: null,
+          progress: 0,
+        }));
+      }
+    },
+    [tauriService]
+  );
 
   const handleClearOutput = useCallback(() => {
     setState(prev => ({ ...prev, outputs: [] }));
@@ -236,68 +245,72 @@ function AppContent() {
       label: 'Task Orchestration',
       icon: '🎛️',
       active: state.activeTab === 'orchestration',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'orchestration' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'orchestration' })),
     },
     {
       id: 'monitoring',
       label: 'Dashboard',
       icon: '📊',
       active: state.activeTab === 'monitoring',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'monitoring' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'monitoring' })),
     },
     {
       id: 'history',
       label: 'Execution History',
       icon: '📜',
       active: state.activeTab === 'history',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'history' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'history' })),
     },
     {
       id: 'sandbox',
       label: 'Docker Sandbox',
       icon: '🐳',
       active: state.activeTab === 'sandbox',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'sandbox' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'sandbox' })),
     },
     {
       id: 'logs',
       label: 'System Logs',
       icon: '👁️',
       active: state.activeTab === 'logs',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'logs' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'logs' })),
     },
     {
       id: 'terminal',
       label: 'Terminal',
       icon: '⌨️',
       active: state.activeTab === 'terminal',
-      onClick: () => setState(prev => ({ ...prev, activeTab: 'terminal' }))
+      onClick: () => setState(prev => ({ ...prev, activeTab: 'terminal' })),
     },
     {
-      id: 'settings',
+      id: 'configuration',
       label: 'Configuration',
       icon: '⚙️',
-      onClick: () => setState(prev => ({ ...prev, showSettings: !prev.showSettings }))
-    }
+      active: state.activeTab === 'configuration',
+      onClick: () =>
+        setState(prev => ({ ...prev, activeTab: 'configuration', showSettings: false })),
+    },
   ];
 
-  // Status indicators for header
+  // Status indicators for header with live data
   const statusIndicators = [
     {
-      status: state.isExecuting ? 'warning' : 'online',
+      status: state.isExecuting ? 'warning' : systemStats.cpu > 80 ? 'warning' : 'online',
       label: 'System',
-      value: state.isExecuting ? 'Busy' : 'Ready'
+      value: state.isExecuting ? 'Busy' : `CPU ${systemStats.cpu.toFixed(0)}%`,
     } as const,
     {
-      status: 'online',
+      status: aiStatus.connected ? 'online' : 'offline',
       label: 'AI',
-      value: 'Connected'
+      value: aiStatus.connected
+        ? `Connected${aiStatus.latency ? ` (${aiStatus.latency}ms)` : ''}`
+        : 'Disconnected',
     } as const,
     {
-      status: config.dockerEnabled ? 'online' : 'offline',
+      status: dockerStatus.running ? 'online' : 'offline',
       label: 'Docker',
-      value: config.dockerEnabled ? 'Active' : 'Inactive'
-    } as const
+      value: dockerStatus.running ? `${dockerStatus.containers || 0} containers` : 'Not running',
+    } as const,
   ];
 
   // Keyboard shortcuts
@@ -327,7 +340,7 @@ function AppContent() {
             break;
         }
       }
-      
+
       if (event.key === 'Escape') {
         setState(prev => ({ ...prev, showSettings: false, showUpdater: false }));
       }
@@ -338,16 +351,18 @@ function AppContent() {
   }, [handleClearOutput, toggleFullscreen, toggleSettings, toggleUpdater]);
 
   return (
-    <div className={cn(
-      "min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white transition-all duration-300 flex flex-col",
-      state.isFullscreen && "fixed inset-0 z-50"
-    )}>
+    <div
+      className={cn(
+        'min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white transition-all duration-300 flex flex-col',
+        state.isFullscreen && 'fixed inset-0 z-50'
+      )}
+    >
       {/* Header with our new component */}
       <Header
         title="AutoDev-AI Neural Bridge"
         statusIndicators={statusIndicators}
         onMenuClick={toggleSidebar}
-        className='bg-gray-800/90 border-gray-700'
+        className="bg-gray-800/90 border-gray-700 fixed top-0 left-0 right-0 z-50"
       >
         {/* Header Actions */}
         <div className="flex items-center space-x-2">
@@ -364,7 +379,13 @@ function AppContent() {
             aria-label="Settings"
           />
           <IconButton
-            icon={state.isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            icon={
+              state.isFullscreen ? (
+                <Minimize2 className="w-5 h-5" />
+              ) : (
+                <Maximize2 className="w-5 h-5" />
+              )
+            }
             onClick={toggleFullscreen}
             variant="ghost"
             aria-label={`${state.isFullscreen ? 'Exit' : 'Enter'} fullscreen`}
@@ -374,8 +395,8 @@ function AppContent() {
 
       {/* Progress Bar */}
       {state.isExecuting && (
-        <div className="px-6 py-2 border-b border-gray-700">
-          <ProgressTracker 
+        <div className="px-6 py-2 border-b border-gray-700 bg-gray-800/90 fixed top-16 left-0 right-0 z-40">
+          <ProgressTracker
             progress={state.progress}
             taskName={state.currentTask || 'Unknown Task'}
           />
@@ -387,93 +408,82 @@ function AppContent() {
         isOpen={state.showSidebar}
         onClose={() => setState(prev => ({ ...prev, showSidebar: false }))}
         navigationItems={navigationItems}
-        className='bg-gray-800 border-gray-700'
+        className="bg-gray-800 border-gray-700"
       />
 
       {/* Main Content Container */}
-      <div className={cn(
-        "flex-1 flex overflow-hidden transition-all duration-300",
-        // Add left margin on large screens when sidebar is open
-        state.showSidebar && "lg:ml-64"
-      )}>
-        {/* Settings Sidebar */}
-        {state.showSettings && (
-          <div className={cn(
-            "w-80 border-r bg-gray-800 border-gray-700 transition-all duration-300 flex-shrink-0"
-          )}>
-            <ConfigurationPanel 
-              config={config}
-              onChange={setConfig}
-              onClose={() => setState(prev => ({ ...prev, showSettings: false }))}
-            />
-          </div>
+      <div
+        className={cn(
+          'flex-1 flex transition-all duration-300 pt-16',
+          // Add left margin on large screens when sidebar is open
+          state.showSidebar && 'lg:ml-80',
+          // Add top margin when progress bar is showing
+          state.isExecuting && 'pt-28'
         )}
-        
+      >
         {/* Update Manager Sidebar */}
         {state.showUpdater && (
-          <div className={cn(
-            "w-96 border-r bg-gray-800 border-gray-700 transition-all duration-300 overflow-y-auto flex-shrink-0"
-          )}>
+          <div
+            className={cn(
+              'w-96 border-r bg-gray-800 border-gray-700 transition-all duration-300 overflow-y-auto flex-shrink-0'
+            )}
+          >
             <div className="p-6">
               <ErrorBoundary>
-                <UpdateManager 
+                <UpdateManager
                   onClose={() => setState(prev => ({ ...prev, showUpdater: false }))}
                 />
               </ErrorBoundary>
             </div>
           </div>
         )}
-        
+
         {/* Primary Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 p-4 lg:p-6 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 h-[calc(100vh-4rem)] overflow-hidden mt-16">
+          <div className="flex-1 p-4 lg:p-6 overflow-y-auto">
             <ErrorBoundary level="view" showDetails={true}>
               {/* Route to different views based on active tab */}
               {state.activeTab === 'orchestration' && (
                 <OrchestrationView
                   config={config}
                   onConfigChange={setConfig}
-                  onExecute={(command: any) => handleExecute(command)}
+                  onExecute={(command: ClaudeFlowCommand) => handleExecute(command)}
                   isExecuting={state.isExecuting}
                 />
               )}
-              
+
               {state.activeTab === 'monitoring' && (
                 <MonitoringDashboard
                   realTime={true}
-                  onAlert={(alert) => {
+                  onAlert={alert => {
                     toast.error(`Alert: ${alert.message}`);
                   }}
                 />
               )}
-              
+
               {state.activeTab === 'history' && (
                 <HistoryView
                   outputs={state.outputs}
                   onClear={handleClearOutput}
-                  onExport={(data) => {
+                  onExport={data => {
                     console.log('Exporting history data:', data);
                     toast.success('History exported successfully');
                   }}
                 />
               )}
-              
+
               {state.activeTab === 'sandbox' && (
                 <SandboxView
                   dockerEnabled={config.dockerEnabled}
-                  onDockerToggle={(enabled) => {
+                  onDockerToggle={enabled => {
                     setConfig(prev => ({ ...prev, dockerEnabled: enabled }));
                     toast.success(`Docker ${enabled ? 'enabled' : 'disabled'}`);
                   }}
                 />
               )}
-              
-              {state.activeTab === 'logs' && (
-                <MonitoringView
-                  realTime={true}
-                />
-              )}
-              
+
+              {state.activeTab === 'logs' && <MonitoringView realTime={true} />}
+
               {state.activeTab === 'terminal' && (
                 <TerminalView
                   onExecute={async (command, sessionId) => {
@@ -484,6 +494,16 @@ function AppContent() {
                   }}
                 />
               )}
+
+              {state.activeTab === 'configuration' && (
+                <div className="h-full">
+                  <ConfigurationPanel
+                    config={config}
+                    onChange={setConfig}
+                    onClose={() => setState(prev => ({ ...prev, activeTab: 'orchestration' }))}
+                  />
+                </div>
+              )}
             </ErrorBoundary>
           </div>
         </div>
@@ -491,21 +511,23 @@ function AppContent() {
 
       {/* Status Bar with system health */}
       <ErrorBoundary level="component">
-        <div className={cn(
-          "transition-all duration-300",
-          // Add left margin when sidebar is open on large screens
-          state.showSidebar && "lg:ml-64"
-        )}>
+        <div
+          className={cn(
+            'transition-all duration-300',
+            // Add left margin when sidebar is open on large screens
+            state.showSidebar && 'lg:ml-80'
+          )}
+        >
           <StatusBar
             systemHealth={{
-              cpu: 45.2,
-              memory: 62.8,
-              disk: 78.4,
-              network: 'connected'
+              cpu: systemStats.cpu,
+              memory: systemStats.memory,
+              disk: systemStats.disk,
+              network: systemStats.network,
             }}
-            activeConnections={state.outputs.length}
+            activeConnections={systemStats.processes}
             lastUpdate={new Date().toISOString()}
-            className='bg-gray-800 border-gray-700'
+            className="bg-gray-800 border-gray-700"
           />
         </div>
       </ErrorBoundary>

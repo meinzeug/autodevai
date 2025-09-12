@@ -347,7 +347,7 @@ export function useResponsiveValue<T>(
     // Check from current breakpoint down to xs
     for (let i = currentIndex; i >= 0; i--) {
       const bp = breakpointOrder[i];
-      if (bp in breakpointValues && breakpointValues[bp] !== undefined) {
+      if (bp && bp in breakpointValues && breakpointValues[bp] !== undefined) {
         return breakpointValues[bp];
       }
     }
@@ -355,7 +355,7 @@ export function useResponsiveValue<T>(
     // Check from current breakpoint up to 2xl
     for (let i = currentIndex; i < breakpointOrder.length; i++) {
       const bp = breakpointOrder[i];
-      if (bp in breakpointValues && breakpointValues[bp] !== undefined) {
+      if (bp && bp in breakpointValues && breakpointValues[bp] !== undefined) {
         return breakpointValues[bp];
       }
     }

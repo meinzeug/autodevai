@@ -1,5 +1,15 @@
 import React from 'react';
-import { Menu, X, Sun, Moon, Settings, Download, Maximize2, Minimize2, Activity } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Settings,
+  Download,
+  Maximize2,
+  Minimize2,
+  Activity,
+} from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { StatusIndicator } from '../../types';
 
@@ -32,11 +42,11 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
   theme = 'light',
   isFullscreen = false,
   className,
-  children
+  children,
 }) => {
-  const StatusIndicatorComponent: React.FC<{ indicator: StatusIndicator; size?: 'sm' | 'md' }> = ({ 
-    indicator, 
-    size = 'md' 
+  const StatusIndicatorComponent: React.FC<{ indicator: StatusIndicator; size?: 'sm' | 'md' }> = ({
+    indicator,
+    size = 'md',
   }) => {
     const getStatusColor = (status: StatusIndicator['status']) => {
       switch (status) {
@@ -69,18 +79,16 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
     };
 
     return (
-      <div className={cn(
-        "flex items-center gap-1 rounded-full font-medium",
-        size === 'sm' ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm",
-        getStatusColor(indicator.status)
-      )}>
-        <span className="flex items-center justify-center">
-          {getStatusIcon(indicator.status)}
-        </span>
-        <span className="font-semibold">{indicator.label}</span>
-        {indicator.value && (
-          <span className="ml-1 opacity-75 text-xs">{indicator.value}</span>
+      <div
+        className={cn(
+          'flex items-center gap-1 rounded-full font-medium',
+          size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm',
+          getStatusColor(indicator.status)
         )}
+      >
+        <span className="flex items-center justify-center">{getStatusIcon(indicator.status)}</span>
+        <span className="font-semibold">{indicator.label}</span>
+        {indicator.value && <span className="ml-1 opacity-75 text-xs">{indicator.value}</span>}
       </div>
     );
   };
@@ -95,10 +103,10 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        "p-2 rounded-lg transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-        active 
-          ? "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" 
-          : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+        'p-2 rounded-lg transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        active
+          ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
       )}
     >
       {children}
@@ -106,10 +114,12 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
   );
 
   return (
-    <header className={cn(
-      "bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50",
-      className
-    )}>
+    <header
+      className={cn(
+        'bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50',
+        className
+      )}
+    >
       {/* Mobile Header */}
       <div className="lg:hidden">
         <div className="flex items-center justify-between px-3 py-3">
@@ -120,7 +130,7 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </ActionButton>
             )}
-            
+
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
                 <span className="text-white font-bold text-xs sm:text-sm">AD</span>
@@ -136,19 +146,22 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
           {/* Right: Essential actions only */}
           <div className="flex items-center gap-1">
             {/* Status indicator - compact */}
-            {statusIndicators.length > 0 && layoutMode === 'tablet' && (
+            {statusIndicators.length > 0 && layoutMode === 'tablet' && statusIndicators[0] && (
               <div className="flex items-center gap-1 mr-2">
                 <StatusIndicatorComponent indicator={statusIndicators[0]} size="sm" />
               </div>
             )}
-            
+
             {/* Theme toggle */}
             {onThemeToggle && (
-              <ActionButton onClick={onThemeToggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+              <ActionButton
+                onClick={onThemeToggle}
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </ActionButton>
             )}
-            
+
             {/* Settings */}
             {onSettingsClick && (
               <ActionButton onClick={onSettingsClick} aria-label="Settings">
@@ -186,7 +199,7 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
                 <p className="text-sm text-gray-500 dark:text-gray-400">Neural Bridge Platform</p>
               </div>
             </div>
-            
+
             {/* Status indicators */}
             {statusIndicators.length > 0 && (
               <div className="flex items-center gap-3">
@@ -196,22 +209,22 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
               </div>
             )}
           </div>
-          
+
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
             {/* Time */}
             <div className="text-sm text-gray-500 dark:text-gray-400 mr-4">
-              {new Date().toLocaleTimeString([], { 
-                hour: '2-digit', 
+              {new Date().toLocaleTimeString([], {
+                hour: '2-digit',
                 minute: '2-digit',
-                hour12: false 
+                hour12: false,
               })}
             </div>
 
             {/* Action buttons */}
             {onThemeToggle && (
-              <ActionButton 
-                onClick={onThemeToggle} 
+              <ActionButton
+                onClick={onThemeToggle}
                 aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               >
                 {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -231,11 +244,15 @@ export const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
             )}
 
             {onFullscreenToggle && (
-              <ActionButton 
-                onClick={onFullscreenToggle} 
+              <ActionButton
+                onClick={onFullscreenToggle}
                 aria-label={`${isFullscreen ? 'Exit' : 'Enter'} fullscreen`}
               >
-                {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                {isFullscreen ? (
+                  <Minimize2 className="w-5 h-5" />
+                ) : (
+                  <Maximize2 className="w-5 h-5" />
+                )}
               </ActionButton>
             )}
 

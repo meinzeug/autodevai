@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
-import { OrchestrationConfig } from '../types';
+import { OrchestrationConfig, Tool, ExecutionMode } from '../types';
 import { cn } from '../utils/cn';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
@@ -73,7 +73,17 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   className,
 }) => {
   const [activeSection, setActiveSection] = useState('execution');
-  const [tempConfig, setTempConfig] = useState<OrchestrationConfig>(config);
+  const [tempConfig, setTempConfig] = useState<OrchestrationConfig>({
+    mode: config?.mode || 'single',
+    timeout: config?.timeout || 30,
+    maxRetries: config?.maxRetries || 3,
+    autoRestart: config?.autoRestart ?? false,
+    dockerEnabled: config?.dockerEnabled ?? false,
+    tool: config?.tool || ('claude-flow' as Tool),
+    executionMode: config?.executionMode || ('standard' as ExecutionMode),
+    primaryModel: config?.primaryModel || 'claude',
+    secondaryModel: config?.secondaryModel,
+  });
   const [hasChanges, setHasChanges] = useState(false);
   const [apiKeys, setApiKeys] = useLocalStorage('autodev-api-keys', {
     anthropic: '',
@@ -84,7 +94,19 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setTempConfig(config);
+    if (config) {
+      setTempConfig({
+        mode: config.mode || 'single',
+        timeout: config.timeout || 30,
+        maxRetries: config.maxRetries || 3,
+        autoRestart: config.autoRestart ?? false,
+        dockerEnabled: config.dockerEnabled ?? false,
+        tool: config.tool || ('claude-flow' as Tool),
+        executionMode: config.executionMode || ('standard' as ExecutionMode),
+        primaryModel: config.primaryModel || 'claude',
+        secondaryModel: config.secondaryModel,
+      });
+    }
   }, [config]);
 
   useEffect(() => {
@@ -116,7 +138,8 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       newErrors['maxRetries'] = 'Max retries must be between 0 and 10';
     }
 
-    const configMode = typeof cfg.mode === 'object' ? cfg.mode : { type: cfg.mode, primaryModel: 'claude' };
+    const configMode =
+      typeof cfg.mode === 'object' ? cfg.mode : { type: cfg.mode, primaryModel: 'claude' };
     if (configMode.type === 'dual' && !configMode.secondaryModel) {
       newErrors['secondaryModel'] = 'Secondary model is required for dual mode';
     }
@@ -177,12 +200,16 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             onClick={() =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: typeof prev.mode === 'object' ? { ...prev.mode, type: 'single' } : { type: 'single', primaryModel: 'claude' },
+                mode:
+                  typeof prev.mode === 'object'
+                    ? { ...prev.mode, type: 'single' }
+                    : { type: 'single', primaryModel: 'claude' },
               }))
             }
             className={cn(
               'p-4 rounded-lg border text-left transition-colors',
-              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'single'
+              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) ===
+                'single'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             )}
@@ -194,16 +221,20 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             onClick={() =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: typeof prev.mode === 'object' ? {
-                  ...prev.mode,
-                  type: 'dual',
-                  secondaryModel: prev.mode.secondaryModel || 'codex',
-                } : { type: 'dual', primaryModel: 'claude', secondaryModel: 'codex' },
+                mode:
+                  typeof prev.mode === 'object'
+                    ? {
+                        ...prev.mode,
+                        type: 'dual',
+                        secondaryModel: prev.mode.secondaryModel || 'codex',
+                      }
+                    : { type: 'dual', primaryModel: 'claude', secondaryModel: 'codex' },
               }))
             }
             className={cn(
               'p-4 rounded-lg border text-left transition-colors',
-              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'dual'
+              (typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) ===
+                'dual'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
             )}
@@ -222,9 +253,10 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           onChange={e =>
             setTempConfig(prev => ({
               ...prev,
-              mode: typeof prev.mode === 'object' ? 
-                { ...prev.mode, primaryModel: e.target.value as 'claude' | 'codex' } :
-                { type: prev.mode, primaryModel: e.target.value as 'claude' | 'codex' },
+              mode:
+                typeof prev.mode === 'object'
+                  ? { ...prev.mode, primaryModel: e.target.value as 'claude' | 'codex' }
+                  : { type: prev.mode, primaryModel: e.target.value as 'claude' | 'codex' },
             }))
           }
           className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -235,7 +267,8 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       </div>
 
       {/* Secondary Model (for dual mode) */}
-      {(typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) === 'dual' && (
+      {(typeof tempConfig.mode === 'object' ? tempConfig.mode.type : tempConfig.mode) ===
+        'dual' && (
         <div className="space-y-3">
           <label className="text-sm font-medium text-gray-900 dark:text-white">
             Secondary Model
@@ -245,9 +278,14 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             onChange={e =>
               setTempConfig(prev => ({
                 ...prev,
-                mode: typeof prev.mode === 'object' ? 
-                  { ...prev.mode, secondaryModel: e.target.value as 'claude' | 'codex' } :
-                  { type: prev.mode, primaryModel: 'claude', secondaryModel: e.target.value as 'claude' | 'codex' },
+                mode:
+                  typeof prev.mode === 'object'
+                    ? { ...prev.mode, secondaryModel: e.target.value as 'claude' | 'codex' }
+                    : {
+                        type: prev.mode,
+                        primaryModel: 'claude',
+                        secondaryModel: e.target.value as 'claude' | 'codex',
+                      },
               }))
             }
             className={cn(
@@ -348,7 +386,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           type="number"
           min="10"
           max="3600"
-          value={tempConfig.timeout}
+          value={tempConfig.timeout || 30}
           onChange={e =>
             setTempConfig(prev => ({
               ...prev,
@@ -371,7 +409,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           type="number"
           min="0"
           max="10"
-          value={tempConfig.maxRetries}
+          value={tempConfig.maxRetries || 0}
           onChange={e =>
             setTempConfig(prev => ({
               ...prev,
@@ -526,7 +564,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
       {/* Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex space-x-0">
+        <nav className="flex space-x-0 overflow-x-auto">
           {configSections.map(section => {
             const Icon = section.icon;
             return (
@@ -534,7 +572,7 @@ export const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  'flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                  'flex items-center space-x-2 px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
                   activeSection === section.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'

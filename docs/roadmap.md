@@ -1,3 +1,10 @@
+<!-- 
+AutoDev-AI - Dual License
+GNU General Public License v3.0 for open-source use
+Commercial license available for proprietary use
+See LICENSE-GPL and LICENSE-COMMERCIAL for details
+-->
+
 # Phase 1: System-Vorbereitung und Abhängigkeiten (80 Schritte)
 
 ## 1.1 System Update und Basis-Tools (20 Schritte)
@@ -10056,3 +10063,14 @@ EOF
 
 - [ ] ## Schritt 425: Version 1.0 Release
   Veröffentliche finale Version 1.0 auf allen Plattformen.
+
+
+---
+
+## 📜 Lizenz / License
+
+Dieses Projekt wird unter einem **Dual-Lizenzmodell** angeboten:
+- **GPL-3.0**: Für Open-Source-Projekte (kostenlos)
+- **Kommerzielle Lizenz**: Für proprietäre/unternehmensinterne Nutzung (kostenpflichtig)
+
+Siehe [README.md](../README.md#-lizenz--license) für Details.

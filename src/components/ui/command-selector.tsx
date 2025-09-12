@@ -1,14 +1,13 @@
-import * as React from "react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
-import { ClaudeFlowCommand, ClaudeFlowCommandType } from "../../types"
-import { Network, Code, Brain, Database } from "lucide-react"
-import { cn } from "../../utils/cn"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
+import { ClaudeFlowCommandType } from '../../types';
+import { Network, Code, Brain, Database } from 'lucide-react';
+import { cn } from '../../utils/cn';
 
 interface CommandSelectorProps {
-  value?: string
-  onValueChange?: (value: string) => void
-  disabled?: boolean
-  className?: string
+  value?: string;
+  onValueChange?: ((value: string) => void) | undefined;
+  disabled?: boolean;
+  className?: string;
 }
 
 const commands = [
@@ -40,30 +39,25 @@ const commands = [
     icon: Database,
     category: 'storage',
   },
-] as const
+] as const;
 
-export function CommandSelector({ 
-  value, 
-  onValueChange, 
+export function CommandSelector({
+  value,
+  onValueChange,
   disabled = false,
-  className 
+  className,
 }: CommandSelectorProps) {
+  const handleValueChange = onValueChange || (() => {});
   return (
-    <div className={cn("space-y-2", className)}>
-      <label className="text-sm font-medium text-foreground">
-        Command Type
-      </label>
-      <Select 
-        value={value || ''} 
-        onValueChange={onValueChange}
-        disabled={disabled}
-      >
+    <div className={cn('space-y-2', className)}>
+      <label className="text-sm font-medium text-foreground">Command Type</label>
+      <Select value={value || ''} onValueChange={handleValueChange} disabled={disabled}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select command type..." />
         </SelectTrigger>
         <SelectContent>
-          {commands.map((command) => {
-            const IconComponent = command.icon
+          {commands.map(command => {
+            const IconComponent = command.icon;
             return (
               <SelectItem key={command.value} value={command.value}>
                 <div className="flex items-center space-x-3">
@@ -75,16 +69,14 @@ export function CommandSelector({
                         {command.category}
                       </span>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {command.description}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{command.description}</span>
                   </div>
                 </div>
               </SelectItem>
-            )
+            );
           })}
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }

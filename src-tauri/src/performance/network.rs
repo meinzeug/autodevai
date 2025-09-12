@@ -315,6 +315,7 @@ impl NetworkOptimizer {
         let pool_key = format!("{}:{}", connection.host, connection.port);
         let mut pool = self.connection_pool.write().await;
 
+        let connection_id = connection.id.clone();
         if let Some(host_pool) = pool.get_mut(&pool_key) {
             for conn in host_pool.iter_mut() {
                 if conn.id == connection.id {
@@ -324,7 +325,7 @@ impl NetworkOptimizer {
             }
         }
 
-        debug!("Released connection {}", connection.id);
+        debug!("Released connection {}", connection_id);
         Ok(())
     }
 
@@ -561,7 +562,7 @@ impl NetworkOptimizer {
 
     pub async fn optimize_network(&self) -> anyhow::Result<NetworkOptimizationReport> {
         let metrics = self.get_metrics().await;
-        let request_history = self.request_history.read().await;
+        let _request_history = self.request_history.read().await;
 
         let mut report = NetworkOptimizationReport {
             timestamp: chrono::Utc::now().timestamp(),

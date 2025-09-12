@@ -102,7 +102,7 @@ impl Default for ResourceRequirements {
 }
 
 pub type TaskFunction = Box<
-    dyn Fn() -> Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin>
+    dyn Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send>>
         + Send
         + Sync,
 >;
@@ -255,8 +255,9 @@ impl ConcurrencyManager {
 
         // Wrap function in BoxedFuture
         let task_function: TaskFunction = Box::new(move || {
-            Box::new(function())
-                as Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + Unpin>
+            use std::pin::Pin;
+            Box::pin(function())
+                as Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send>>
         });
 
         let task = Task {
@@ -280,7 +281,7 @@ impl ConcurrencyManager {
             let mut stats = self.stats.lock().await;
             stats.queued_tasks += 1;
 
-            debug!("Task '{}' queued with priority {:?}", name, priority);
+            debug!("Task '{}' queued with priority {:?}", name, priority_index);
         } else {
             return Err(anyhow::anyhow!("Invalid priority level"));
         }

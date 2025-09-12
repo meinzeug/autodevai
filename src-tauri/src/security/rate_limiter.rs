@@ -96,6 +96,7 @@ pub enum RateLimitResult {
 }
 
 /// Enhanced Rate Limiter with multiple strategies
+#[derive(Debug)]
 pub struct EnhancedRateLimiter {
     // Global configuration
     global_config: RateLimitConfig,

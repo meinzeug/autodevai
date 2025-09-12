@@ -196,8 +196,7 @@ impl MetricsCollector {
             value: 1024.0 + (timestamp % 500) as f64, // MB
             tags: HashMap::from([
                 ("host".to_string(), "localhost".to_string()),
-                "type".to_string(),
-                "physical".to_string(),
+                ("type".to_string(), "physical".to_string()),
             ]),
             unit: "megabytes".to_string(),
         });
@@ -208,8 +207,7 @@ impl MetricsCollector {
             value: 8192.0 - (1024.0 + (timestamp % 500) as f64), // Total - Used
             tags: HashMap::from([
                 ("host".to_string(), "localhost".to_string()),
-                "type".to_string(),
-                "physical".to_string(),
+                ("type".to_string(), "available".to_string()),
             ]),
             unit: "megabytes".to_string(),
         });
@@ -221,8 +219,8 @@ impl MetricsCollector {
             value: 65.0 + (timestamp % 10) as f64,
             tags: HashMap::from([
                 ("host".to_string(), "localhost".to_string()),
-                "device".to_string(),
-                "/dev/sda1".to_string(),
+                ("device".to_string(),
+                "/dev/sda1".to_string()),
             ]),
             unit: "percent".to_string(),
         });
@@ -234,8 +232,7 @@ impl MetricsCollector {
             value: 1024.0 * 1024.0 + (timestamp as f64 * 1024.0),
             tags: HashMap::from([
                 ("host".to_string(), "localhost".to_string()),
-                "interface".to_string(),
-                "eth0".to_string(),
+                ("interface".to_string(), "eth0".to_string()),
             ]),
             unit: "bytes".to_string(),
         });
@@ -246,8 +243,7 @@ impl MetricsCollector {
             value: 2.0 * 1024.0 * 1024.0 + (timestamp as f64 * 2048.0),
             tags: HashMap::from([
                 ("host".to_string(), "localhost".to_string()),
-                "interface".to_string(),
-                "eth0".to_string(),
+                ("interface".to_string(), "eth0".to_string()),
             ]),
             unit: "bytes".to_string(),
         });
@@ -258,10 +254,8 @@ impl MetricsCollector {
             metric_name: "application.requests.total".to_string(),
             value: 1000.0 + (timestamp % 100) as f64,
             tags: HashMap::from([
-                "service".to_string(),
-                "autodev-ai".to_string(),
-                "endpoint".to_string(),
-                "api".to_string(),
+                ("service".to_string(), "autodev-ai".to_string()),
+                ("endpoint".to_string(), "api".to_string()),
             ]),
             unit: "count".to_string(),
         });
@@ -271,10 +265,8 @@ impl MetricsCollector {
             metric_name: "application.response_time".to_string(),
             value: 150.0 + (timestamp % 50) as f64,
             tags: HashMap::from([
-                "service".to_string(),
-                "autodev-ai".to_string(),
-                "endpoint".to_string(),
-                "api".to_string(),
+                ("service".to_string(), "autodev-ai".to_string()),
+                ("endpoint".to_string(), "api".to_string()),
             ]),
             unit: "milliseconds".to_string(),
         });
@@ -284,10 +276,8 @@ impl MetricsCollector {
             metric_name: "application.errors.total".to_string(),
             value: 5.0 + (timestamp % 10) as f64,
             tags: HashMap::from([
-                "service".to_string(),
-                "autodev-ai".to_string(),
-                "type".to_string(),
-                "http_error".to_string(),
+                ("service".to_string(), "autodev-ai".to_string()),
+                ("type".to_string(), "http_error".to_string()),
             ]),
             unit: "count".to_string(),
         });
@@ -298,10 +288,8 @@ impl MetricsCollector {
             metric_name: "ai.inference.duration".to_string(),
             value: 800.0 + (timestamp % 400) as f64,
             tags: HashMap::from([
-                "model".to_string(),
-                "claude-3".to_string(),
-                "operation".to_string(),
-                "chat_completion".to_string(),
+                ("model".to_string(), "claude-3".to_string()),
+                ("operation".to_string(), "chat_completion".to_string()),
             ]),
             unit: "milliseconds".to_string(),
         });
@@ -311,10 +299,8 @@ impl MetricsCollector {
             metric_name: "ai.tokens.consumed".to_string(),
             value: 1500.0 + (timestamp % 1000) as f64,
             tags: HashMap::from([
-                "model".to_string(),
-                "claude-3".to_string(),
-                "type".to_string(),
-                "input_tokens".to_string(),
+                ("model".to_string(), "claude-3".to_string()),
+                ("type".to_string(), "input_tokens".to_string()),
             ]),
             unit: "count".to_string(),
         });
@@ -329,7 +315,7 @@ impl MetricsCollector {
     ) {
         let metrics = raw_metrics.read().await;
         let aggregation_window = Duration::from_secs(config.aggregation_interval_seconds);
-        let now = Instant::now();
+        let _now = Instant::now();
 
         // Group metrics by name and time window
         let mut metric_groups: HashMap<String, Vec<&MetricPoint>> = HashMap::new();
@@ -353,7 +339,7 @@ impl MetricsCollector {
                 continue;
             }
 
-            let values: Vec<f64> = points.iter().map(|p| p.value).collect();
+            let mut values: Vec<f64> = points.iter().map(|p| p.value).collect();
             values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
             let min_value = values.first().copied().unwrap_or(0.0);

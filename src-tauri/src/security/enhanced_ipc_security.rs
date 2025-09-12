@@ -20,6 +20,7 @@ use tokio::sync::RwLock;
 
 /// Enhanced IPC Security Manager
 /// This wraps the basic IPC security with additional features
+#[derive(Debug)]
 pub struct EnhancedIpcSecurity {
     basic_security: IpcSecurity,
     input_sanitizer: InputSanitizer,

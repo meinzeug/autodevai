@@ -70,10 +70,10 @@ function ContainerCard({
   stats
 }: { 
   container: DockerContainer
-  onStart?: () => void
-  onStop?: () => void
-  onRemove?: () => void
-  stats?: ContainerStats
+  onStart?: () => void | undefined
+  onStop?: () => void | undefined
+  onRemove?: () => void | undefined
+  stats?: ContainerStats | undefined
 }) {
   const [showTerminal, setShowTerminal] = React.useState(false)
   const [terminalLines] = React.useState([
@@ -477,7 +477,7 @@ export function DockerSandbox({
             <ContainerCard
               key={container.id}
               container={container}
-              stats={containerStats[container.id]}
+              stats={containerStats[container.id] || undefined}
               onStart={() => onContainerStart?.(container.id)}
               onStop={() => onContainerStop?.(container.id)}
               onRemove={() => onContainerRemove?.(container.id)}

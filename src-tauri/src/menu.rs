@@ -142,20 +142,8 @@ fn create_view_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
     let minimize = MenuItem::with_id(app, "minimize", "Minimize", true, Some("CmdOrCtrl+M"))?;
     let sep3 = PredefinedMenuItem::separator(app)?;
 
-    let mut menu_items = vec![
-        &reload,
-        &force_reload,
-        &sep1,
-        &zoom_in,
-        &zoom_out,
-        &zoom_reset,
-        &sep2,
-        &fullscreen,
-        &minimize,
-    ];
-
-    // Add developer tools option in debug builds
-    if cfg!(debug_assertions) {
+    // Create developer tools items conditionally
+    let (devtools, console) = if cfg!(debug_assertions) {
         let devtools = MenuItem::with_id(
             app,
             "toggle_devtools",
@@ -170,7 +158,27 @@ fn create_view_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
             true,
             Some("CmdOrCtrl+Alt+I"),
         )?;
-        menu_items.extend_from_slice(&[&sep3, &devtools, &console]);
+        (Some(devtools), Some(console))
+    } else {
+        (None, None)
+    };
+
+    // Create base menu items
+    let mut menu_items: Vec<&dyn tauri::menu::IsMenuItem<Wry>> = vec![
+        &reload,
+        &force_reload,
+        &sep1,
+        &zoom_in,
+        &zoom_out,
+        &zoom_reset,
+        &sep2,
+        &fullscreen,
+        &minimize,
+    ];
+
+    // Add developer tools if available
+    if let (Some(ref dt), Some(ref con)) = (&devtools, &console) {
+        menu_items.extend_from_slice(&[&sep3 as &dyn tauri::menu::IsMenuItem<Wry>, dt, con]);
     }
 
     let view_menu = Submenu::with_items(app, "View", true, &menu_items)?;

@@ -166,8 +166,8 @@ export function SettingsModal({
                         <label className="text-sm font-medium">Default Orchestration Mode</label>
                         <Select
                           value={typeof localSettings.default_mode === "string" ? localSettings.default_mode : "single"}
-                          onValueChange={(value: OrchestrationMode) => 
-                            handleSettingChange('default_mode', value)
+                          onValueChange={(value: string) => 
+                            handleSettingChange('default_mode', value as OrchestrationMode)
                           }
                         >
                           <SelectTrigger>

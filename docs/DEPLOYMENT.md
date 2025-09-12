@@ -1,3 +1,10 @@
+<!--
+AutoDev-AI - Dual License
+GNU General Public License v3.0 for open-source use
+Commercial license available for proprietary use
+See LICENSE-GPL and LICENSE-COMMERCIAL for details
+-->
+
 # AutoDev-AI Neural Bridge Platform - Deployment Guide
 
 Complete deployment guide for Ubuntu 24.04 production environments.

@@ -11,7 +11,7 @@ import { usePrefersReducedMotion } from '../../hooks/useMediaQuery';
 export const ANIMATION_DURATIONS = {
   fast: 150,
   normal: 300,
-  slow: 500
+  slow: 500,
 } as const;
 
 // Easing functions
@@ -19,7 +19,7 @@ export const EASING = {
   easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
   easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
   easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  bounce: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+  bounce: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
 } as const;
 
 // Base transition classes
@@ -28,25 +28,21 @@ const baseTransitionClasses = {
   transform: 'transition-transform duration-300 ease-out',
   opacity: 'transition-opacity duration-200 ease-out',
   all: 'transition-all duration-300 ease-out',
-  size: 'transition-[width,height] duration-300 ease-out'
+  size: 'transition-[width,height] duration-300 ease-out',
 };
 
 interface AnimationProps {
   children: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
   delay?: number;
   duration?: keyof typeof ANIMATION_DURATIONS;
   easing?: keyof typeof EASING;
 }
 
 // Fade animations
-export const FadeIn: React.FC<AnimationProps & { direction?: 'up' | 'down' | 'left' | 'right' }> = ({
-  children,
-  className,
-  direction,
-  delay = 0,
-  duration = 'normal'
-}) => {
+export const FadeIn: React.FC<
+  AnimationProps & { direction?: 'up' | 'down' | 'left' | 'right' }
+> = ({ children, className, direction, delay = 0, duration = 'normal' }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [isVisible, setIsVisible] = React.useState(false);
 
@@ -58,11 +54,11 @@ export const FadeIn: React.FC<AnimationProps & { direction?: 'up' | 'down' | 'le
     return () => clearTimeout(timer);
   }, [delay]);
 
-  const getTransformClasses = () => {
+  const getTransformClasses = (): string => {
     if (prefersReducedMotion) return '';
-    
+
     const baseTransform = isVisible ? 'translate-x-0 translate-y-0 opacity-100' : 'opacity-0';
-    
+
     switch (direction) {
       case 'up':
         return isVisible ? baseTransform : 'translate-y-4 opacity-0';
@@ -87,7 +83,7 @@ export const FadeIn: React.FC<AnimationProps & { direction?: 'up' | 'down' | 'le
         className
       )}
       style={{
-        willChange: isVisible && !prefersReducedMotion ? 'transform, opacity' : 'auto'
+        willChange: isVisible && !prefersReducedMotion ? 'transform, opacity' : 'auto',
       }}
     >
       {children}
@@ -100,7 +96,7 @@ export const ScaleIn: React.FC<AnimationProps> = ({
   children,
   className,
   delay = 0,
-  duration = 'normal'
+  duration = 'normal',
 }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [isVisible, setIsVisible] = React.useState(false);
@@ -123,7 +119,7 @@ export const ScaleIn: React.FC<AnimationProps> = ({
         className
       )}
       style={{
-        willChange: isVisible && !prefersReducedMotion ? 'transform' : 'auto'
+        willChange: isVisible && !prefersReducedMotion ? 'transform' : 'auto',
       }}
     >
       {children}
@@ -132,13 +128,9 @@ export const ScaleIn: React.FC<AnimationProps> = ({
 };
 
 // Slide animations
-export const SlideIn: React.FC<AnimationProps & { direction: 'up' | 'down' | 'left' | 'right' }> = ({
-  children,
-  className,
-  direction,
-  delay = 0,
-  duration = 'normal'
-}) => {
+export const SlideIn: React.FC<
+  AnimationProps & { direction: 'up' | 'down' | 'left' | 'right' }
+> = ({ children, className, direction, delay = 0, duration = 'normal' }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [isVisible, setIsVisible] = React.useState(false);
 
@@ -150,11 +142,11 @@ export const SlideIn: React.FC<AnimationProps & { direction: 'up' | 'down' | 'le
     return () => clearTimeout(timer);
   }, [delay]);
 
-  const getTransformClasses = () => {
+  const getTransformClasses = (): string => {
     if (prefersReducedMotion) return 'transform-none';
-    
+
     const baseTransform = 'translate-x-0 translate-y-0';
-    
+
     if (!isVisible) {
       switch (direction) {
         case 'up':
@@ -165,9 +157,11 @@ export const SlideIn: React.FC<AnimationProps & { direction: 'up' | 'down' | 'le
           return 'translate-x-full';
         case 'right':
           return '-translate-x-full';
+        default:
+          return baseTransform;
       }
     }
-    
+
     return baseTransform;
   };
 
@@ -180,7 +174,7 @@ export const SlideIn: React.FC<AnimationProps & { direction: 'up' | 'down' | 'le
         className
       )}
       style={{
-        willChange: !prefersReducedMotion ? 'transform' : 'auto'
+        willChange: !prefersReducedMotion ? 'transform' : 'auto',
       }}
     >
       {children}
@@ -204,7 +198,7 @@ export const StaggeredList: React.FC<{
           key={index}
           direction="up"
           delay={prefersReducedMotion ? 0 : index * staggerDelay}
-          className={itemClassName}
+          className={itemClassName ?? undefined}
         >
           {child}
         </FadeIn>
@@ -227,17 +221,11 @@ export const LoadingSkeleton: React.FC<{
 
   return (
     <div className={cn('space-y-3', className)} role="status" aria-label="Loading">
-      {avatar && (
-        <div className={cn('h-12 w-12 rounded-full', shimmerClasses)} />
-      )}
+      {avatar && <div className={cn('h-12 w-12 rounded-full', shimmerClasses)} />}
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className={cn(
-            'h-4 rounded',
-            i === lines - 1 ? 'w-3/4' : 'w-full',
-            shimmerClasses
-          )}
+          className={cn('h-4 rounded', i === lines - 1 ? 'w-3/4' : 'w-full', shimmerClasses)}
         />
       ))}
       <span className="sr-only">Loading content...</span>
@@ -257,19 +245,14 @@ export const PulseIndicator: React.FC<{
     red: 'bg-red-500',
     yellow: 'bg-yellow-500',
     green: 'bg-green-500',
-    blue: 'bg-blue-500'
+    blue: 'bg-blue-500',
   };
 
   return (
     <div className={cn('relative inline-flex', className)}>
       {children}
       {!prefersReducedMotion && (
-        <span
-          className={cn(
-            'absolute -top-1 -right-1 h-3 w-3 rounded-full',
-            colorClasses[color]
-          )}
-        >
+        <span className={cn('absolute -top-1 -right-1 h-3 w-3 rounded-full', colorClasses[color])}>
           <span
             className={cn(
               'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
@@ -293,7 +276,7 @@ export const HoverLift: React.FC<{
   const intensityClasses = {
     subtle: 'hover:scale-[1.02] hover:shadow-md',
     medium: 'hover:scale-105 hover:shadow-lg',
-    strong: 'hover:scale-110 hover:shadow-xl'
+    strong: 'hover:scale-110 hover:shadow-xl',
   };
 
   return (
@@ -305,7 +288,7 @@ export const HoverLift: React.FC<{
         className
       )}
       style={{
-        willChange: !prefersReducedMotion ? 'transform' : 'auto'
+        willChange: !prefersReducedMotion ? 'transform' : 'auto',
       }}
     >
       {children}
@@ -334,7 +317,7 @@ export const SpringButton: React.FC<{
       onClick={onClick}
       disabled={disabled}
       style={{
-        willChange: !prefersReducedMotion && !disabled ? 'transform' : 'auto'
+        willChange: !prefersReducedMotion && !disabled ? 'transform' : 'auto',
       }}
     >
       {children}
@@ -348,7 +331,7 @@ export const PageTransition: React.FC<{
   className?: string;
 }> = ({ children, className }) => {
   return (
-    <FadeIn direction="up" duration="normal" className={className}>
+    <FadeIn direction="up" duration="normal" className={className ?? undefined}>
       {children}
     </FadeIn>
   );
@@ -368,7 +351,7 @@ export const AnimateOnScroll: React.FC<{
   React.useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry?.isIntersecting) {
           setIsVisible(true);
           observer.disconnect();
         }
@@ -391,12 +374,12 @@ export const AnimateOnScroll: React.FC<{
         isVisible && !prefersReducedMotion
           ? 'opacity-100 translate-y-0'
           : prefersReducedMotion
-          ? 'opacity-100'
-          : 'opacity-0 translate-y-8',
+            ? 'opacity-100'
+            : 'opacity-0 translate-y-8',
         className
       )}
       style={{
-        willChange: isVisible && !prefersReducedMotion ? 'transform, opacity' : 'auto'
+        willChange: isVisible && !prefersReducedMotion ? 'transform, opacity' : 'auto',
       }}
     >
       {children}
@@ -418,7 +401,7 @@ export const animationStyles = {
       animation: shimmer 1.5s infinite;
     }
   `,
-  
+
   fadeInUp: `
     @keyframes fadeInUp {
       from {
@@ -434,7 +417,7 @@ export const animationStyles = {
       animation: fadeInUp 0.6s ease-out;
     }
   `,
-  
+
   slideInRight: `
     @keyframes slideInRight {
       from {
@@ -449,7 +432,7 @@ export const animationStyles = {
     .animate-slide-in-right {
       animation: slideInRight 0.5s ease-out;
     }
-  `
+  `,
 };
 
 // Hook for managing animation state
@@ -469,7 +452,7 @@ export const useAnimation = (
     if (triggerCondition) {
       const startTimer = setTimeout(() => {
         setIsAnimating(true);
-        
+
         const completeTimer = setTimeout(() => {
           setIsAnimating(false);
           setIsComplete(true);
@@ -481,6 +464,7 @@ export const useAnimation = (
 
       return () => clearTimeout(startTimer);
     }
+    return undefined;
   }, [triggerCondition, delay, duration, onComplete]);
 
   return { isAnimating, isComplete };

@@ -36,7 +36,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Planned
 
 - Machine learning-based task routing optimization
-- Visual design integration for UI/UX generation  
+- Visual design integration for UI/UX generation
 - VS Code extension for real-time AI assistance
 - Advanced security vulnerability detection
 
@@ -415,3 +415,14 @@ see [roadmap.md](./roadmap.md)_ _For development tasks and sprints, see [todo.md
 **Last Updated**: September 10, 2025  
 **Version**: 1.1.0  
 **Next Release**: 1.2.0 (Q1 2025)
+
+---
+
+## 📜 Lizenz / License
+
+Dieses Projekt wird unter einem **Dual-Lizenzmodell** angeboten:
+
+- **GPL-3.0**: Für Open-Source-Projekte (kostenlos)
+- **Kommerzielle Lizenz**: Für proprietäre/unternehmensinterne Nutzung (kostenpflichtig)
+
+Siehe [README.md](../README.md#-lizenz--license) für Details.

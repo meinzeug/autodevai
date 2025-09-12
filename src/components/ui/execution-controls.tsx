@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Button } from "./button"
 import { Badge } from "./badge"
 import { Play, Square, RotateCcw, Settings, Activity } from "lucide-react"

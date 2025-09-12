@@ -1,3 +1,10 @@
+<!-- 
+AutoDev-AI - Dual License
+GNU General Public License v3.0 for open-source use
+Commercial license available for proprietary use
+See LICENSE-GPL and LICENSE-COMMERCIAL for details
+-->
+
 # AutoDev-AI Neural Bridge Platform
 ## Vollständiges Implementierungskonzept für VibeCoding AI
 
@@ -1294,3 +1301,14 @@ Die Plattform ist nicht nur ein Tool, sondern eine Vision für die Zukunft der S
 Mit minimalen Ressourcen-Anforderungen, maximaler Performance und vollständiger Sicherheit ist AutoDev-AI bereit für den Production-Einsatz. Die modulare Architektur ermöglicht kontinuierliche Erweiterung und Anpassung an neue AI-Tools und Technologien.
 
 Die Reise hat gerade erst begonnen. AutoDev-AI ist der erste Schritt in eine Zukunft, in der Softwareentwicklung nicht mehr durch menschliche Geschwindigkeit limitiert ist, sondern nur durch unsere Vorstellungskraft.
+
+
+---
+
+## 📜 Lizenz / License
+
+Dieses Projekt wird unter einem **Dual-Lizenzmodell** angeboten:
+- **GPL-3.0**: Für Open-Source-Projekte (kostenlos)
+- **Kommerzielle Lizenz**: Für proprietäre/unternehmensinterne Nutzung (kostenpflichtig)
+
+Siehe [README.md](../README.md#-lizenz--license) für Details.

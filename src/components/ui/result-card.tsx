@@ -7,7 +7,7 @@ import {
   CheckCircle2, 
   XCircle, 
   Clock, 
-  AlertTriangle, 
+ 
   Download, 
   ExternalLink,
   Copy,
@@ -137,9 +137,9 @@ export function ResultCard({
                   <span>Duration: {formatDuration(duration_ms)}</span>
                 )}
 
-                {metadata?.timestamp && (
+                {metadata?.['timestamp'] && (
                   <span>
-                    {new Date(metadata.timestamp).toLocaleString()}
+                    {new Date(metadata['timestamp']).toLocaleString()}
                   </span>
                 )}
               </div>

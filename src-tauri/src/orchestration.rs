@@ -467,7 +467,7 @@ impl ClaudeFlowService {
     }
 
     /// Store data in persistent memory layer
-    async fn store_memory(&self, key: &str, value: &str) -> Result<()> {
+    pub async fn store_memory(&self, key: &str, value: &str) -> Result<()> {
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "memory", "store", key, value])
             .env("MEMORY_NAMESPACE", "autodev-ai")
@@ -487,7 +487,7 @@ impl ClaudeFlowService {
     }
 
     /// Retrieve data from persistent memory layer
-    async fn retrieve_memory(&self, key: &str) -> Result<String> {
+    pub async fn retrieve_memory(&self, key: &str) -> Result<String> {
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "memory", "retrieve", key])
             .env("MEMORY_NAMESPACE", "autodev-ai")
@@ -505,7 +505,7 @@ impl ClaudeFlowService {
     }
 
     /// Collect swarm performance metrics
-    async fn collect_swarm_metrics(&self, session_id: &str) -> Result<SwarmMetrics> {
+    pub async fn collect_swarm_metrics(&self, session_id: &str) -> Result<SwarmMetrics> {
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "swarm", "metrics", session_id])
             .output()
@@ -865,7 +865,7 @@ impl OrchestrationService {
     }
 
     /// Calculate current memory layer state
-    async fn calculate_memory_state(&self) -> Result<MemoryState> {
+    pub async fn calculate_memory_state(&self) -> Result<MemoryState> {
         let output = Command::new("npx")
             .args(["claude-flow@alpha", "memory", "stats"])
             .env("MEMORY_NAMESPACE", "autodev-ai")
@@ -1037,7 +1037,7 @@ impl OrchestrationService {
 ///
 /// The enhanced service is designed as a modular extension to the base
 /// orchestration system, allowing for selective activation of advanced features.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnhancedOrchestrationConfig {
     pub openrouter_enabled: bool,
     pub openrouter_api_key: Option<String>,

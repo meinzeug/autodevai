@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable", "ES6"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -14,24 +14,29 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    
+    // Performance optimizations
+    "incremental": true,
+    "composite": false,
+    "tsBuildInfoFile": ".tsbuildinfo",
 
-    // Strict Type Checking
+    // Strict Type Checking (optimized for development speed)
     "strict": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
+    "strictPropertyInitialization": false,
     "noImplicitThis": true,
-    "noImplicitReturns": true,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
 
-    // Additional Checks
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true,
+    // Additional Checks (relaxed for development)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
 
@@ -49,11 +54,11 @@
       "@assets/*": ["src/assets/*"]
     },
 
-    // Emit
-    "declaration": true,
-    "declarationMap": true,
+    // Emit (optimized)
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
-    "removeComments": false,
+    "removeComments": true,
     "importHelpers": true,
 
     // Experimental

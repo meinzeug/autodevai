@@ -1,12 +1,10 @@
-import * as React from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
-import { OrchestrationMode } from "../../types"
 import { Settings, Layers } from "lucide-react"
 import { cn } from "../../utils/cn"
 
 interface ModeSelectorProps {
   value?: string
-  onValueChange?: (value: string) => void
+  onValueChange?: ((value: string) => void) | undefined
   disabled?: boolean
   className?: string
 }

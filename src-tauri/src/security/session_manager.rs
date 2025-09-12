@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Session security level
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum SessionSecurityLevel {
     Basic,      // Standard session security
     Enhanced,   // Additional validation checks
@@ -100,6 +100,7 @@ impl Default for SessionConfig {
 }
 
 /// Secure Session Manager
+#[derive(Debug)]
 pub struct SecureSessionManager {
     sessions: HashMap<String, SessionSecurityContext>,
     session_activities: HashMap<String, Vec<SessionActivity>>,
@@ -225,22 +226,27 @@ impl SecureSessionManager {
         session_id: &str,
         current_ip: Option<&str>,
     ) -> SessionValidation {
-        let session = match self.sessions.get_mut(session_id) {
-            Some(session) => session,
-            None => {
-                return SessionValidation::Invalid {
-                    reason: "Session not found".to_string(),
-                }
-            }
-        };
-
         let now = Utc::now();
-
+        
+        // First check if session exists
+        if !self.sessions.contains_key(session_id) {
+            return SessionValidation::Invalid {
+                reason: "Session not found".to_string(),
+            };
+        }
+        
         // Check if session is expired
-        if now > session.expires_at {
+        let is_expired = {
+            let session = self.sessions.get(session_id).unwrap();
+            now > session.expires_at
+        };
+        
+        if is_expired {
             self.log_session_activity(session_id, "session_expired", HashMap::new(), 20);
             return SessionValidation::Expired;
         }
+        
+        let session = self.sessions.get_mut(session_id).unwrap();
 
         // Check authentication state
         match session.authentication_state {
@@ -257,9 +263,14 @@ impl SecureSessionManager {
 
         // Check inactivity timeout
         let inactive_duration = now - session.last_activity;
-        if inactive_duration > Duration::minutes(self.config.max_inactive_minutes) {
+        let max_inactive = self.config.max_inactive_minutes;
+        if inactive_duration > Duration::minutes(max_inactive) {
+            session.authentication_state = AuthenticationState::Expired;
+            let session_id_str = session_id.to_string();
+            drop(session); // Drop the mutable borrow
+            
             self.log_session_activity(
-                session_id,
+                &session_id_str,
                 "session_inactive_timeout",
                 HashMap::from([(
                     "inactive_minutes".to_string(),
@@ -267,7 +278,6 @@ impl SecureSessionManager {
                 )]),
                 30,
             );
-            session.authentication_state = AuthenticationState::Expired;
             return SessionValidation::Expired;
         }
 
@@ -275,24 +285,29 @@ impl SecureSessionManager {
         if self.config.require_ip_validation {
             if let (Some(session_ip), Some(current_ip)) = (&session.ip_address, current_ip) {
                 if session_ip != current_ip {
+                    let session_ip_clone = session_ip.clone();
+                    let current_ip_str = current_ip.to_string();
+                    
+                    // Increase risk score for IP changes
+                    session.risk_score = (session.risk_score + 20).min(100);
+                    let session_id_str = session_id.to_string();
+                    drop(session); // Drop the mutable borrow
+                    
                     self.log_session_activity(
-                        session_id,
+                        &session_id_str,
                         "ip_mismatch",
                         HashMap::from([
                             (
                                 "session_ip".to_string(),
-                                serde_json::Value::String(session_ip.clone()),
+                                serde_json::Value::String(session_ip_clone),
                             ),
                             (
                                 "current_ip".to_string(),
-                                serde_json::Value::String(current_ip.to_string()),
+                                serde_json::Value::String(current_ip_str),
                             ),
                         ]),
                         60,
                     );
-
-                    // Increase risk score for IP changes
-                    session.risk_score = (session.risk_score + 20).min(100);
 
                     return SessionValidation::Invalid {
                         reason: "IP address validation failed".to_string(),
@@ -320,25 +335,39 @@ impl SecureSessionManager {
 
     /// Refresh session with new token
     pub fn refresh_session(&mut self, session_id: &str) -> Result<String, String> {
+        // First check if session exists and get user_id
+        let user_id = self
+            .sessions
+            .get(session_id)
+            .ok_or("Session not found")?
+            .user_id
+            .clone();
+
+        // Generate new token before getting mutable reference
+        let new_token = self.generate_secure_token(session_id, &user_id);
+        
+        // Now get mutable reference to update session
         let session = self
             .sessions
             .get_mut(session_id)
             .ok_or("Session not found")?;
 
-        // Generate new token
-        let new_token = self.generate_secure_token(session_id, &session.user_id);
-
-        // Blacklist old token
-        self.blacklisted_tokens
-            .insert(session.session_token.clone());
-
+        // Store old token for blacklisting
+        let old_token = session.session_token.clone();
+        
         // Update session
         session.session_token = new_token.clone();
         session.last_activity = Utc::now();
-
+        
         // Extend expiry
-        session.expires_at = Utc::now() + Duration::hours(self.config.default_expiry_hours);
-
+        let expiry_hours = self.config.default_expiry_hours;
+        session.expires_at = Utc::now() + Duration::hours(expiry_hours);
+        
+        drop(session); // Drop the mutable borrow
+        
+        // Blacklist old token
+        self.blacklisted_tokens.insert(old_token);
+        
         self.log_session_activity(session_id, "session_refreshed", HashMap::new(), 5);
 
         Ok(new_token)
@@ -346,82 +375,94 @@ impl SecureSessionManager {
 
     /// Update session permissions
     pub fn update_permissions(&mut self, session_id: &str, permissions: HashSet<String>) -> bool {
-        if let Some(session) = self.sessions.get_mut(session_id) {
-            let old_permissions = session.permissions.clone();
-            session.permissions = permissions.clone();
-
-            self.log_session_activity(
-                session_id,
-                "permissions_updated",
-                HashMap::from([
-                    (
-                        "old_permissions".to_string(),
-                        serde_json::Value::Array(
-                            old_permissions
-                                .into_iter()
-                                .map(serde_json::Value::String)
-                                .collect(),
-                        ),
-                    ),
-                    (
-                        "new_permissions".to_string(),
-                        serde_json::Value::Array(
-                            permissions
-                                .into_iter()
-                                .map(serde_json::Value::String)
-                                .collect(),
-                        ),
-                    ),
-                ]),
-                15,
-            );
-
-            true
+        // Check if session exists and get old permissions
+        let old_permissions = if let Some(session) = self.sessions.get(session_id) {
+            session.permissions.clone()
         } else {
-            false
+            return false;
+        };
+        
+        // Update permissions
+        if let Some(session) = self.sessions.get_mut(session_id) {
+            session.permissions = permissions.clone();
         }
+        
+        // Log activity after releasing the mutable borrow
+        self.log_session_activity(
+            session_id,
+            "permissions_updated",
+            HashMap::from([
+                (
+                    "old_permissions".to_string(),
+                    serde_json::Value::Array(
+                        old_permissions
+                            .into_iter()
+                            .map(serde_json::Value::String)
+                            .collect(),
+                    ),
+                ),
+                (
+                    "new_permissions".to_string(),
+                    serde_json::Value::Array(
+                        permissions
+                            .into_iter()
+                            .map(serde_json::Value::String)
+                            .collect(),
+                    ),
+                ),
+            ]),
+            15,
+        );
+
+        true
     }
 
     /// Record failed authentication attempt
     pub fn record_failed_attempt(&mut self, session_id: &str) -> bool {
-        if let Some(session) = self.sessions.get_mut(session_id) {
+        // Update session and get the new failed_attempts count and risk_score
+        let (failed_attempts, risk_score, should_suspend) = if let Some(session) = self.sessions.get_mut(session_id) {
             session.failed_attempts += 1;
             session.risk_score = (session.risk_score + 15).min(100);
+            let max_attempts = self.config.max_failed_attempts;
+            (session.failed_attempts, session.risk_score, session.failed_attempts >= max_attempts)
+        } else {
+            return false;
+        };
+        
+        // Log activity after releasing the mutable borrow
+        self.log_session_activity(
+            session_id,
+            "failed_attempt",
+            HashMap::from([
+                (
+                    "total_attempts".to_string(),
+                    serde_json::Value::Number(failed_attempts.into()),
+                ),
+                (
+                    "risk_score".to_string(),
+                    serde_json::Value::Number(risk_score.into()),
+                ),
+            ]),
+            40,
+        );
 
+        // Suspend session after too many failures
+        if should_suspend {
+            if let Some(session) = self.sessions.get_mut(session_id) {
+                session.authentication_state = AuthenticationState::Suspended;
+            }
             self.log_session_activity(
                 session_id,
-                "failed_attempt",
-                HashMap::from([
-                    (
-                        "total_attempts".to_string(),
-                        serde_json::Value::Number(session.failed_attempts.into()),
-                    ),
-                    (
-                        "risk_score".to_string(),
-                        serde_json::Value::Number(session.risk_score.into()),
-                    ),
-                ]),
-                40,
+                "session_suspended",
+                HashMap::from([(
+                    "reason".to_string(),
+                    serde_json::Value::String("too_many_failed_attempts".to_string()),
+                )]),
+                80,
             );
-
-            // Suspend session after too many failures
-            if session.failed_attempts >= self.config.max_failed_attempts {
-                session.authentication_state = AuthenticationState::Suspended;
-                self.log_session_activity(
-                    session_id,
-                    "session_suspended",
-                    HashMap::from([(
-                        "reason".to_string(),
-                        serde_json::Value::String("too_many_failed_attempts".to_string()),
-                    )]),
-                    80,
-                );
-            }
-
-            true
-        } else {
-            false
         }
+
+        true
     }
 
     /// Enable MFA for session

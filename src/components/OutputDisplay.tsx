@@ -9,11 +9,7 @@ interface OutputDisplayProps {
   className?: string;
 }
 
-export const OutputDisplay: React.FC<OutputDisplayProps> = ({
-  outputs,
-  onClear,
-  className
-}) => {
+export const OutputDisplay: React.FC<OutputDisplayProps> = ({ outputs, onClear, className }) => {
   const [filter, setFilter] = useState<'all' | 'stdout' | 'stderr' | 'error' | 'success'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -23,10 +19,11 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
 
   const filteredOutputs = outputs.filter(output => {
     const matchesFilter = filter === 'all' || output.type === filter;
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       output.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (output.source && output.source.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     return matchesFilter && matchesSearch;
   });
 
@@ -48,16 +45,19 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
 
   const handleExport = () => {
     const exportData = outputs.map(output => ({
-      timestamp: typeof output.timestamp === 'string' ? output.timestamp : new Date(output.timestamp).toISOString(),
+      timestamp:
+        typeof output.timestamp === 'string'
+          ? output.timestamp
+          : new Date(output.timestamp).toISOString(),
       type: output.type,
       source: output.source || 'unknown',
-      content: output.content || ''
+      content: output.content || '',
     }));
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
+      type: 'application/json',
     });
-    
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -97,7 +97,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
   };
 
   return (
-    <div className={cn("bg-gray-800 border border-gray-700 rounded-lg", className)}>
+    <div className={cn('bg-gray-800 border border-gray-700 rounded-lg', className)}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <div className="flex items-center space-x-2">
@@ -107,20 +107,20 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             ({filteredOutputs.length} / {outputs.length})
           </span>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setAutoScroll(!autoScroll)}
             className={cn(
-              "px-3 py-1 text-xs rounded border transition-colors",
+              'px-3 py-1 text-xs rounded border transition-colors',
               autoScroll
-                ? "border-green-500 text-green-400 bg-green-500/10"
-                : "border-gray-600 text-gray-400 hover:border-gray-500"
+                ? 'border-green-500 text-green-400 bg-green-500/10'
+                : 'border-gray-600 text-gray-400 hover:border-gray-500'
             )}
           >
             Auto-scroll
           </button>
-          
+
           <button
             onClick={handleExport}
             className="p-2 hover:bg-gray-700 rounded transition-colors"
@@ -128,7 +128,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
           >
             <Download className="w-4 h-4 text-gray-400" />
           </button>
-          
+
           <button
             onClick={onClear}
             className="p-2 hover:bg-gray-700 rounded transition-colors"
@@ -146,7 +146,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             <Filter className="w-4 h-4 text-gray-400" />
             <select
               value={filter}
-              onChange={(e) => setFilter(e.target.value as typeof filter)}
+              onChange={e => setFilter(e.target.value as typeof filter)}
               className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Types</option>
@@ -157,13 +157,13 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
               <option value="info">Info</option>
             </select>
           </div>
-          
+
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search output..."
               className="w-full bg-gray-700 border border-gray-600 rounded pl-10 pr-3 py-1 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
             />
@@ -172,10 +172,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
       </div>
 
       {/* Output Content */}
-      <div 
-        ref={outputRef}
-        className="h-96 overflow-y-auto p-4 space-y-2 font-mono text-sm"
-      >
+      <div ref={outputRef} className="h-96 overflow-y-auto p-4 space-y-2 font-mono text-sm">
         {filteredOutputs.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             {outputs.length === 0 ? (
@@ -188,7 +185,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             )}
           </div>
         ) : (
-          filteredOutputs.map((output) => (
+          filteredOutputs.map(output => (
             <div
               key={output.id}
               className="group flex items-start space-x-3 p-2 hover:bg-gray-700/50 rounded"
@@ -196,25 +193,25 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
               <div className="flex-shrink-0 pt-1">
                 <span className="text-lg">{getOutputTypeIcon(output.type)}</span>
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center space-x-2">
-                    <span className={cn("font-medium", getOutputTypeColor(output.type))}>
+                    <span className={cn('font-medium', getOutputTypeColor(output.type))}>
                       {output.type.toUpperCase()}
                     </span>
                     {output.source && (
-                      <span className="text-gray-500 text-xs">
-                        [{output.source}]
-                      </span>
+                      <span className="text-gray-500 text-xs">[{output.source}]</span>
                     )}
                     <span className="text-gray-500 text-xs">
-                      {typeof output.timestamp === 'string' ? 
-                        new Date(output.timestamp).toLocaleTimeString() : 
-                        new Date().toLocaleTimeString()}
+                      {output.timestamp
+                        ? typeof output.timestamp === 'string'
+                          ? new Date(output.timestamp).toLocaleTimeString()
+                          : new Date(output.timestamp).toLocaleTimeString()
+                        : new Date().toLocaleTimeString()}
                     </span>
                   </div>
-                  
+
                   <button
                     onClick={() => handleCopy(output.content || '', output.id)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-600 rounded transition-all"
@@ -227,7 +224,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
                     )}
                   </button>
                 </div>
-                
+
                 <div className="text-gray-300 whitespace-pre-wrap break-words">
                   {output.content || 'No content'}
                 </div>
@@ -235,7 +232,7 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
             </div>
           ))
         )}
-        
+
         <div ref={endRef} />
       </div>
 
@@ -243,16 +240,20 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
       <div className="px-4 py-2 border-t border-gray-700 text-xs text-gray-500">
         <div className="flex justify-between">
           <span>
-            Total: {outputs.length} | 
-            Errors: {outputs.filter(o => o.type === 'error').length} |
+            Total: {outputs.length} | Errors: {outputs.filter(o => o.type === 'error').length} |
             Success: {outputs.filter(o => o.type === 'success').length}
           </span>
           <span>
-            Last update: {outputs.length > 0 ? (
-              typeof outputs[outputs.length - 1]?.timestamp === 'string' 
-                ? new Date(outputs[outputs.length - 1].timestamp).toLocaleTimeString()
+            Last update:{' '}
+            {outputs.length > 0
+              ? outputs[outputs.length - 1]?.timestamp
+                ? typeof outputs[outputs.length - 1]!.timestamp === 'string'
+                  ? new Date(outputs[outputs.length - 1]!.timestamp as string).toLocaleTimeString()
+                  : new Date(
+                      outputs[outputs.length - 1]!.timestamp as string | Date
+                    ).toLocaleTimeString()
                 : new Date().toLocaleTimeString()
-            ) : 'Never'}
+              : 'Never'}
           </span>
         </div>
       </div>

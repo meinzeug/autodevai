@@ -516,8 +516,9 @@ impl AdvancedProfiler {
             "network_request",
         ];
 
-        let function_name =
-            function_names[rand::random::<usize>() % function_names.len()].to_string();
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as usize;
+        let function_name = function_names[seed % function_names.len()].to_string();
 
         Ok(ProfileData {
             timestamp: chrono::Utc::now().timestamp(),

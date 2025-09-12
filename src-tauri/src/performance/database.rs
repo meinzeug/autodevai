@@ -602,15 +602,19 @@ impl DatabaseOptimizer {
     pub async fn cleanup_connections(&self) -> anyhow::Result<usize> {
         let mut pool = self.connection_pool.write().await;
         let initial_count = pool.len();
+        let min_connections = self.config.min_connections as usize;
 
         // Remove inactive connections that haven't been used for a while
         let cutoff = Instant::now() - Duration::from_secs(300); // 5 minutes
+        let mut current_count = initial_count;
+        
         pool.retain(|conn| {
             if !conn.is_active
                 && conn.last_used < cutoff
-                && pool.len() > self.config.min_connections as usize
+                && current_count > min_connections
             {
                 debug!("Cleaning up inactive connection: {}", conn.id);
+                current_count -= 1;
                 false
             } else {
                 true
