@@ -96,7 +96,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.includes('/@vite') || 
       url.pathname.includes('__vite') || 
       url.port === '5173' ||
-      url.port === '50011' ||
+      url.port === '50010' ||
       url.pathname.includes('node_modules') ||
       url.pathname.includes('.tsx') ||
       url.pathname.includes('.ts') ||

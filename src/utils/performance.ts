@@ -226,6 +226,17 @@ export const performanceMonitor = new PerformanceMonitor({
 
 // Service Worker registration helper
 export const registerServiceWorker = async () => {
+  // Skip Service Worker in development mode
+  const isDevelopment = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.port === '5173' ||
+                        window.location.port === '50010';
+  
+  if (isDevelopment) {
+    console.log('[SW] Skipping service worker in development mode');
+    return null;
+  }
+  
   if ('serviceWorker' in navigator) {
     try {
       console.log('[SW] Registering service worker...');
