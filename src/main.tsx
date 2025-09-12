@@ -5,30 +5,31 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './styles/globals.css';
-import { performanceMonitor, registerServiceWorker } from './utils/performance';
+import { performanceMonitor } from './utils/performance';
 
 // Initialize performance monitoring
 performanceMonitor;
 
-// Register service worker
+// DISABLED: Service Worker causes issues in development
+// Uncomment for production builds only
+/*
+import { registerServiceWorker } from './utils/performance';
 registerServiceWorker().then((registration) => {
   if (registration) {
     console.log('Service Worker registered successfully');
   }
 });
+*/
 
-// Listen for service worker updates
-window.addEventListener('sw-update-available', (event) => {
-  const detail = (event as CustomEvent).detail;
-  console.log('Service Worker update available');
-  
-  // You could show a toast notification here
-  if (confirm('A new version is available. Reload to update?')) {
-    if (detail.registration.waiting) {
-      detail.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+// Unregister any existing service workers
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister();
+      console.log('Unregistered service worker:', registration.scope);
     }
-  }
-});
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

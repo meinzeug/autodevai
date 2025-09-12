@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Unregister Service Worker</title>
+</head>
+<body>
+    <h1>Service Worker Cleanup</h1>
+    <div id="status"></div>
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        async function unregisterAll() {
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                
+                for(let registration of registrations) {
+                    const success = await registration.unregister();
+                    statusDiv.innerHTML += `<p>Unregistered: ${registration.scope} - ${success ? 'SUCCESS' : 'FAILED'}</p>`;
+                }
+                
+                // Clear all caches
+                const cacheNames = await caches.keys();
+                for(let cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    statusDiv.innerHTML += `<p>Deleted cache: ${cacheName}</p>`;
+                }
+                
+                statusDiv.innerHTML += '<h2 style="color: green;">✅ All Service Workers and Caches cleared!</h2>';
+                statusDiv.innerHTML += '<p>You can now close this page and reload your application.</p>';
+            } else {
+                statusDiv.innerHTML = '<p>Service Workers not supported</p>';
+            }
+        }
+        
+        unregisterAll();
+    </script>
+</body>
+</html>

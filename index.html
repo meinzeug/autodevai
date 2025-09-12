@@ -138,20 +138,37 @@
     <!-- Application Scripts -->
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Service Worker Registration Disabled (Tauri app) -->
-    <!-- <script>
+    <!-- Service Worker Cleanup and Disable -->
+    <script>
+      // Unregister all service workers and clear caches
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
-            });
+        window.addEventListener('load', async () => {
+          try {
+            // Get all registrations
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            
+            // Unregister each one
+            for(let registration of registrations) {
+              const success = await registration.unregister();
+              console.log('Unregistered SW:', registration.scope, success ? 'SUCCESS' : 'FAILED');
+            }
+            
+            // Clear all caches
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              for(let cacheName of cacheNames) {
+                await caches.delete(cacheName);
+                console.log('Deleted cache:', cacheName);
+              }
+            }
+            
+            console.log('All Service Workers and caches cleared');
+          } catch (error) {
+            console.error('Error clearing Service Workers:', error);
+          }
         });
       }
-    </script> -->
+    </script>
     
     <!-- Error Boundary Script -->
     <script>
