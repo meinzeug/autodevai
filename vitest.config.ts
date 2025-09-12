@@ -21,7 +21,8 @@ export default defineConfig({
       'tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/frontend/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/integration/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      'tests/accessibility/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      'tests/accessibility/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/comprehensive-*.test.{ts,tsx}'
     ],
     exclude: [
       'node_modules',
@@ -81,7 +82,6 @@ export default defineConfig({
       all: true,
       clean: true
     },
-    testTimeout: 10000,
     hookTimeout: 10000,
     teardownTimeout: 10000,
     pool: 'threads',

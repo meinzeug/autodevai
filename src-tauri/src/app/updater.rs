@@ -378,13 +378,19 @@ impl UpdateManager {
 
     /// Get current status (thread-safe)
     pub fn get_status(&self) -> UpdateStatus {
-        let status_guard = self.status.read().unwrap();
+        let status_guard = match self.status.read() {
+            Ok(guard) => guard,
+            Err(_) => return UpdateStatus::Error("Failed to read status".to_string()),
+        };
         status_guard.clone()
     }
 
     /// Get configuration (thread-safe)
     pub fn get_config(&self) -> UpdateConfig {
-        let config_guard = self.config.read().unwrap();
+        let config_guard = match self.config.read() {
+            Ok(guard) => guard,
+            Err(_) => return UpdateConfig::default(),
+        };
         config_guard.clone()
     }
 

@@ -367,24 +367,27 @@ impl WindowStateManager {
 
     /// Get window state for a specific window
     pub fn get_window_state(&self, label: &str) -> Option<WindowState> {
-        let states = self.states.read().unwrap();
+        let states = self.states.read().ok()?;
         states.states.get(label).cloned()
     }
 
     /// Get all window states
     pub fn get_all_window_states(&self) -> HashMap<String, WindowState> {
-        let states = self.states.read().unwrap();
+        let states = match self.states.read() {
+            Ok(states) => states,
+            Err(_) => return HashMap::new(),
+        };
         states.states.clone()
     }
 
     /// Track window focus
     pub fn track_focus(&self, label: &str) {
-        let mut focus_tracker = self.focus_tracker.write().unwrap();
-        focus_tracker.insert(label.to_string(), Utc::now());
+        if let Ok(mut focus_tracker) = self.focus_tracker.write() {
+            focus_tracker.insert(label.to_string(), Utc::now());
+        }
 
         // Update last active window
-        {
-            let mut states = self.states.write().unwrap();
+        if let Ok(mut states) = self.states.write() {
             states.last_active_window = Some(label.to_string());
         }
 
@@ -393,15 +396,16 @@ impl WindowStateManager {
 
     /// Get last focused window
     pub fn get_last_focused_window(&self) -> Option<String> {
-        let states = self.states.read().unwrap();
+        let states = self.states.read().ok()?;
         states.last_active_window.clone()
     }
 
     /// Clean up old focus entries
     pub fn cleanup_focus_tracker(&self) {
         let cutoff = Utc::now() - chrono::Duration::hours(24);
-        let mut focus_tracker = self.focus_tracker.write().unwrap();
-        focus_tracker.retain(|_, &mut timestamp| timestamp > cutoff);
+        if let Ok(mut focus_tracker) = self.focus_tracker.write() {
+            focus_tracker.retain(|_, &mut timestamp| timestamp > cutoff);
+        }
     }
 
     /// Save all current states to disk

@@ -217,7 +217,10 @@ impl IpcSecurity {
             .or_else(|| self.rate_limits.get("*"))
             .ok_or_else(|| "No rate limit configured".to_string())?;
 
-        let mut state = self.rate_limiter.lock().unwrap();
+        let mut state = match self.rate_limiter.lock() {
+            Ok(state) => state,
+            Err(_) => return false, // Failed to acquire lock, deny request
+        };
         let now = Instant::now();
         let key = format!("{}:{}", session_id, command);
 
@@ -309,7 +312,7 @@ impl IpcSecurity {
             window_label,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_default()
                 .as_secs(),
         };
 
@@ -321,7 +324,7 @@ impl IpcSecurity {
 
     /// Get session context
     pub fn get_session(&self, session_id: &str) -> Option<SecurityContext> {
-        let sessions = self.sessions.lock().unwrap();
+        let sessions = self.sessions.lock().ok()?;
         sessions.get(session_id).cloned()
     }
 
@@ -342,7 +345,10 @@ impl IpcSecurity {
 
     /// Remove session
     pub fn remove_session(&self, session_id: &str) -> bool {
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = match self.sessions.lock() {
+            Ok(sessions) => sessions,
+            Err(_) => return false,
+        };
         sessions.remove(session_id).is_some()
     }
 

@@ -367,39 +367,51 @@ fn get_docker_client() -> Result<std::sync::Arc<std::sync::Mutex<Option<DockerCl
 /// List all containers
 pub async fn list_containers() -> Result<Vec<DockerContainer>> {
     let client_mutex = get_docker_client()?;
-    let mut client_guard = client_mutex.lock().unwrap();
+    let mut client_guard = client_mutex.lock().map_err(|e| {
+        crate::errors::NeuralBridgeError::docker(format!("Failed to acquire Docker client lock: {}", e))
+    })?;
 
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
 
-    let client = client_guard.as_ref().unwrap();
+    let client = client_guard.as_ref().ok_or_else(|| {
+        crate::errors::NeuralBridgeError::docker("Docker client not initialized".to_string())
+    })?;
     client.list_containers(false).await
 }
 
 /// Create and start a container
 pub async fn create_container(image: &str, name: &str, config: Value) -> Result<String> {
     let client_mutex = get_docker_client()?;
-    let mut client_guard = client_mutex.lock().unwrap();
+    let mut client_guard = client_mutex.lock().map_err(|e| {
+        crate::errors::NeuralBridgeError::docker(format!("Failed to acquire Docker client lock: {}", e))
+    })?;
 
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
 
-    let client = client_guard.as_ref().unwrap();
+    let client = client_guard.as_ref().ok_or_else(|| {
+        crate::errors::NeuralBridgeError::docker("Docker client not initialized".to_string())
+    })?;
     client.create_container(image, name, config).await
 }
 
 /// Stop a container
 pub async fn stop_container(container_id: &str) -> Result<()> {
     let client_mutex = get_docker_client()?;
-    let mut client_guard = client_mutex.lock().unwrap();
+    let mut client_guard = client_mutex.lock().map_err(|e| {
+        crate::errors::NeuralBridgeError::docker(format!("Failed to acquire Docker client lock: {}", e))
+    })?;
 
     if client_guard.is_none() {
         *client_guard = Some(DockerClient::new()?);
     }
 
-    let client = client_guard.as_ref().unwrap();
+    let client = client_guard.as_ref().ok_or_else(|| {
+        crate::errors::NeuralBridgeError::docker("Docker client not initialized".to_string())
+    })?;
     client.stop_container(container_id, None).await
 }
 
@@ -445,7 +457,10 @@ mod tests {
             return; // Skip test if Docker not available
         }
 
-        let client = client.unwrap();
+        let client = match client {
+            Ok(c) => c,
+            Err(_) => return, // Skip test if Docker not available
+        };
         let config = serde_json::json!({
             "env": ["NODE_ENV=production", "PORT=3000"],
             "cmd": ["npm", "start"],
@@ -458,7 +473,10 @@ mod tests {
         let result = client.parse_container_config("node:18", config);
         assert!(result.is_ok());
 
-        let parsed_config = result.unwrap();
+        let parsed_config = match result {
+            Ok(config) => config,
+            Err(_) => return, // Skip test if parsing fails
+        };
         assert_eq!(parsed_config.image, Some("node:18".to_string()));
         assert!(parsed_config.env.is_some());
         assert!(parsed_config.cmd.is_some());

@@ -20,7 +20,7 @@ docs/changelog.md → Append-only history docs/todo.md → Sprint generation </m
 
 <parallel_batch_execution> Message 1: [BatchTool - Analysis]
 
-- Read(konzept.md, roadmap.md, changelog.md, todo.md)
+- Read(docs/konzept.md, docs/roadmap.md, docs/changelog.md, docs/todo.md, docs/inhaltsverzeichnis.md)
 - Analyze architecture requirements
 - Identify next unchecked [ ] task
 - Map dependencies and scope
@@ -128,7 +128,13 @@ main ) </git_operations>
 <immediate_init> Initialize hive-mind NOW:
 
 1. Load all documentation in parallel
-2. Spawn necessary agents
+2. Spawn necessary agents BUT BE AWERE: You always must spawnwith right Agent type. Available agents: general-purpose, statusline-setup, output-style-setup, security-manager, gossip-coordinator, quorum-manager, Consensus Builder, performance-benchmarker, 
+     byzantine-coordinator, crdt-synchronizer, raft-manager, reviewer, researcher, planner, tester, coder, base-template-generator, Migration Summary, tdd-london-swarm, flow-nexus-swarm, backend-dev, flow-nexus-app-store, 
+     flow-nexus-payments, flow-nexus-user-tools, flow-nexus-auth, flow-nexus-workflow, flow-nexus-challenges, flow-nexus-sandbox, flow-nexus-neural, Agents Directory, api-docs, mobile-dev, code-analyzer, multi-repo-swarm, 
+     release-swarm, code-review-swarm, issue-tracker, swarm-issue, project-board-sync, release-manager, workflow-automation, repo-architect, github-modes, pr-manager, swarm-pr, sync-coordinator, Swarm Coordination, mesh-coordinator, 
+     hierarchical-coordinator, adaptive-coordinator, Benchmark Suite, Performance Optimization, Resource Allocator, Topology Optimizer, Load Balancing Coordinator, Performance Monitor, refinement, specification, pseudocode, 
+     architecture, migration-planner, task-orchestrator, memory-coordinator, sparc-coord, production-validator, swarm-init, sparc-coder, smart-agent, perf-analyzer, ml-developer, system-architect, cicd-engineer
+
 3. Execute current roadmap task
 4. Deploy with verification
 5. Continue until all tasks [x]

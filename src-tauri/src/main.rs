@@ -11,6 +11,7 @@ mod dev_window;
 mod events;
 mod logging;
 mod menu;
+mod monitoring;
 mod orchestration;
 mod performance;
 mod security;
@@ -112,6 +113,13 @@ fn main() {
                 // Initialize updater
                 if let Err(e) = app::updater::setup_updater(app_handle.clone()).await {
                     warn!("Failed to setup updater: {}", e);
+                }
+
+                // Initialize monitoring system
+                if let Err(e) = monitoring::setup_monitoring(&app_handle).await {
+                    warn!("Failed to setup monitoring: {}", e);
+                } else {
+                    info!("Monitoring system initialized successfully");
                 }
             });
 
@@ -259,7 +267,17 @@ fn main() {
             commands::enhanced_ai_commands::configure_enhanced_orchestration,
             commands::enhanced_ai_commands::get_enhanced_capabilities,
             commands::enhanced_ai_commands::get_openrouter_models,
-            commands::enhanced_ai_commands::test_enhanced_orchestration
+            commands::enhanced_ai_commands::test_enhanced_orchestration,
+            // Monitoring system commands
+            monitoring::logger::get_logging_stats,
+            monitoring::logger::flush_logs_command,
+            monitoring::logger::rotate_logs_command,
+            monitoring::metrics::get_metrics_stats,
+            monitoring::metrics::get_metrics_output,
+            // Security monitoring commands
+            monitoring::security_integration::get_security_status,
+            monitoring::security_integration::record_security_event,
+            monitoring::security_integration::get_security_metrics
         ])
         .run(tauri::generate_context!())
         .expect("error while running AutoDev-AI Neural Bridge Platform");

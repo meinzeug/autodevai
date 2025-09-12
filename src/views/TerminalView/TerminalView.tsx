@@ -198,7 +198,7 @@ export function TerminalView({ className, onExecute }: TerminalViewProps) {
 
     try {
       let output: string;
-      let exitCode = 0;
+      const exitCode = 0;
       const startTime = Date.now();
 
       if (onExecute) {

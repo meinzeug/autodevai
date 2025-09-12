@@ -1,6 +1,6 @@
 npx claude-flow@alpha hive-mind spawn "
 
-you are the led queen, spawn mutiple agents simultan.  execute prompt in code_github.md ...
+you are the led queen, spawn mutiple agents simultan.  execute prompt in code.md ...
 spawn your agents right with this agent types: 
 coordinator - Coordination and orchestration
 researcher - Information gathering and analysis

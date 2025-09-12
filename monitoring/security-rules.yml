@@ -1,0 +1,400 @@
+# AutoDev-AI Security Monitoring Rules for Prometheus
+# These rules detect security threats and compliance violations in real-time
+# All alerts are classified by severity and compliance requirements
+
+groups:
+- name: security.critical
+  rules:
+  # Authentication and Authorization Threats
+  - alert: SuspiciousLoginActivity
+    expr: increase(auth_failed_attempts_total[5m]) > 10
+    for: 1m
+    labels:
+      severity: critical
+      category: security
+      compliance: soc2
+      threat_type: authentication
+    annotations:
+      summary: "Suspicious login activity detected"
+      description: "More than 10 failed authentication attempts detected in the last 5 minutes. Instance: {{ $labels.instance }}"
+      runbook_url: "https://security.autodev-ai.local/runbooks/suspicious-login"
+      impact: "Potential brute force attack in progress"
+      action_required: "Block IP, review logs, notify security team"
+
+  - alert: PrivilegeEscalationAttempt
+    expr: increase(sudo_attempts_failed_total[5m]) > 5
+    for: 1m
+    labels:
+      severity: critical
+      category: security
+      compliance: iso27001
+      threat_type: privilege_escalation
+    annotations:
+      summary: "Privilege escalation attempt detected"
+      description: "More than 5 failed sudo attempts in the last 5 minutes on {{ $labels.instance }}"
+      impact: "Potential unauthorized privilege escalation"
+      action_required: "Investigate user activity, review system logs"
+
+  - alert: UnauthorizedAPIAccess
+    expr: rate(http_requests_total{code=~"401|403"}[5m]) > 10
+    for: 2m
+    labels:
+      severity: critical
+      category: security
+      threat_type: unauthorized_access
+    annotations:
+      summary: "High rate of unauthorized API access attempts"
+      description: "Unauthorized access attempts rate is {{ $value }} per second on {{ $labels.service }}"
+      action_required: "Check API keys, review access logs, potentially block source"
+
+  # Data Exfiltration and Unusual Activity
+  - alert: DataExfiltrationAttempt
+    expr: rate(network_bytes_transmitted_total[5m]) > 100000000  # 100MB/5min
+    for: 2m
+    labels:
+      severity: critical
+      category: security
+      compliance: gdpr
+      threat_type: data_exfiltration
+    annotations:
+      summary: "Potential data exfiltration detected"
+      description: "Unusually high network egress of {{ $value | humanize }}Bps on {{ $labels.instance }}"
+      impact: "Potential data breach in progress"
+      action_required: "Block network traffic, investigate data flows, notify DPO"
+
+  - alert: AnomalousFileAccess
+    expr: increase(file_access_violations_total[10m]) > 5
+    for: 1m
+    labels:
+      severity: critical
+      category: security
+      threat_type: file_access
+    annotations:
+      summary: "Anomalous file access patterns detected"
+      description: "{{ $value }} file access violations in the last 10 minutes"
+      action_required: "Review file access logs, check for unauthorized users"
+
+- name: security.high
+  rules:
+  # Service Security Issues
+  - alert: ServiceRunningAsRoot
+    expr: container_spec_user_id == 0
+    for: 5m
+    labels:
+      severity: high
+      category: security
+      compliance: cis_benchmark
+      threat_type: privilege_violation
+    annotations:
+      summary: "Container running as root user"
+      description: "Container {{ $labels.name }} is running as root (UID 0)"
+      impact: "Security best practice violation - containers should not run as root"
+      action_required: "Update container to run as non-root user"
+
+  - alert: UnencryptedConnection
+    expr: http_requests_total{scheme="http"} > 0
+    for: 1m
+    labels:
+      severity: high
+      category: security
+      compliance: pci_dss
+      threat_type: data_exposure
+    annotations:
+      summary: "Unencrypted HTTP traffic detected"
+      description: "HTTP (non-TLS) requests detected on {{ $labels.service }}"
+      impact: "Data transmitted without encryption"
+      action_required: "Enforce HTTPS-only, review TLS configuration"
+
+  - alert: WeakTLSVersion
+    expr: tls_version{version=~"1.0|1.1"} > 0
+    for: 1m
+    labels:
+      severity: high
+      category: security
+      compliance: pci_dss
+      threat_type: weak_encryption
+    annotations:
+      summary: "Weak TLS version in use"
+      description: "TLS version {{ $labels.version }} detected on {{ $labels.service }}"
+      action_required: "Upgrade to TLS 1.2 or higher"
+
+  # Resource Abuse and DoS Protection
+  - alert: SuspiciousResourceConsumption
+    expr: rate(cpu_usage_seconds_total[5m]) > 0.9
+    for: 10m
+    labels:
+      severity: high
+      category: security
+      threat_type: resource_abuse
+    annotations:
+      summary: "Abnormally high CPU usage sustained"
+      description: "CPU usage above 90% for 10+ minutes on {{ $labels.instance }}"
+      impact: "Potential crypto-mining or DoS attack"
+      action_required: "Investigate running processes, check for malware"
+
+  - alert: MemoryExhaustionRisk
+    expr: memory_usage_ratio > 0.95
+    for: 5m
+    labels:
+      severity: high
+      category: security
+      threat_type: denial_of_service
+    annotations:
+      summary: "Memory exhaustion risk detected"
+      description: "Memory usage at {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+      action_required: "Identify memory-hungry processes, prevent OOM kill"
+
+- name: security.medium
+  rules:
+  # Configuration and Compliance Issues
+  - alert: InsecureServiceConfiguration
+    expr: security_configuration_score < 0.8
+    for: 5m
+    labels:
+      severity: medium
+      category: security
+      compliance: security_baseline
+    annotations:
+      summary: "Service security configuration below baseline"
+      description: "Security score {{ $value }} for {{ $labels.service }}"
+      action_required: "Review and improve security configuration"
+
+  - alert: OutdatedSoftwareVersion
+    expr: software_version_age_days > 90
+    for: 0s
+    labels:
+      severity: medium
+      category: security
+      compliance: vulnerability_management
+    annotations:
+      summary: "Outdated software detected"
+      description: "{{ $labels.software }} version {{ $labels.version }} is {{ $value }} days old"
+      action_required: "Schedule software update, review security patches"
+
+  - alert: UnusualUserActivity
+    expr: rate(user_actions_total[1h]) > 1000
+    for: 10m
+    labels:
+      severity: medium
+      category: security
+      threat_type: insider_threat
+    annotations:
+      summary: "Unusual user activity pattern"
+      description: "User {{ $labels.user }} performing {{ $value }} actions per second"
+      action_required: "Review user activity logs for anomalies"
+
+  # Network Security
+  - alert: SuspiciousNetworkConnection
+    expr: network_connections_external{country!~"US|CA|GB|DE|AU"} > 10
+    for: 5m
+    labels:
+      severity: medium
+      category: security
+      threat_type: network_anomaly
+    annotations:
+      summary: "Connections to suspicious geographic regions"
+      description: "{{ $value }} external connections to {{ $labels.country }}"
+      action_required: "Review connection logs, verify business justification"
+
+  - alert: PortScanDetected
+    expr: increase(port_scan_attempts_total[5m]) > 20
+    for: 1m
+    labels:
+      severity: medium
+      category: security
+      threat_type: reconnaissance
+    annotations:
+      summary: "Port scan activity detected"
+      description: "{{ $value }} port scan attempts from {{ $labels.source_ip }}"
+      action_required: "Block source IP, enhance network monitoring"
+
+- name: compliance.monitoring
+  rules:
+  # SOC 2 Compliance Monitoring
+  - alert: ComplianceViolation
+    expr: security_compliance_score < 0.9
+    for: 5m
+    labels:
+      severity: warning
+      category: compliance
+      compliance: soc2
+    annotations:
+      summary: "Security compliance score below threshold"
+      description: "Compliance score {{ $value }} for {{ $labels.control }}"
+      action_required: "Review compliance controls, update documentation"
+
+  - alert: AuditLogIntegrityFailure
+    expr: audit_log_hash_verification_failed > 0
+    for: 0s
+    labels:
+      severity: critical
+      category: compliance
+      compliance: sox
+    annotations:
+      summary: "Audit log integrity verification failed"
+      description: "{{ $value }} audit log integrity failures detected"
+      impact: "Potential audit log tampering"
+      action_required: "Investigate log tampering, restore from backup"
+
+  # GDPR Compliance
+  - alert: DataRetentionViolation
+    expr: data_retention_days > gdpr_max_retention_days
+    for: 0s
+    labels:
+      severity: high
+      category: compliance
+      compliance: gdpr
+    annotations:
+      summary: "Data retention period exceeds GDPR limits"
+      description: "Data {{ $labels.data_type }} retained for {{ $value }} days"
+      action_required: "Purge old data, update retention policies"
+
+  - alert: UnencryptedPersonalData
+    expr: personal_data_encrypted_ratio < 1.0
+    for: 1m
+    labels:
+      severity: critical
+      category: compliance
+      compliance: gdpr
+    annotations:
+      summary: "Personal data found unencrypted"
+      description: "{{ $value | humanizePercentage }} of personal data unencrypted"
+      action_required: "Encrypt all personal data immediately"
+
+- name: application.security
+  rules:
+  # AutoDev-AI Specific Security Rules
+  - alert: AIModelAccessViolation
+    expr: increase(ai_model_unauthorized_access_total[5m]) > 3
+    for: 1m
+    labels:
+      severity: high
+      category: security
+      application: autodev-ai
+      threat_type: model_theft
+    annotations:
+      summary: "Unauthorized AI model access attempts"
+      description: "{{ $value }} unauthorized access attempts to AI models"
+      impact: "Potential intellectual property theft"
+      action_required: "Review model access logs, strengthen authentication"
+
+  - alert: CodeGenerationAnomalyDetected
+    expr: rate(code_generation_requests_total[5m]) > 100
+    for: 3m
+    labels:
+      severity: medium
+      category: security
+      application: autodev-ai
+      threat_type: abuse
+    annotations:
+      summary: "Abnormally high code generation request rate"
+      description: "{{ $value }} code generation requests per second"
+      action_required: "Check for API abuse, review rate limiting"
+
+  - alert: MaliciousCodePatternDetected
+    expr: malicious_code_patterns_detected_total > 0
+    for: 0s
+    labels:
+      severity: critical
+      category: security
+      application: autodev-ai
+      threat_type: code_injection
+    annotations:
+      summary: "Malicious code patterns detected in generated code"
+      description: "{{ $value }} malicious patterns found in code generation"
+      impact: "Potential security vulnerability in generated code"
+      action_required: "Block user, review generated code, update filters"
+
+  - alert: UserDataLeakageRisk
+    expr: user_data_in_logs_total > 0
+    for: 0s
+    labels:
+      severity: high
+      category: security
+      application: autodev-ai
+      compliance: gdpr
+      threat_type: data_leakage
+    annotations:
+      summary: "User data detected in application logs"
+      description: "{{ $value }} instances of user data in logs"
+      action_required: "Sanitize logs, review log filtering rules"
+
+- name: infrastructure.security
+  rules:
+  # Infrastructure Security Monitoring
+  - alert: ContainerEscapeAttempt
+    expr: increase(container_escape_attempts_total[5m]) > 0
+    for: 0s
+    labels:
+      severity: critical
+      category: security
+      threat_type: container_escape
+    annotations:
+      summary: "Container escape attempt detected"
+      description: "{{ $value }} container escape attempts on {{ $labels.instance }}"
+      impact: "Potential host system compromise"
+      action_required: "Isolate container, investigate security breach"
+
+  - alert: KubernetesAPIAbuseDetected
+    expr: rate(kubernetes_api_requests_total{code="403"}[5m]) > 10
+    for: 2m
+    labels:
+      severity: medium
+      category: security
+      threat_type: api_abuse
+    annotations:
+      summary: "High rate of Kubernetes API access denials"
+      description: "{{ $value }} forbidden API requests per second"
+      action_required: "Review RBAC policies, investigate source"
+
+  - alert: DockerDaemonCompromise
+    expr: docker_daemon_privileged_containers_total > expected_privileged_containers
+    for: 1m
+    labels:
+      severity: high
+      category: security
+      threat_type: privilege_escalation
+    annotations:
+      summary: "Unexpected privileged containers detected"
+      description: "{{ $value }} privileged containers running (expected: {{ $labels.expected }})"
+      action_required: "Investigate privileged container creation"
+
+- name: monitoring.security
+  rules:
+  # Monitoring System Self-Protection
+  - alert: MetricsScrapingFailure
+    expr: up == 0
+    for: 2m
+    labels:
+      severity: high
+      category: monitoring
+      security_impact: visibility_loss
+    annotations:
+      summary: "Monitoring target unreachable"
+      description: "Cannot scrape metrics from {{ $labels.instance }}"
+      impact: "Loss of security visibility for this target"
+      action_required: "Restore monitoring connectivity"
+
+  - alert: PrometheusConfigTampering
+    expr: prometheus_config_last_reload_successful == 0
+    for: 1m
+    labels:
+      severity: critical
+      category: monitoring
+      threat_type: configuration_tampering
+    annotations:
+      summary: "Prometheus configuration reload failed"
+      description: "Configuration reload failed - possible tampering"
+      action_required: "Check configuration integrity, restore if necessary"
+
+  - alert: AlertmanagerSilencingAbuse
+    expr: alertmanager_silences_total > 10
+    for: 5m
+    labels:
+      severity: medium
+      category: monitoring
+      threat_type: alert_suppression
+    annotations:
+      summary: "Excessive alert silencing detected"
+      description: "{{ $value }} active silences in Alertmanager"
+      action_required: "Review silencing justification, prevent abuse"

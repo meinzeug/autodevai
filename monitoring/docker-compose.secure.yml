@@ -1,0 +1,470 @@
+version: '3.8'
+
+# Secure Docker Compose configuration for AutoDev-AI Monitoring Stack
+# Addresses all critical security vulnerabilities identified in audit
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: autodev-ai-prometheus-secure
+    user: "65534:65534" # nobody user for security
+    ports:
+      - "127.0.0.1:9090:9090" # Bind to localhost only
+    volumes:
+      - ./prometheus-secure.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./prometheus-web.yml:/etc/prometheus/web.yml:ro
+      - ./ssl/prometheus:/etc/ssl/prometheus:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.retention.size=50GB'
+      - '--web.enable-lifecycle=false'
+      - '--web.enable-admin-api=false'
+      - '--web.config.file=/etc/prometheus/web.yml'
+      - '--web.external-url=https://monitoring.autodev-ai.local/prometheus'
+      - '--web.route-prefix=/prometheus'
+      - '--query.max-concurrency=20'
+      - '--query.max-samples=50000000'
+      - '--storage.tsdb.wal-compression'
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/prometheus/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    environment:
+      - TZ=UTC
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: autodev-ai-grafana-secure
+    user: "472:472" # grafana user
+    ports:
+      - "127.0.0.1:3000:3000" # Bind to localhost only
+    environment:
+      # Security Configuration
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECRET_KEY}
+      - GF_SECURITY_LOGIN_REMEMBER_DAYS=7
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY_MAX_AGE_SECONDS=31536000
+      - GF_SECURITY_CONTENT_TYPE_PROTECTION=true
+      - GF_SECURITY_X_CONTENT_TYPE_OPTIONS=nosniff
+      - GF_SECURITY_X_XSS_PROTECTION=true
+      
+      # Server Configuration
+      - GF_SERVER_PROTOCOL=https
+      - GF_SERVER_CERT_FILE=/etc/grafana/ssl/cert.pem
+      - GF_SERVER_CERT_KEY=/etc/grafana/ssl/key.pem
+      - GF_SERVER_ROOT_URL=https://monitoring.autodev-ai.local/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      
+      # Authentication Configuration
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=${OAUTH_ENABLED:-false}
+      - GF_AUTH_GENERIC_OAUTH_NAME=AutoDev-AI SSO
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${OAUTH_AUTH_URL}
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${OAUTH_TOKEN_URL}
+      - GF_AUTH_GENERIC_OAUTH_API_URL=${OAUTH_API_URL}
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=false
+      - GF_AUTH_GENERIC_OAUTH_TLS_SKIP_VERIFY_INSECURE=false
+      
+      # User Management
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_AUTO_ASSIGN_ORG=true
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      
+      # Analytics and Telemetry (Disabled for Privacy)
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_GOOGLE_ANALYTICS_UA_ID=""
+      
+      # Plugins (Controlled installation)
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=""
+      
+      # Database Configuration
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=${GRAFANA_DB_USER}
+      - GF_DATABASE_PASSWORD=${GRAFANA_DB_PASSWORD}
+      - GF_DATABASE_SSL_MODE=require
+      
+      # Session Configuration
+      - GF_SESSION_PROVIDER=postgres
+      - GF_SESSION_PROVIDER_CONFIG=user=${GRAFANA_DB_USER} password=${GRAFANA_DB_PASSWORD} host=postgres port=5432 dbname=grafana sslmode=require
+      - GF_SESSION_COOKIE_NAME=grafana_sess
+      - GF_SESSION_COOKIE_SECURE=true
+      - GF_SESSION_SESSION_LIFE_TIME=86400
+      
+      # Logging Configuration
+      - GF_LOG_MODE=console,file
+      - GF_LOG_LEVEL=info
+      - GF_LOG_FILTERS=alerting.notifier.slack:debug
+      
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources-secure:/etc/grafana/provisioning/datasources:ro
+      - ./ssl/grafana:/etc/grafana/ssl:ro
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f https://localhost:3000/grafana/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - postgres
+
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: autodev-ai-alertmanager-secure
+    user: "65534:65534" # nobody user
+    ports:
+      - "127.0.0.1:9093:9093" # Bind to localhost only
+    volumes:
+      - ./alertmanager-secure.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./ssl/alertmanager:/etc/ssl/alertmanager:ro
+      - ./alertmanager/templates:/etc/alertmanager/templates:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://monitoring.autodev-ai.local/alertmanager'
+      - '--web.route-prefix=/alertmanager'
+      - '--cluster.listen-address='
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: autodev-ai-node-exporter-secure
+    user: "65534:65534" # nobody user
+    ports:
+      - "127.0.0.1:9100:9100" # Bind to localhost only
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.wifi'
+      - '--no-collector.hwmon'
+      - '--web.disable-exporter-metrics'
+      - '--web.max-requests=20'
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    pid: host
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: autodev-ai-cadvisor-secure
+    ports:
+      - "127.0.0.1:8080:8080" # Bind to localhost only
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - '--housekeeping_interval=30s'
+      - '--max_housekeeping_interval=35s'
+      - '--event_storage_event_limit=default=0'
+      - '--event_storage_age_limit=default=0'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,network,hugetlb'
+      - '--docker_only=true'
+      - '--store_container_labels=false'
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  loki:
+    image: grafana/loki:2.8.0
+    container_name: autodev-ai-loki-secure
+    user: "10001:10001" # loki user
+    ports:
+      - "127.0.0.1:3100:3100" # Bind to localhost only
+    volumes:
+      - ./loki-secure.yml:/etc/loki/local-config.yaml:ro
+      - ./ssl/loki:/etc/loki/ssl:ro
+      - loki_data:/loki
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -target=all
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  promtail:
+    image: grafana/promtail:2.8.0
+    container_name: autodev-ai-promtail-secure
+    user: "0:0" # root needed for log file access
+    volumes:
+      - ./promtail-secure.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail_data:/promtail
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  elasticsearch:
+    image: elasticsearch:8.8.0
+    container_name: autodev-ai-elasticsearch-secure
+    ports:
+      - "127.0.0.1:9200:9200" # Bind to localhost only
+      - "127.0.0.1:9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.keystore.path=/usr/share/elasticsearch/config/certs/transport.p12
+      - xpack.security.transport.ssl.truststore.path=/usr/share/elasticsearch/config/certs/transport.p12
+      - xpack.security.http.ssl.keystore.path=/usr/share/elasticsearch/config/certs/http.p12
+      - xpack.security.http.ssl.truststore.path=/usr/share/elasticsearch/config/certs/http.p12
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.security.authc.realms.native.native1.order=0
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g -Des.enforce.bootstrap.checks=true"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+      - ./ssl/elasticsearch:/usr/share/elasticsearch/config/certs:ro
+      - ./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-u", "elastic:${ELASTIC_PASSWORD}", "https://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=30s"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  kibana:
+    image: kibana:8.8.0
+    container_name: autodev-ai-kibana-secure
+    ports:
+      - "127.0.0.1:5601:5601" # Bind to localhost only
+    environment:
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/ca.crt
+      - SERVER_SSL_ENABLED=true
+      - SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/kibana.crt
+      - SERVER_SSL_KEY=/usr/share/kibana/config/certs/kibana.key
+      - SERVER_BASEPATH=/kibana
+      - SERVER_REWRITEBASEPATH=true
+      - XPACK_SECURITY_ENABLED=true
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
+      - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
+      - SERVER_XSRF_ALLOWLIST='["/api/apm/sourcemaps"]'
+    volumes:
+      - ./ssl/kibana:/usr/share/kibana/config/certs:ro
+      - ./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: autodev-ai-postgres-secure
+    ports:
+      - "127.0.0.1:5432:5432" # Bind to localhost only
+    environment:
+      - POSTGRES_DB=autodev_ai
+      - POSTGRES_USER=autodev_ai
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256
+      - PGUSER=autodev_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-secure.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./ssl/postgres:/etc/ssl/postgres:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autodev_ai -d autodev_ai"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/etc/ssl/postgres/server.crt
+      -c ssl_key_file=/etc/ssl/postgres/server.key
+      -c ssl_ca_file=/etc/ssl/postgres/ca.crt
+      -c config_file=/etc/postgresql/postgresql.conf
+
+  redis:
+    image: redis:7-alpine
+    container_name: autodev-ai-redis-secure
+    ports:
+      - "127.0.0.1:6379:6379" # Bind to localhost only
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --appendfsync everysec
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --timeout 300
+      --tcp-keepalive 60
+      --databases 1
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: nginx:alpine
+    container_name: autodev-ai-nginx-secure
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-secure.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/nginx:/etc/nginx/ssl:ro
+      - ./nginx/htpasswd:/etc/nginx/.htpasswd:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    networks:
+      - monitoring-secure
+    restart: unless-stopped
+    depends_on:
+      - grafana
+      - prometheus
+      - kibana
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autodev-ai/monitoring/data/prometheus
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autodev-ai/monitoring/data/grafana
+  alertmanager_data:
+    driver: local
+  loki_data:
+    driver: local
+  promtail_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autodev-ai/monitoring/data/elasticsearch
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/autodev-ai/monitoring/data/postgres
+
+networks:
+  monitoring-secure:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
+    driver_opts:
+      com.docker.network.bridge.name: br-monitoring
+      com.docker.network.bridge.enable_icc: "false"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: "1500"

@@ -188,10 +188,10 @@ pub async fn spawn_agent(
 
     let mut request_data = HashMap::new();
     request_data.insert("type".to_string(), agent_type.to_string());
-    request_data.insert(
-        "capabilities".to_string(),
-        serde_json::to_string(&capabilities).unwrap_or_default(),
-    );
+    let capabilities_json = serde_json::to_string(&capabilities).map_err(|e| {
+        crate::errors::NeuralBridgeError::api(format!("Failed to serialize capabilities: {}", e))
+    })?;
+    request_data.insert("capabilities".to_string(), capabilities_json);
     request_data.insert("swarmId".to_string(), swarm_id.to_string());
 
     #[derive(Deserialize)]
@@ -386,7 +386,7 @@ mod tests {
             strategy: "balanced".to_string(),
         };
 
-        let json = serde_json::to_string(&request).unwrap();
+        let json = serde_json::to_string(&request).expect("Failed to serialize request");
         assert!(json.contains("hierarchical"));
         assert!(json.contains("maxAgents"));
     }
@@ -400,7 +400,7 @@ mod tests {
             max_agents: Some(5),
         };
 
-        let json = serde_json::to_string(&request).unwrap();
+        let json = serde_json::to_string(&request).expect("Failed to serialize request");
         assert!(json.contains("test task"));
         assert!(json.contains("maxAgents"));
     }
@@ -415,7 +415,7 @@ mod tests {
             "currentTask": "task-456"
         }"#;
 
-        let agent: AgentInfo = serde_json::from_str(json).unwrap();
+        let agent: AgentInfo = serde_json::from_str(json).expect("Failed to deserialize agent info");
         assert_eq!(agent.id, "agent-123");
         assert_eq!(agent.agent_type, "coder");
         assert_eq!(agent.capabilities, vec!["rust", "typescript"]);

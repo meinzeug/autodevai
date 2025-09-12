@@ -1,0 +1,47 @@
+# Prometheus Web Configuration for AutoDev-AI Secure Monitoring
+# This file configures TLS and authentication for Prometheus web interface
+
+tls_server_config:
+  # TLS Configuration
+  cert_file: /etc/ssl/prometheus/cert.pem
+  key_file: /etc/ssl/prometheus/key.pem
+  # Client certificate authentication (optional)
+  client_auth_type: NoClientCert
+  
+  # TLS Settings
+  min_version: TLS12
+  max_version: TLS13
+  cipher_suites:
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_RSA_WITH_AES_128_GCM_SHA256
+  
+  # Prefer server cipher suites
+  prefer_server_cipher_suites: true
+  
+  # Session tickets (disable for perfect forward secrecy)
+  session_tickets_disabled: true
+
+# Basic Authentication (optional - use with OAuth for better security)
+basic_auth_users:
+  # Use htpasswd to generate: htpasswd -nB prometheus_admin
+  # prometheus_admin: $2b$12$hNf2lSsxfm0.i4a.1kVpSOVyBOxAVqFOPiWgRQJ9fppYH0oZvOlqG
+
+# HTTP Settings
+http_server_config:
+  # Custom headers for security
+  headers:
+    # Strict Transport Security
+    Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+    # Content Security Policy
+    Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; img-src 'self' data:"
+    # X-Frame-Options
+    X-Frame-Options: "SAMEORIGIN"
+    # X-Content-Type-Options
+    X-Content-Type-Options: "nosniff"
+    # Referrer Policy
+    Referrer-Policy: "strict-origin-when-cross-origin"
+    # Permissions Policy
+    Permissions-Policy: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
